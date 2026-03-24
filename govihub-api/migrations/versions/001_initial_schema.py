@@ -7,10 +7,15 @@ Create Date: 2026-03-23
 from typing import Sequence, Union
 
 import geoalchemy2
-import pgvector
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+try:
+    import pgvector.sqlalchemy
+    _has_pgvector = True
+except ImportError:
+    _has_pgvector = False
 
 # revision identifiers, used by Alembic.
 revision: str = "001"
@@ -23,7 +28,13 @@ def upgrade() -> None:
     # Extensions
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
     op.execute('CREATE EXTENSION IF NOT EXISTS "postgis"')
-    op.execute('CREATE EXTENSION IF NOT EXISTS "vector"')
+    # pgvector: create only if available in the postgres image
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT EXISTS(SELECT 1 FROM pg_available_extensions WHERE name = 'vector')"
+    ))
+    if result.scalar():
+        op.execute('CREATE EXTENSION IF NOT EXISTS "vector"')
 
     # Enums
     user_role = postgresql.ENUM("farmer", "buyer", "supplier", "admin", name="user_role", create_type=True)
@@ -278,7 +289,7 @@ def upgrade() -> None:
         sa.Column("language", sa.String(5), server_default="en"),
         sa.Column("category", sa.String(100), nullable=True),
         sa.Column("tags", postgresql.JSONB, nullable=True),
-        sa.Column("embedding", pgvector.sqlalchemy.Vector(384), nullable=True),
+        sa.Column("embedding", sa.LargeBinary, nullable=True),  # pgvector Vector type added via ALTER after extension install
         sa.Column("metadata", postgresql.JSONB, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),

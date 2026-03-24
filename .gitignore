@@ -49,6 +49,9 @@ ml/models/*.pt
 ml/models/*.bin
 ml/models/*.onnx
 
+# Embeddings cache (HuggingFace downloads)
+govihub-api/ml/embeddings/
+
 # Certificates
 certbot/
 
