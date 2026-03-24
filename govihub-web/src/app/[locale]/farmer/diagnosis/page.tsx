@@ -54,7 +54,7 @@ export default function CropDiagnosisPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.get<HistoryItem[]>("/api/v1/farmer/diagnosis/history")
+    api.get<HistoryItem[]>("/farmer/diagnosis/history")
       .then(setHistory)
       .catch(() => setHistory(MOCK_HISTORY))
       .finally(() => setHistoryLoading(false));
@@ -75,7 +75,7 @@ export default function CropDiagnosisPage() {
     const formData = new FormData();
     formData.append("image", selectedImage);
     try {
-      const res = await api.upload<DiagnosisResult>("/api/v1/diagnosis", formData);
+      const res = await api.upload<DiagnosisResult>("/diagnosis", formData);
       setResult(res);
     } catch {
       setResult(MOCK_RESULT);

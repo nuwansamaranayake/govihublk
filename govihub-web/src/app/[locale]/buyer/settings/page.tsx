@@ -35,20 +35,20 @@ export default function BuyerSettingsPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
-    api.get<UserProfile>("/api/v1/users/me/profile").then(setProfile).catch(() => setProfile(MOCK)).finally(() => setLoading(false));
+    api.get<UserProfile>("/users/me/profile").then(setProfile).catch(() => setProfile(MOCK)).finally(() => setLoading(false));
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
-    try { await api.put("/api/v1/users/me/profile", profile); } catch {}
+    try { await api.put("/users/me/profile", profile); } catch {}
     finally { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }
   };
 
   const toggle = (key: keyof UserProfile) => { if (!profile) return; setProfile({...profile, [key]: !profile[key as keyof UserProfile]}); };
   const setField = (key: keyof UserProfile, val: string) => { if (!profile) return; setProfile({...profile, [key]: val}); };
-  const handleDeactivate = async () => { try { await api.post("/api/v1/users/me/deactivate"); } catch {} setConfirmDeactivate(false); };
+  const handleDeactivate = async () => { try { await api.post("/users/me/deactivate"); } catch {} setConfirmDeactivate(false); };
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">

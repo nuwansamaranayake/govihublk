@@ -51,7 +51,7 @@ export default function FarmerMatchesPage() {
   const [actionLoading, setActionLoading] = useState<string|null>(null);
 
   useEffect(() => {
-    api.get<Match[]>("/api/v1/farmer/matches")
+    api.get<Match[]>("/farmer/matches")
       .then(setMatches)
       .catch(() => setMatches(MOCK))
       .finally(() => setLoading(false));
@@ -60,8 +60,8 @@ export default function FarmerMatchesPage() {
   const handleAction = async (matchId: string, action: string) => {
     setActionLoading(`${matchId}-${action}`);
     try {
-      await api.post(`/api/v1/farmer/matches/${matchId}/${action.toLowerCase()}`);
-      const updated = await api.get<Match[]>("/api/v1/farmer/matches");
+      await api.post(`/farmer/matches/${matchId}/${action.toLowerCase()}`);
+      const updated = await api.get<Match[]>("/farmer/matches");
       setMatches(updated);
     } catch {
       const map: Record<string, MatchStatus> = { Accept:"farmer_accepted", Reject:"cancelled", Confirm:"buyer_accepted", Fulfill:"in_transit" };

@@ -52,7 +52,7 @@ export default function FarmerListingsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    api.get<Listing[]>("/api/v1/farmer/listings")
+    api.get<Listing[]>("/farmer/listings")
       .then(setListings)
       .catch(() => setListings(MOCK))
       .finally(() => setLoading(false));
@@ -71,9 +71,9 @@ export default function FarmerListingsPage() {
     setSubmitting(true);
     try {
       if (editId) {
-        await api.put(`/api/v1/farmer/listings/${editId}`, form);
+        await api.put(`/farmer/listings/${editId}`, form);
       } else {
-        await api.post("/api/v1/farmer/listings", form);
+        await api.post("/farmer/listings", form);
       }
       setShowModal(false);
       await load();
@@ -86,7 +86,7 @@ export default function FarmerListingsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this listing?")) return;
-    await api.delete(`/api/v1/farmer/listings/${id}`).catch(()=>{});
+    await api.delete(`/farmer/listings/${id}`).catch(()=>{});
     setListings(prev => prev.filter(l => l.id !== id));
   };
 
@@ -110,7 +110,7 @@ export default function FarmerListingsPage() {
         {(activeTab) => {
           const filtered = activeTab === "all" ? listings : listings.filter(l => l.status === activeTab);
           return (
-            <div className="px-4 py-4 space-y-3">
+            <div className="px-4 py-4 pb-20 space-y-3">
               {loading ? (
                 Array.from({length:3}).map((_,i) => (
                   <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-2">

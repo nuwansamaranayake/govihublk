@@ -54,7 +54,7 @@ export default function AdminCropsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    api.get<Crop[]>("/api/v1/admin/crops")
+    api.get<Crop[]>("/admin/crops")
       .then(setCrops)
       .catch(() => setCrops(MOCK))
       .finally(() => setLoading(false));
@@ -72,8 +72,8 @@ export default function AdminCropsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/api/v1/admin/crops/${editId}`, form);
-      else await api.post("/api/v1/admin/crops", form);
+      if (editId) await api.put(`/admin/crops/${editId}`, form);
+      else await api.post("/admin/crops", form);
       setShowModal(false);
       await load();
     } catch {
@@ -85,7 +85,7 @@ export default function AdminCropsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this crop?")) return;
-    await api.delete(`/api/v1/admin/crops/${id}`).catch(()=>{});
+    await api.delete(`/admin/crops/${id}`).catch(()=>{});
     setCrops(prev => prev.filter(c => c.id !== id));
   };
 

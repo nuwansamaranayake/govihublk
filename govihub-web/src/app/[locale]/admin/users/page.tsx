@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    api.get<User[]>("/api/v1/admin/users")
+    api.get<User[]>("/admin/users")
       .then(setUsers)
       .catch(() => setUsers(MOCK_USERS))
       .finally(() => setLoading(false));
@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     setActionLoading(true);
     try {
-      await api.put(`/api/v1/admin/users/${userId}`, { status: newStatus });
+      await api.put(`/admin/users/${userId}`, { status: newStatus });
       setUsers(prev => prev.map(u => u.id===userId ? {...u, status:newStatus} : u));
       if (selectedUser?.id===userId) setSelectedUser(prev => prev ? {...prev, status:newStatus} : null);
     } catch {

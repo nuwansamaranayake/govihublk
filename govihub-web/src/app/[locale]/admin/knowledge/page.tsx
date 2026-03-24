@@ -69,8 +69,8 @@ export default function AdminKnowledgePage() {
 
   useEffect(() => {
     Promise.all([
-      api.get<KnowledgeChunk[]>("/api/v1/admin/knowledge"),
-      api.get<KnowledgeStats>("/api/v1/admin/knowledge/stats"),
+      api.get<KnowledgeChunk[]>("/admin/knowledge"),
+      api.get<KnowledgeStats>("/admin/knowledge/stats"),
     ])
       .then(([c,s]) => { setChunks(c); setStats(s); })
       .catch(() => { setChunks(MOCK_CHUNKS); setStats(MOCK_STATS); })
@@ -81,8 +81,8 @@ export default function AdminKnowledgePage() {
     e.preventDefault();
     setIngesting(true);
     try {
-      await api.post("/api/v1/admin/knowledge/ingest", form);
-      const fresh = await api.get<KnowledgeChunk[]>("/api/v1/admin/knowledge");
+      await api.post("/admin/knowledge/ingest", form);
+      const fresh = await api.get<KnowledgeChunk[]>("/admin/knowledge");
       setChunks(fresh);
       setIngestOpen(false);
       setForm(EMPTY_INGEST);
@@ -96,7 +96,7 @@ export default function AdminKnowledgePage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this knowledge chunk?")) return;
-    await api.delete(`/api/v1/admin/knowledge/${id}`).catch(()=>{});
+    await api.delete(`/admin/knowledge/${id}`).catch(()=>{});
     setChunks(prev => prev.filter(c => c.id !== id));
   };
 

@@ -52,7 +52,7 @@ export default function BuyerDemandsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    api.get<Demand[]>("/api/v1/buyer/demands")
+    api.get<Demand[]>("/buyer/demands")
       .then(setDemands)
       .catch(() => setDemands(MOCK))
       .finally(() => setLoading(false));
@@ -70,8 +70,8 @@ export default function BuyerDemandsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/api/v1/buyer/demands/${editId}`, form);
-      else await api.post("/api/v1/buyer/demands", form);
+      if (editId) await api.put(`/buyer/demands/${editId}`, form);
+      else await api.post("/buyer/demands", form);
       setShowModal(false);
       await load();
     } catch {
@@ -83,7 +83,7 @@ export default function BuyerDemandsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this demand?")) return;
-    await api.delete(`/api/v1/buyer/demands/${id}`).catch(()=>{});
+    await api.delete(`/buyer/demands/${id}`).catch(()=>{});
     setDemands(prev => prev.filter(d => d.id !== id));
   };
 

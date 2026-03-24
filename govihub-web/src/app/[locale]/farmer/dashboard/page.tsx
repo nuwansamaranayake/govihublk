@@ -45,7 +45,7 @@ export default function FarmerDashboardPage() {
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
   useEffect(() => {
-    api.get<DashboardData>("/api/v1/farmer/dashboard")
+    api.get<DashboardData>("/farmer/dashboard")
       .then(setData)
       .catch(() => setData(MOCK))
       .finally(() => setLoading(false));

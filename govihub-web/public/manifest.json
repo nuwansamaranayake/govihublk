@@ -2,7 +2,7 @@
   "name": "GoviHub - Smart Farming Marketplace",
   "short_name": "GoviHub",
   "description": "AI-driven smart farming marketplace for Sri Lanka",
-  "start_url": "/si",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f0fdf4",
   "theme_color": "#16a34a",

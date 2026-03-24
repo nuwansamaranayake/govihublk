@@ -89,9 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
-      const tokenData = await api.post<TokenResponse>("/api/v1/auth/refresh");
+      const tokenData = await api.post<TokenResponse>("/auth/refresh");
       setAccessToken(tokenData.access_token);
-      const me = await api.get<MeResponse>("/api/v1/users/me");
+      const me = await api.get<MeResponse>("/users/me");
       setUser(mapUser(me));
       return true;
     } catch (err) {
@@ -105,12 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (code: string, redirectUri: string): Promise<void> => {
-      const tokenData = await api.post<TokenResponse>("/api/v1/auth/google/callback", {
+      const tokenData = await api.post<TokenResponse>("/auth/google/callback", {
         code,
         redirect_uri: redirectUri,
       });
       setAccessToken(tokenData.access_token);
-      const me = await api.get<MeResponse>("/api/v1/users/me");
+      const me = await api.get<MeResponse>("/users/me");
       setUser(mapUser(me));
     },
     []
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
-      await api.post("/api/v1/auth/logout");
+      await api.post("/auth/logout");
     } catch {
       // best-effort
     } finally {

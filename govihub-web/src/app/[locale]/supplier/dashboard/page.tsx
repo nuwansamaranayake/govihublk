@@ -36,7 +36,7 @@ const CATEGORY_ICON: Record<Category, string> = {
 };
 
 const MOCK: DashboardData = {
-  supplierName: "Rohan Jayasuriya",
+  supplierName: "Sunil Fernando",
   totalListings: 8,
   activeListings: 6,
   totalViews: 245,
@@ -62,7 +62,7 @@ export default function SupplierDashboardPage() {
   const greeting = hour<12 ? "Good Morning" : hour<17 ? "Good Afternoon" : "Good Evening";
 
   useEffect(() => {
-    api.get<DashboardData>("/api/v1/supplier/dashboard")
+    api.get<DashboardData>("/supplier/dashboard")
       .then(setData)
       .catch(() => setData(MOCK))
       .finally(() => setLoading(false));

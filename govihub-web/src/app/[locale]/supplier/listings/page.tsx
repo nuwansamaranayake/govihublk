@@ -54,7 +54,7 @@ export default function SupplierListingsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    api.get<Listing[]>("/api/v1/supplier/listings")
+    api.get<Listing[]>("/supplier/listings")
       .then(setListings)
       .catch(() => setListings(MOCK))
       .finally(() => setLoading(false));
@@ -72,8 +72,8 @@ export default function SupplierListingsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/api/v1/supplier/listings/${editId}`, form);
-      else await api.post("/api/v1/supplier/listings", form);
+      if (editId) await api.put(`/supplier/listings/${editId}`, form);
+      else await api.post("/supplier/listings", form);
       setShowModal(false);
       await load();
     } catch {
@@ -85,7 +85,7 @@ export default function SupplierListingsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this listing?")) return;
-    await api.delete(`/api/v1/supplier/listings/${id}`).catch(()=>{});
+    await api.delete(`/supplier/listings/${id}`).catch(()=>{});
     setListings(prev => prev.filter(l => l.id !== id));
   };
 
@@ -107,7 +107,7 @@ export default function SupplierListingsPage() {
         {(activeTab) => {
           const filtered = activeTab==="all" ? listings : listings.filter(l => l.category===activeTab);
           return (
-            <div className="px-4 py-4 space-y-3">
+            <div className="px-4 py-4 pb-20 space-y-3">
               {loading ? (
                 Array.from({length:3}).map((_,i) => (
                   <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-2">

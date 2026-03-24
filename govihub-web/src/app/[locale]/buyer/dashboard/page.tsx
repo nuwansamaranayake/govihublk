@@ -36,7 +36,7 @@ interface DashboardData {
 }
 
 const MOCK: DashboardData = {
-  buyerName: "Thilini Wickramasinghe",
+  buyerName: "Nimal Silva",
   activeDemands: 4,
   matchedFarmers: 12,
   pendingConfirmations: 3,
@@ -62,7 +62,7 @@ export default function BuyerDashboardPage() {
   const greeting = hour<12 ? "Good Morning" : hour<17 ? "Good Afternoon" : "Good Evening";
 
   useEffect(() => {
-    api.get<DashboardData>("/api/v1/buyer/dashboard")
+    api.get<DashboardData>("/buyer/dashboard")
       .then(setData)
       .catch(() => setData(MOCK))
       .finally(() => setLoading(false));

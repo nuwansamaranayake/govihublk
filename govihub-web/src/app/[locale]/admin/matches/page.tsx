@@ -52,7 +52,7 @@ export default function AdminMatchesPage() {
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
-    api.get<Match[]>("/api/v1/admin/matches")
+    api.get<Match[]>("/admin/matches")
       .then(setMatches)
       .catch(() => setMatches(MOCK))
       .finally(() => setLoading(false));
@@ -68,7 +68,7 @@ export default function AdminMatchesPage() {
     if (!selected || !resolution.trim()) return;
     setResolving(true);
     try {
-      await api.post(`/api/v1/admin/matches/${selected.id}/resolve`, { action:resolveAction, note:resolution });
+      await api.post(`/admin/matches/${selected.id}/resolve`, { action:resolveAction, note:resolution });
       const newStatus: MatchStatus = resolveAction==="cancel" ? "cancelled" : "in_transit";
       setMatches(prev => prev.map(m => m.id===selected.id ? {...m, status:newStatus} : m));
       setResolveOpen(false);

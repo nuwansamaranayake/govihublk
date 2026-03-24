@@ -43,7 +43,7 @@ let refreshPromise: Promise<string | null> | null = null;
 
 async function doRefresh(): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       credentials: "include",
     });

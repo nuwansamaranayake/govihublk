@@ -39,19 +39,19 @@ export default function FarmerNotificationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Notification[]>("/api/v1/users/me/notifications")
+    api.get<Notification[]>("/users/me/notifications")
       .then(setNotifications)
       .catch(() => setNotifications(MOCK))
       .finally(() => setLoading(false));
   }, []);
 
   const markRead = async (id: string) => {
-    await api.post(`/api/v1/users/me/notifications/${id}/read`).catch(()=>{});
+    await api.post(`/users/me/notifications/${id}/read`).catch(()=>{});
     setNotifications(prev => prev.map(n => n.id===id ? {...n, read:true} : n));
   };
 
   const markAllRead = async () => {
-    await api.post("/api/v1/users/me/notifications/read-all").catch(()=>{});
+    await api.post("/users/me/notifications/read-all").catch(()=>{});
     setNotifications(prev => prev.map(n => ({...n, read:true})));
   };
 

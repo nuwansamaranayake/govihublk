@@ -53,7 +53,7 @@ export default function FarmAdvisoryPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get<HistoryItem[]>("/api/v1/advisory/history")
+    api.get<HistoryItem[]>("/advisory/history")
       .then(setHistory)
       .catch(() => setHistory(MOCK_HISTORY))
       .finally(() => setHistoryLoading(false));
@@ -70,7 +70,7 @@ export default function FarmAdvisoryPage() {
     setInput("");
     setLoading(true);
     try {
-      const res = await api.post<{ answer:string; sources?:string[] }>("/api/v1/advisory/ask", { question });
+      const res = await api.post<{ answer:string; sources?:string[] }>("/advisory/ask", { question });
       const assistantMsg: Message = {
         id: String(Date.now()+1),
         role:"assistant",

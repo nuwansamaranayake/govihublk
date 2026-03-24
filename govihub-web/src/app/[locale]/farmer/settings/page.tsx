@@ -44,7 +44,7 @@ export default function FarmerSettingsPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
-    api.get<UserProfile>("/api/v1/users/me/profile")
+    api.get<UserProfile>("/users/me/profile")
       .then(setProfile)
       .catch(() => setProfile(MOCK_PROFILE))
       .finally(() => setLoading(false));
@@ -55,7 +55,7 @@ export default function FarmerSettingsPage() {
     if (!profile) return;
     setSaving(true);
     try {
-      await api.put("/api/v1/users/me/profile", profile);
+      await api.put("/users/me/profile", profile);
     } catch {
       // optimistic
     } finally {
@@ -77,7 +77,7 @@ export default function FarmerSettingsPage() {
 
   const handleDeactivate = async () => {
     try {
-      await api.post("/api/v1/users/me/deactivate");
+      await api.post("/users/me/deactivate");
     } catch {}
     setConfirmDeactivate(false);
   };

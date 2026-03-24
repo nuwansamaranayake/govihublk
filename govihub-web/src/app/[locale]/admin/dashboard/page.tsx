@@ -66,8 +66,8 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      api.get<StatsData>("/api/v1/admin/dashboard"),
-      api.get<ActivityItem[]>("/api/v1/admin/activity"),
+      api.get<StatsData>("/admin/dashboard"),
+      api.get<ActivityItem[]>("/admin/activity"),
     ])
       .then(([s, a]) => { setStats(s); setActivity(a); })
       .catch(() => { setStats(MOCK_STATS); setActivity(MOCK_ACTIVITY); })

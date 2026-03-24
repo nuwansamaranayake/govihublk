@@ -52,7 +52,7 @@ export default function BuyerMatchesPage() {
   const [actionLoading, setActionLoading] = useState<string|null>(null);
 
   useEffect(() => {
-    api.get<Match[]>("/api/v1/buyer/matches")
+    api.get<Match[]>("/buyer/matches")
       .then(setMatches)
       .catch(() => setMatches(MOCK))
       .finally(() => setLoading(false));
@@ -61,8 +61,8 @@ export default function BuyerMatchesPage() {
   const handleAction = async (matchId: string, action: string) => {
     setActionLoading(`${matchId}-${action}`);
     try {
-      await api.post(`/api/v1/buyer/matches/${matchId}/${action.toLowerCase()}`);
-      const updated = await api.get<Match[]>("/api/v1/buyer/matches");
+      await api.post(`/buyer/matches/${matchId}/${action.toLowerCase()}`);
+      const updated = await api.get<Match[]>("/buyer/matches");
       setMatches(updated);
     } catch {
       const map: Record<string, MatchStatus> = { Accept:"buyer_accepted", Decline:"cancelled", Confirm:"buyer_accepted", Complete:"in_transit" };

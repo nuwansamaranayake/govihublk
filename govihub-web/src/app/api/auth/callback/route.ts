@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Exchange code with backend
-    const response = await fetch(`${API_BASE}/api/v1/auth/google/callback`, {
+    const response = await fetch(`${API_BASE}/auth/google/callback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, redirect_uri: redirectUri, state }),

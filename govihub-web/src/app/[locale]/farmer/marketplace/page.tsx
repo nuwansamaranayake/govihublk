@@ -49,7 +49,7 @@ export default function FarmerMarketplacePage() {
   const [category, setCategory] = useState<Category>("all");
 
   useEffect(() => {
-    api.get<Supplier[]>("/api/v1/marketplace/suppliers")
+    api.get<Supplier[]>("/marketplace/suppliers")
       .then(setSuppliers)
       .catch(() => setSuppliers(MOCK_SUPPLIERS))
       .finally(() => setLoading(false));

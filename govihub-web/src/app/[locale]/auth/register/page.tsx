@@ -101,7 +101,7 @@ export default function RegisterPage() {
     setServerError(null);
     try {
       const data = await api.post<{ role: string; name: string }>(
-        "/api/v1/users/complete-registration",
+        "/users/complete-registration",
         {
           role: selectedRole,
           name: form.name.trim(),
