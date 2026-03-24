@@ -1,0 +1,70 @@
+/* Google Fonts: Inter, Noto Sans Sinhala, Noto Sans Tamil */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Sinhala:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #16a34a;
+    --color-accent: #d4a017;
+    --font-inter: "Inter", sans-serif;
+    --font-sinhala: "Noto Sans Sinhala", sans-serif;
+    --font-tamil: "Noto Sans Tamil", sans-serif;
+  }
+
+  html {
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* Support dynamic viewport units */
+    height: 100%;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-900 antialiased;
+    font-family: "Inter", "Noto Sans Sinhala", "Noto Sans Tamil", sans-serif;
+    min-height: 100%;
+    /* Safe area for notched phones */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Sinhala / Tamil line-height overrides ─────────────────────────────── */
+  :lang(si) {
+    font-family: "Noto Sans Sinhala", "Inter", sans-serif;
+    line-height: 1.8;
+    word-spacing: 0.05em;
+  }
+
+  :lang(ta) {
+    font-family: "Noto Sans Tamil", "Inter", sans-serif;
+    line-height: 1.85;
+    word-spacing: 0.03em;
+  }
+
+  /* ── Focus styles ───────────────────────────────────────────────────────── */
+  :focus-visible {
+    outline: 2px solid #16a34a;
+    outline-offset: 2px;
+  }
+
+  /* ── Scrollbar utilities ────────────────────────────────────────────────── */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* ── Safe area bottom padding (BottomNav) ───────────────────────────────── */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Tap highlight removal on mobile ────────────────────────────────────── */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
