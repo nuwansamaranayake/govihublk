@@ -1,4 +1,6 @@
-.PHONY: dev prod down logs migrate seed test shell-api shell-db backup restore
+.PHONY: dev prod down logs migrate seed test shell-api shell-db backup restore \
+       local-setup local-up local-down local-restart local-logs local-logs-api \
+       local-logs-web local-psql local-redis local-test-api local-fresh
 
 dev:
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -37,3 +39,41 @@ restore:
 	if [ -z "$$LATEST" ]; then echo "No backup found"; exit 1; fi; \
 	echo "Restoring from $$LATEST"; \
 	gunzip -c "$$LATEST" | docker compose exec -T postgres psql -U govihub -d govihub
+
+# ============================================
+# Local development (standalone docker-compose.dev.yml)
+# ============================================
+
+local-setup:
+	@bash scripts/local-setup.sh
+
+local-up:
+	docker compose -f docker-compose.dev.yml up -d
+
+local-down:
+	docker compose -f docker-compose.dev.yml down
+
+local-restart:
+	docker compose -f docker-compose.dev.yml restart govihub-api govihub-web
+
+local-logs:
+	docker compose -f docker-compose.dev.yml logs -f
+
+local-logs-api:
+	docker compose -f docker-compose.dev.yml logs -f govihub-api
+
+local-logs-web:
+	docker compose -f docker-compose.dev.yml logs -f govihub-web
+
+local-psql:
+	docker compose -f docker-compose.dev.yml exec postgres psql -U govihub -d govihub
+
+local-redis:
+	docker compose -f docker-compose.dev.yml exec redis redis-cli
+
+local-test-api:
+	@bash scripts/test-api.sh
+
+local-fresh:
+	docker compose -f docker-compose.dev.yml down -v
+	@bash scripts/local-setup.sh

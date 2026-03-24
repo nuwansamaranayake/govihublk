@@ -9,29 +9,76 @@ services:
     volumes:
       - ./govihub-api:/app
       - ./ml/models:/app/ml/models
-    environment:
-      - APP_ENV=development
-      - APP_DEBUG=true
+      - ./uploads:/app/uploads
+      - ./knowledge_base:/app/knowledge_base
+    env_file: .env
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - govihub-net
 
   govihub-web:
     build:
       context: ./govihub-web
       dockerfile: Dockerfile.dev
-    command: npm run dev
+    command: npm run dev -- -H 0.0.0.0
     volumes:
       - ./govihub-web:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
+      - /app/.next
+    env_file: .env.frontend
     ports:
       - "3000:3000"
+    depends_on:
+      - govihub-api
+    networks:
+      - govihub-net
 
   postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: govihub
+      POSTGRES_USER: govihub
+      POSTGRES_PASSWORD: govihub_dev_2026
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U govihub -d govihub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - govihub-net
 
   redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata_dev:/data
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - govihub-net
+
+volumes:
+  pgdata_dev:
+    driver: local
+  redisdata_dev:
+    driver: local
+
+networks:
+  govihub-net:
+    driver: bridge

@@ -127,6 +127,12 @@ def create_app() -> FastAPI:
     app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
     app.include_router(mcp_router, prefix="/mcp", tags=["MCP"])
 
+    # Dev auth bypass — only in development mode
+    if settings.APP_ENV == "development":
+        from app.auth.dev_router import router as dev_auth_router
+        app.include_router(dev_auth_router, prefix="/api/v1/auth", tags=["Dev Auth"])
+        logger.warning("dev_auth_enabled", note="Development-only login bypass is active")
+
     return app
 
 

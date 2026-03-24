@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://govihub:password@postgres:5432/govihub"
+    DATABASE_URL_SYNC: str = ""
     DB_PASS: str = "password"
 
     # Redis
@@ -64,6 +65,8 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         """Synchronous database URL for Alembic."""
+        if self.DATABASE_URL_SYNC:
+            return self.DATABASE_URL_SYNC
         return self.DATABASE_URL.replace("+asyncpg", "")
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
