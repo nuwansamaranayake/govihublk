@@ -26,10 +26,10 @@ This applies to ALL projects, not just GoviHub.
 
 | Service | Port | Health |
 |---------|------|--------|
-| govihub-api (FastAPI) | 8000 | `GET /api/v1/health` |
+| govihub-api (FastAPI) | 8002 | `GET /api/v1/health` |
 | govihub-web (Next.js) | 6000 | HTTP response |
-| postgres (PostGIS 16) | 5432 | `pg_isready` |
-| redis (Redis 7) | 6379 | `redis-cli ping` |
+| postgres (PostGIS 16) | 5434 | `pg_isready` |
+| redis (Redis 7) | 6380 | `redis-cli ping` |
 
 ### URLs
 
@@ -37,14 +37,14 @@ This applies to ALL projects, not just GoviHub.
 |------|-----|
 | Frontend | http://localhost:6000 |
 | Dev Login | http://localhost:6000/en/auth/dev-login |
-| API | http://localhost:8000 |
-| Swagger Docs | http://localhost:8000/docs |
-| Health | http://localhost:8000/api/v1/health |
+| API | http://localhost:8002 |
+| Swagger Docs | http://localhost:8002/docs |
+| Health | http://localhost:8002/api/v1/health |
 
 ### Database (local dev only)
 
 ```
-Host: localhost:5432 | DB: govihub | User: govihub | Pass: govihub_dev_2026
+Host: localhost:5434 | DB: govihub | User: govihub | Pass: govihub_dev_2026
 ```
 
 ### Environment
@@ -130,10 +130,10 @@ bash scripts/test-api.sh
 ### Dev Auth (no Google OAuth needed)
 
 ```bash
-curl -s -X POST http://localhost:8000/api/v1/auth/dev/login/farmer
-curl -s -X POST http://localhost:8000/api/v1/auth/dev/login/buyer
-curl -s -X POST http://localhost:8000/api/v1/auth/dev/login/supplier
-curl -s -X POST http://localhost:8000/api/v1/auth/dev/login/admin
+curl -s -X POST http://localhost:8002/api/v1/auth/dev/login/farmer
+curl -s -X POST http://localhost:8002/api/v1/auth/dev/login/buyer
+curl -s -X POST http://localhost:8002/api/v1/auth/dev/login/supplier
+curl -s -X POST http://localhost:8002/api/v1/auth/dev/login/admin
 ```
 
 ### Hot Reload
@@ -146,7 +146,7 @@ curl -s -X POST http://localhost:8000/api/v1/auth/dev/login/admin
 
 1. `docker compose -f docker-compose.dev.yml ps` — are all containers running?
 2. `docker compose -f docker-compose.dev.yml logs --tail=50 <service>` — what's the error?
-3. Health check: `curl -s http://localhost:8000/api/v1/health`
+3. Health check: `curl -s http://localhost:8002/api/v1/health`
 4. DB connection: `docker compose -f docker-compose.dev.yml exec postgres pg_isready -U govihub`
 5. Redis: `docker compose -f docker-compose.dev.yml exec redis redis-cli ping`
 6. If DB migration issue: `docker compose -f docker-compose.dev.yml exec govihub-api alembic current`
