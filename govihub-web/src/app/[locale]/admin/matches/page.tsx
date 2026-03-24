@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 
-type MatchStatus = "proposed"|"active"|"completed"|"disputed"|"cancelled";
+type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
 interface Match {
   id: string;
@@ -30,14 +30,14 @@ interface Match {
 }
 
 const MOCK: Match[] = [
-  { id:"1", farmerName:"Kamal Perera", buyerName:"Colombo Fresh Mart", crop:"Tomato", quantity:300, unit:"kg", price:115, score:92, status:"active", createdAt:"2026-03-20" },
+  { id:"1", farmerName:"Kamal Perera", buyerName:"Colombo Fresh Mart", crop:"Tomato", quantity:300, unit:"kg", price:115, score:92, status:"farmer_accepted", createdAt:"2026-03-20" },
   { id:"2", farmerName:"Nimal Silva", buyerName:"Lanka Supermart", crop:"Cabbage", quantity:200, unit:"kg", price:80, score:78, status:"disputed", createdAt:"2026-03-18", disputeReason:"Quality did not match description" },
-  { id:"3", farmerName:"Saman Fernando", buyerName:"Green Foods Ltd", crop:"Carrot", quantity:150, unit:"kg", price:150, score:85, status:"completed", createdAt:"2026-03-10" },
+  { id:"3", farmerName:"Saman Fernando", buyerName:"Green Foods Ltd", crop:"Carrot", quantity:150, unit:"kg", price:150, score:85, status:"in_transit", createdAt:"2026-03-10" },
   { id:"4", farmerName:"Ranjith Kumar", buyerName:"City Vegetables", crop:"Beans", quantity:100, unit:"kg", price:195, score:70, status:"proposed", createdAt:"2026-03-22" },
 ];
 
-const STATUS_COLOR: Record<MatchStatus, "green"|"gold"|"gray"|"red"|"orange"> = {
-  proposed:"gold", active:"green", completed:"gray", disputed:"red", cancelled:"gray",
+const STATUS_COLOR: Record<MatchStatus, "green"|"gold"|"gray"|"red"|"orange"|"blue"> = {
+  proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"red", cancelled:"gray",
 };
 
 export default function AdminMatchesPage() {
@@ -69,18 +69,18 @@ export default function AdminMatchesPage() {
     setResolving(true);
     try {
       await api.post(`/api/v1/admin/matches/${selected.id}/resolve`, { action:resolveAction, note:resolution });
-      const newStatus: MatchStatus = resolveAction==="cancel" ? "cancelled" : "completed";
+      const newStatus: MatchStatus = resolveAction==="cancel" ? "cancelled" : "in_transit";
       setMatches(prev => prev.map(m => m.id===selected.id ? {...m, status:newStatus} : m));
       setResolveOpen(false);
     } catch {
-      setMatches(prev => prev.map(m => m.id===selected.id ? {...m, status:"completed"} : m));
+      setMatches(prev => prev.map(m => m.id===selected.id ? {...m, status:"in_transit"} : m));
       setResolveOpen(false);
     } finally { setResolving(false); }
   };
 
   const scoreColor = (s: number) => s>=85?"text-green-600":s>=70?"text-amber-500":"text-red-500";
 
-  const allStatuses: MatchStatus[] = ["proposed","active","completed","disputed","cancelled"];
+  const allStatuses: MatchStatus[] = ["proposed","farmer_accepted","buyer_accepted","in_transit","disputed","cancelled"];
   const tabs = [
     { key:"all", label:"All", badge: matches.length },
     ...allStatuses.map(s => ({

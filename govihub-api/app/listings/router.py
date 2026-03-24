@@ -197,7 +197,6 @@ async def browse_harvests(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
-        status="active",
     )
     listings, total = await svc.list_all_harvests(filters=filters, page=page, size=size)
     return {
@@ -238,7 +237,7 @@ async def update_harvest_listing(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
-    """Update a harvest listing. Owner only; only draft/active listings."""
+    """Update a harvest listing. Owner only; only planned/ready listings."""
     svc = ListingService(db)
     listing = await svc.update_harvest(
         listing_id=listing_id,
@@ -279,7 +278,7 @@ async def delete_harvest_listing(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
-    """Delete a harvest listing. Only draft listings can be hard-deleted."""
+    """Delete a harvest listing. Only planned listings can be hard-deleted."""
     svc = ListingService(db)
     await svc.delete_harvest(listing_id=listing_id, farmer_id=current_user.id)
 
@@ -372,7 +371,6 @@ async def browse_demands(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
-        status="active",
     )
     postings, total = await svc.list_all_demands(filters=filters, page=page, size=size)
     return {
@@ -413,7 +411,7 @@ async def update_demand_posting(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
-    """Update a demand posting. Owner only; only draft/active postings."""
+    """Update a demand posting. Owner only; only open/reviewing postings."""
     svc = ListingService(db)
     posting = await svc.update_demand(
         posting_id=posting_id,
@@ -454,7 +452,7 @@ async def delete_demand_posting(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
-    """Delete a demand posting. Only draft postings can be hard-deleted."""
+    """Delete a demand posting. Only open postings can be hard-deleted."""
     svc = ListingService(db)
     await svc.delete_demand(posting_id=posting_id, buyer_id=current_user.id)
 

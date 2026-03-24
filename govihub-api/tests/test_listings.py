@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import pytest
 
 from app.auth.service import create_access_token
-from app.listings.models import DemandStatus, HarvestListing, ListingStatus
+from app.listings.models import DemandStatus, HarvestListing, HarvestStatus
 
 
 def _auth(token: str) -> dict:
@@ -186,18 +186,27 @@ async def test_delete_own_demand_posting(client, buyer_user, demand_posting):
 # ---------------------------------------------------------------------------
 
 def test_listing_status_enum_values():
-    """ListingStatus contains expected transitions."""
-    statuses = {s.value for s in ListingStatus}
-    assert "draft" in statuses
-    assert "active" in statuses
-    assert "matched" in statuses
-    assert "sold" in statuses
+    """HarvestStatus contains expected transitions."""
+    statuses = {s.value for s in HarvestStatus}
+    assert "planned" in statuses
+    assert "ready" in statuses
+    assert "fulfilled" in statuses
     assert "expired" in statuses
     assert "cancelled" in statuses
+    assert "draft" not in statuses
+    assert "active" not in statuses
+    assert "sold" not in statuses
 
 
 def test_demand_status_enum_values():
-    """DemandStatus has fulfilled instead of sold."""
+    """DemandStatus has open, reviewing, confirmed, closed states."""
     statuses = {s.value for s in DemandStatus}
+    assert "open" in statuses
+    assert "reviewing" in statuses
+    assert "confirmed" in statuses
+    assert "closed" in statuses
     assert "fulfilled" in statuses
+    assert "draft" not in statuses
+    assert "active" not in statuses
+    assert "matched" not in statuses
     assert "sold" not in statuses

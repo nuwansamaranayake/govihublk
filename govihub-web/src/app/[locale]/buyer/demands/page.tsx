@@ -25,22 +25,22 @@ interface Demand {
   startDate: string;
   endDate: string;
   recurring: boolean;
-  status: "active"|"matched"|"completed"|"expired";
+  status: "open"|"reviewing"|"confirmed"|"closed"|"expired";
 }
 
 const CROPS = ["Tomato","Cabbage","Carrot","Beans","Potato","Onion","Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish"];
 const UNITS = ["kg","ton","crate","bunch","bag"];
 
 const MOCK: Demand[] = [
-  { id:"1", crop:"Tomato", quantity:500, unit:"kg", minPrice:100, maxPrice:130, location:"Colombo", radius:50, startDate:"2026-04-01", endDate:"2026-04-30", recurring:true, status:"active" },
-  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", minPrice:70, maxPrice:90, location:"Gampaha", radius:30, startDate:"2026-04-10", endDate:"2026-04-20", recurring:false, status:"matched" },
-  { id:"3", crop:"Carrot", quantity:150, unit:"kg", minPrice:140, maxPrice:165, location:"Kandy", radius:20, startDate:"2026-03-01", endDate:"2026-03-31", recurring:false, status:"completed" },
+  { id:"1", crop:"Tomato", quantity:500, unit:"kg", minPrice:100, maxPrice:130, location:"Colombo", radius:50, startDate:"2026-04-01", endDate:"2026-04-30", recurring:true, status:"open" },
+  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", minPrice:70, maxPrice:90, location:"Gampaha", radius:30, startDate:"2026-04-10", endDate:"2026-04-20", recurring:false, status:"reviewing" },
+  { id:"3", crop:"Carrot", quantity:150, unit:"kg", minPrice:140, maxPrice:165, location:"Kandy", radius:20, startDate:"2026-03-01", endDate:"2026-03-31", recurring:false, status:"closed" },
 ];
 
 const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", minPrice:"", maxPrice:"", location:"", radius:"50", startDate:"", endDate:"", recurring:false };
 type FormData = typeof EMPTY_FORM;
 
-const STATUS_COLOR: Record<string,"green"|"gold"|"gray"|"red"> = { active:"green", matched:"gold", completed:"gray", expired:"red" };
+const STATUS_COLOR: Record<string,"green"|"gold"|"gray"|"red"|"blue"|"darkgreen"> = { open:"blue", reviewing:"gold", confirmed:"darkgreen", closed:"gray", expired:"gray" };
 
 export default function BuyerDemandsPage() {
   const t = useTranslations();
@@ -75,7 +75,7 @@ export default function BuyerDemandsPage() {
       setShowModal(false);
       await load();
     } catch {
-      const item: Demand = { id: editId||String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, minPrice:Number(form.minPrice), maxPrice:Number(form.maxPrice), location:form.location, radius:Number(form.radius), startDate:form.startDate, endDate:form.endDate, recurring:form.recurring, status:"active" };
+      const item: Demand = { id: editId||String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, minPrice:Number(form.minPrice), maxPrice:Number(form.maxPrice), location:form.location, radius:Number(form.radius), startDate:form.startDate, endDate:form.endDate, recurring:form.recurring, status:"open" };
       setDemands(prev => editId ? prev.map(d => d.id===editId ? item : d) : [...prev, item]);
       setShowModal(false);
     } finally { setSubmitting(false); }
@@ -91,9 +91,10 @@ export default function BuyerDemandsPage() {
 
   const tabs = [
     { key:"all", label:"All", badge: demands.length },
-    { key:"active", label:"Active", badge: demands.filter(d=>d.status==="active").length },
-    { key:"matched", label:"Matched", badge: demands.filter(d=>d.status==="matched").length },
-    { key:"completed", label:"Completed" },
+    { key:"open", label:"Open", badge: demands.filter(d=>d.status==="open").length },
+    { key:"reviewing", label:"Reviewing", badge: demands.filter(d=>d.status==="reviewing").length },
+    { key:"confirmed", label:"Confirmed", badge: demands.filter(d=>d.status==="confirmed").length },
+    { key:"closed", label:"Closed" },
   ];
 
   return (

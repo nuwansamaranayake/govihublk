@@ -14,7 +14,7 @@ from app.listings.models import (
     DemandPosting,
     DemandStatus,
     HarvestListing,
-    ListingStatus,
+    HarvestStatus,
 )
 
 logger = structlog.get_logger()
@@ -23,30 +23,21 @@ logger = structlog.get_logger()
 # Status transition maps
 # ---------------------------------------------------------------------------
 
-HARVEST_TRANSITIONS: dict[ListingStatus, set[ListingStatus]] = {
-    ListingStatus.draft: {ListingStatus.active, ListingStatus.cancelled},
-    ListingStatus.active: {
-        ListingStatus.matched,
-        ListingStatus.sold,
-        ListingStatus.expired,
-        ListingStatus.cancelled,
-    },
-    ListingStatus.matched: {ListingStatus.sold, ListingStatus.active, ListingStatus.cancelled},
-    ListingStatus.sold: set(),
-    ListingStatus.expired: set(),
-    ListingStatus.cancelled: set(),
+HARVEST_TRANSITIONS: dict[HarvestStatus, set[HarvestStatus]] = {
+    HarvestStatus.planned: {HarvestStatus.ready, HarvestStatus.cancelled},
+    HarvestStatus.ready: {HarvestStatus.matched, HarvestStatus.cancelled},
+    HarvestStatus.matched: {HarvestStatus.fulfilled, HarvestStatus.cancelled},
+    HarvestStatus.fulfilled: set(),
+    HarvestStatus.expired: set(),
+    HarvestStatus.cancelled: set(),
 }
 
 DEMAND_TRANSITIONS: dict[DemandStatus, set[DemandStatus]] = {
-    DemandStatus.draft: {DemandStatus.active, DemandStatus.cancelled},
-    DemandStatus.active: {
-        DemandStatus.matched,
-        DemandStatus.fulfilled,
-        DemandStatus.expired,
-        DemandStatus.cancelled,
-    },
-    DemandStatus.matched: {DemandStatus.fulfilled, DemandStatus.active, DemandStatus.cancelled},
-    DemandStatus.fulfilled: set(),
+    DemandStatus.open: {DemandStatus.reviewing, DemandStatus.cancelled},
+    DemandStatus.reviewing: {DemandStatus.confirmed, DemandStatus.open, DemandStatus.cancelled},
+    DemandStatus.confirmed: {DemandStatus.fulfilled, DemandStatus.cancelled},
+    DemandStatus.fulfilled: {DemandStatus.closed},
+    DemandStatus.closed: set(),
     DemandStatus.expired: set(),
     DemandStatus.cancelled: set(),
 }
@@ -74,7 +65,7 @@ class ListingService:
     # -----------------------------------------------------------------------
 
     async def create_harvest(self, farmer_id: UUID, data: dict) -> HarvestListing:
-        """Create a new harvest listing (starts as draft)."""
+        """Create a new harvest listing (starts as planned)."""
         lat = data.pop("latitude", None)
         lng = data.pop("longitude", None)
 
@@ -131,7 +122,7 @@ class ListingService:
 
         if status:
             try:
-                status_enum = ListingStatus(status)
+                status_enum = HarvestStatus(status)
             except ValueError:
                 raise ValidationError(detail=f"Invalid status: {status}")
             query = query.where(HarvestListing.status == status_enum)
@@ -166,9 +157,9 @@ class ListingService:
         max_price = filters.get("max_price")
         available_from = filters.get("available_from")
         available_until = filters.get("available_until")
-        status = filters.get("status", "active")
+        status = filters.get("status")
 
-        # Base query — only active listings by default for browse
+        # Base query — only planned/ready listings by default for browse
         query = (
             select(HarvestListing)
             .options(selectinload(HarvestListing.crop))
@@ -179,14 +170,14 @@ class ListingService:
         # Status filter
         if status:
             try:
-                status_enum = ListingStatus(status)
+                status_enum = HarvestStatus(status)
             except ValueError:
                 raise ValidationError(detail=f"Invalid status: {status}")
             query = query.where(HarvestListing.status == status_enum)
             count_query = count_query.where(HarvestListing.status == status_enum)
         else:
-            query = query.where(HarvestListing.status == ListingStatus.active)
-            count_query = count_query.where(HarvestListing.status == ListingStatus.active)
+            query = query.where(HarvestListing.status.in_([HarvestStatus.planned, HarvestStatus.ready]))
+            count_query = count_query.where(HarvestListing.status.in_([HarvestStatus.planned, HarvestStatus.ready]))
 
         if crop_id:
             query = query.where(HarvestListing.crop_id == crop_id)
@@ -261,7 +252,7 @@ class ListingService:
         if listing.farmer_id != farmer_id:
             raise ForbiddenError(detail="You do not own this listing")
 
-        if listing.status not in (ListingStatus.draft, ListingStatus.active):
+        if listing.status not in (HarvestStatus.planned, HarvestStatus.ready):
             raise ValidationError(
                 detail=f"Cannot update listing in '{listing.status.value}' status"
             )
@@ -297,7 +288,7 @@ class ListingService:
             raise ForbiddenError(detail="You do not own this listing")
 
         try:
-            target = ListingStatus(new_status)
+            target = HarvestStatus(new_status)
         except ValueError:
             raise ValidationError(detail=f"Invalid status: {new_status}")
 
@@ -321,17 +312,17 @@ class ListingService:
         return listing
 
     async def delete_harvest(self, listing_id: UUID, farmer_id: UUID) -> None:
-        """Delete a harvest listing. Only draft listings can be hard-deleted."""
+        """Delete a harvest listing. Only planned listings can be hard-deleted."""
         listing = await self.get_harvest(listing_id)
 
         if listing.farmer_id != farmer_id:
             raise ForbiddenError(detail="You do not own this listing")
 
-        if listing.status != ListingStatus.draft:
+        if listing.status != HarvestStatus.planned:
             # Soft cancel instead of hard delete
             raise ValidationError(
                 detail=(
-                    "Only draft listings can be deleted. "
+                    "Only planned listings can be deleted. "
                     "Cancel this listing by updating its status to 'cancelled'."
                 )
             )
@@ -434,7 +425,7 @@ class ListingService:
         quality_grade = filters.get("quality_grade")
         max_price = filters.get("max_price")
         needed_by_before = filters.get("needed_by_before")
-        status = filters.get("status", "active")
+        status = filters.get("status")
 
         query = (
             select(DemandPosting)
@@ -451,8 +442,8 @@ class ListingService:
             query = query.where(DemandPosting.status == status_enum)
             count_query = count_query.where(DemandPosting.status == status_enum)
         else:
-            query = query.where(DemandPosting.status == DemandStatus.active)
-            count_query = count_query.where(DemandPosting.status == DemandStatus.active)
+            query = query.where(DemandPosting.status.in_([DemandStatus.open, DemandStatus.reviewing]))
+            count_query = count_query.where(DemandPosting.status.in_([DemandStatus.open, DemandStatus.reviewing]))
 
         if crop_id:
             query = query.where(DemandPosting.crop_id == crop_id)
@@ -511,7 +502,7 @@ class ListingService:
         if posting.buyer_id != buyer_id:
             raise ForbiddenError(detail="You do not own this demand posting")
 
-        if posting.status not in (DemandStatus.draft, DemandStatus.active):
+        if posting.status not in (DemandStatus.open, DemandStatus.reviewing):
             raise ValidationError(
                 detail=f"Cannot update demand posting in '{posting.status.value}' status"
             )
@@ -570,16 +561,16 @@ class ListingService:
         return posting
 
     async def delete_demand(self, posting_id: UUID, buyer_id: UUID) -> None:
-        """Delete a demand posting. Only draft postings can be hard-deleted."""
+        """Delete a demand posting. Only open postings can be hard-deleted."""
         posting = await self.get_demand(posting_id)
 
         if posting.buyer_id != buyer_id:
             raise ForbiddenError(detail="You do not own this demand posting")
 
-        if posting.status != DemandStatus.draft:
+        if posting.status != DemandStatus.open:
             raise ValidationError(
                 detail=(
-                    "Only draft postings can be deleted. "
+                    "Only open postings can be deleted. "
                     "Cancel this posting by updating its status to 'cancelled'."
                 )
             )

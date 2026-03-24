@@ -73,7 +73,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "status": {
                     "type": "string",
-                    "description": "Listing status filter (e.g. active, matched, sold)",
+                    "description": "Listing status filter (harvest: planned, ready, matched, fulfilled; demand: open, reviewing, confirmed, fulfilled)",
                 },
                 "district": {
                     "type": "string",
@@ -791,7 +791,7 @@ async def _handle_get_platform_stats(params: dict) -> dict:
         listing_stmt = text("""
             SELECT COUNT(*) AS harvest_active
             FROM harvest_listings
-            WHERE status = 'active'
+            WHERE status IN ('planned', 'ready')
         """)
         r2 = await session.execute(listing_stmt)
         harvest_active = r2.scalar()
@@ -799,7 +799,7 @@ async def _handle_get_platform_stats(params: dict) -> dict:
         demand_stmt = text("""
             SELECT COUNT(*) AS demand_active
             FROM demand_postings
-            WHERE status = 'active'
+            WHERE status IN ('open', 'reviewing')
         """)
         r3 = await session.execute(demand_stmt)
         demand_active = r3.scalar()
@@ -955,7 +955,7 @@ async def _handle_get_farmer_profile(params: dict) -> dict:
         listing_stmt = text("""
             SELECT COUNT(*) AS active_listings
             FROM harvest_listings
-            WHERE farmer_id = :user_id AND status = 'active'
+            WHERE farmer_id = :user_id AND status IN ('planned', 'ready')
         """)
         r2 = await session.execute(listing_stmt, {"user_id": user_id})
         active_listings = r2.scalar()

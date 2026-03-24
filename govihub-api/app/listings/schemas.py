@@ -85,7 +85,7 @@ class HarvestListingUpdate(BaseModel):
 class HarvestStatusUpdate(BaseModel):
     status: str = Field(
         ...,
-        description="New status: draft, active, matched, sold, expired, cancelled",
+        description="New status: planned, ready, matched, fulfilled, expired, cancelled",
     )
 
 
@@ -199,7 +199,7 @@ class DemandPostingUpdate(BaseModel):
 class DemandStatusUpdate(BaseModel):
     status: str = Field(
         ...,
-        description="New status: draft, active, matched, fulfilled, expired, cancelled",
+        description="New status: open, reviewing, confirmed, fulfilled, closed, expired, cancelled",
     )
 
 

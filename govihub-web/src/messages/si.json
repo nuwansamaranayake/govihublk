@@ -155,17 +155,21 @@
     "openDisputes": "විවෘත ආරවුල්"
   },
   "status": {
-    "planned": "සැලසුම්ගත",
+    "planned": "සැලසුම් කළ",
     "ready": "සූදානම්",
-    "matched": "ගැළපී ඇත",
-    "confirmed": "තහවුරු කළ",
+    "matched": "ගැලපුණු",
     "fulfilled": "සම්පූර්ණ කළ",
-    "cancelled": "අවලංගු",
-    "disputed": "ආරවුල්",
-    "pending": "බලාපොරොත්තු",
-    "active": "ක්‍රියාකාරී",
-    "inactive": "අක්‍රිය",
-    "resolved": "විසඳා ඇත"
+    "expired": "කල් ඉකුත් වූ",
+    "cancelled": "අවලංගු කළ",
+    "open": "විවෘත",
+    "reviewing": "සමාලෝචනය",
+    "confirmed": "තහවුරු කළ",
+    "closed": "වසා ඇත",
+    "proposed": "යෝජිත",
+    "farmer_accepted": "ගොවියා පිළිගත්",
+    "buyer_accepted": "ගැනුම්කරු පිළිගත්",
+    "in_transit": "ප්‍රවාහනයේ",
+    "disputed": "ආරවුල්"
   },
   "listing": {
     "title": "දැන්වීම",

@@ -23,20 +23,21 @@ class CropCategory(str, enum.Enum):
     spice = "spice"
 
 
-class ListingStatus(str, enum.Enum):
-    draft = "draft"
-    active = "active"
+class HarvestStatus(str, enum.Enum):
+    planned = "planned"
+    ready = "ready"
     matched = "matched"
-    sold = "sold"
+    fulfilled = "fulfilled"
     expired = "expired"
     cancelled = "cancelled"
 
 
 class DemandStatus(str, enum.Enum):
-    draft = "draft"
-    active = "active"
-    matched = "matched"
+    open = "open"
+    reviewing = "reviewing"
+    confirmed = "confirmed"
     fulfilled = "fulfilled"
+    closed = "closed"
     expired = "expired"
     cancelled = "cancelled"
 
@@ -77,10 +78,10 @@ class HarvestListing(Base):
     location: Mapped[Optional[str]] = mapped_column(Geography("POINT", srid=4326), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     images: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    status: Mapped[ListingStatus] = mapped_column(
-        Enum(ListingStatus, name="listing_status", create_constraint=True),
-        default=ListingStatus.draft,
-        server_default="draft",
+    status: Mapped[HarvestStatus] = mapped_column(
+        Enum(HarvestStatus, name="harvest_status", create_constraint=True),
+        default=HarvestStatus.planned,
+        server_default="planned",
         index=True,
     )
     is_organic: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -93,7 +94,7 @@ class HarvestListing(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('draft', 'active', 'matched', 'sold', 'expired', 'cancelled')",
+            "status IN ('planned', 'ready', 'matched', 'fulfilled', 'expired', 'cancelled')",
             name="harvest_listing_status_check",
         ),
         Index("ix_harvest_listings_crop_status", "crop_id", "status"),
@@ -120,8 +121,8 @@ class DemandPosting(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[DemandStatus] = mapped_column(
         Enum(DemandStatus, name="demand_status", create_constraint=True),
-        default=DemandStatus.draft,
-        server_default="draft",
+        default=DemandStatus.open,
+        server_default="open",
         index=True,
     )
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -133,7 +134,7 @@ class DemandPosting(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('draft', 'active', 'matched', 'fulfilled', 'expired', 'cancelled')",
+            "status IN ('open', 'reviewing', 'confirmed', 'fulfilled', 'closed', 'expired', 'cancelled')",
             name="demand_posting_status_check",
         ),
         Index("ix_demand_postings_crop_status", "crop_id", "status"),

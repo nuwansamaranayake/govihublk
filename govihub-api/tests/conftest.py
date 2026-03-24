@@ -280,7 +280,7 @@ async def crop_taxonomy(db_session: AsyncSession):
 @pytest_asyncio.fixture
 async def harvest_listing(db_session: AsyncSession, farmer_user, crop_taxonomy):
     """Create a test harvest listing."""
-    from app.listings.models import HarvestListing, ListingStatus
+    from app.listings.models import HarvestListing, HarvestStatus
 
     listing = HarvestListing(
         id=uuid.uuid4(),
@@ -293,7 +293,7 @@ async def harvest_listing(db_session: AsyncSession, farmer_user, crop_taxonomy):
         harvest_date=date.today(),
         available_from=date.today(),
         available_until=date.today() + timedelta(days=30),
-        status=ListingStatus.active,
+        status=HarvestStatus.ready,
         is_organic=True,
         delivery_available=True,
         delivery_radius_km=50,
@@ -318,7 +318,7 @@ async def demand_posting(db_session: AsyncSession, buyer_user, crop_taxonomy):
         quality_grade="A",
         needed_by=date.today() + timedelta(days=14),
         radius_km=100,
-        status=DemandStatus.active,
+        status=DemandStatus.open,
     )
     db_session.add(demand)
     await db_session.flush()

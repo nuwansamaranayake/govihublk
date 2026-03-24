@@ -86,8 +86,8 @@ class MatchingEngine:
             FROM harvest_listings hl
             JOIN demand_postings dp ON dp.id = :demand_id
             WHERE hl.crop_id   = dp.crop_id
-              AND hl.status    = 'active'
-              AND dp.status    = 'active'
+              AND hl.status    = 'ready'
+              AND dp.status    = 'open'
               AND (
                     hl.location IS NULL
                     OR dp.location IS NULL
@@ -161,8 +161,8 @@ class MatchingEngine:
             FROM demand_postings dp
             JOIN harvest_listings hl ON hl.id = :harvest_id
             WHERE dp.crop_id   = hl.crop_id
-              AND dp.status    = 'active'
-              AND hl.status    = 'active'
+              AND dp.status    = 'open'
+              AND hl.status    = 'ready'
               AND (
                     hl.location IS NULL
                     OR dp.location IS NULL
@@ -239,8 +239,8 @@ class MatchingEngine:
             FROM harvest_listings hl
             JOIN demand_postings dp ON dp.id = :demand_id
             WHERE hl.crop_id   = dp.crop_id
-              AND hl.status    = 'active'
-              AND dp.status    = 'active'
+              AND hl.status    = 'ready'
+              AND dp.status    = 'open'
               AND (
                     hl.location IS NULL
                     OR dp.location IS NULL

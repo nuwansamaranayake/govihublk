@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 
-type MatchStatus = "proposed" | "active" | "completed" | "disputed";
+type MatchStatus = "proposed" | "farmer_accepted" | "buyer_accepted" | "in_transit" | "disputed" | "cancelled";
 
 interface Match {
   id: string;
@@ -27,19 +27,21 @@ interface Match {
 
 const MOCK: Match[] = [
   { id:"1", buyerName:"Colombo Fresh Mart", crop:"Tomato", quantity:300, unit:"kg", price:115, location:"Colombo", score:92, status:"proposed", createdAt:"2026-03-20" },
-  { id:"2", buyerName:"Lanka Supermart", crop:"Cabbage", quantity:200, unit:"kg", price:80, location:"Gampaha", score:78, status:"active", createdAt:"2026-03-18" },
-  { id:"3", buyerName:"Green Foods Ltd", crop:"Carrot", quantity:150, unit:"kg", price:150, location:"Kandy", score:85, status:"completed", createdAt:"2026-03-10" },
+  { id:"2", buyerName:"Lanka Supermart", crop:"Cabbage", quantity:200, unit:"kg", price:80, location:"Gampaha", score:78, status:"farmer_accepted", createdAt:"2026-03-18" },
+  { id:"3", buyerName:"Green Foods Ltd", crop:"Carrot", quantity:150, unit:"kg", price:150, location:"Kandy", score:85, status:"in_transit", createdAt:"2026-03-10" },
   { id:"4", buyerName:"City Vegetables", crop:"Beans", quantity:100, unit:"kg", price:195, location:"Matale", score:70, status:"disputed", createdAt:"2026-03-05" },
 ];
 
-const STATUS_COLOR: Record<MatchStatus, "gold"|"green"|"gray"|"red"> = {
-  proposed:"gold", active:"green", completed:"gray", disputed:"red",
+const STATUS_COLOR: Record<MatchStatus, "gold"|"green"|"gray"|"red"|"blue"|"orange"> = {
+  proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"red", cancelled:"gray",
 };
 const ACTIONS: Record<MatchStatus, { label:string; variant:"primary"|"danger"|"secondary" }[]> = {
   proposed: [{label:"Accept",variant:"primary"},{label:"Reject",variant:"danger"}],
-  active: [{label:"Confirm",variant:"primary"},{label:"Fulfill",variant:"secondary"}],
-  completed: [],
+  farmer_accepted: [{label:"Confirm",variant:"primary"}],
+  buyer_accepted: [{label:"Fulfill",variant:"secondary"}],
+  in_transit: [],
   disputed: [{label:"Respond",variant:"primary"}],
+  cancelled: [],
 };
 
 export default function FarmerMatchesPage() {
@@ -62,7 +64,7 @@ export default function FarmerMatchesPage() {
       const updated = await api.get<Match[]>("/api/v1/farmer/matches");
       setMatches(updated);
     } catch {
-      const map: Record<string, MatchStatus> = { Accept:"active", Reject:"completed", Confirm:"active", Fulfill:"completed" };
+      const map: Record<string, MatchStatus> = { Accept:"farmer_accepted", Reject:"cancelled", Confirm:"buyer_accepted", Fulfill:"in_transit" };
       if (map[action]) setMatches(prev => prev.map(m => m.id===matchId ? {...m, status:map[action]} : m));
     } finally { setActionLoading(null); }
   };
@@ -70,7 +72,7 @@ export default function FarmerMatchesPage() {
   const scoreColor = (score: number) =>
     score >= 85 ? "text-green-600" : score >= 70 ? "text-amber-500" : "text-red-500";
 
-  const allStatuses: MatchStatus[] = ["proposed","active","completed","disputed"];
+  const allStatuses: MatchStatus[] = ["proposed","farmer_accepted","buyer_accepted","in_transit","disputed","cancelled"];
   const tabs = [
     { key:"all", label:"All", badge: matches.length },
     ...allStatuses.map(s => ({

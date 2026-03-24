@@ -7,9 +7,17 @@ export type ListingStatus =
   | "planned"
   | "ready"
   | "matched"
-  | "confirmed"
   | "fulfilled"
+  | "expired"
   | "cancelled"
+  | "open"
+  | "reviewing"
+  | "confirmed"
+  | "closed"
+  | "proposed"
+  | "farmer_accepted"
+  | "buyer_accepted"
+  | "in_transit"
   | "disputed";
 
 interface StatusBadgeProps {
@@ -18,7 +26,7 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-type BadgeColor = "blue" | "green" | "gold" | "darkgreen" | "gray" | "red";
+type BadgeColor = "blue" | "green" | "gold" | "darkgreen" | "gray" | "red" | "orange";
 
 const statusConfig: Record<
   ListingStatus,
@@ -27,9 +35,17 @@ const statusConfig: Record<
   planned: { label: "Planned", color: "blue" },
   ready: { label: "Ready", color: "green" },
   matched: { label: "Matched", color: "gold" },
-  confirmed: { label: "Confirmed", color: "darkgreen" },
   fulfilled: { label: "Fulfilled", color: "green" },
+  expired: { label: "Expired", color: "gray" },
   cancelled: { label: "Cancelled", color: "gray" },
+  open: { label: "Open", color: "blue" },
+  reviewing: { label: "Reviewing", color: "gold" },
+  confirmed: { label: "Confirmed", color: "darkgreen" },
+  closed: { label: "Closed", color: "gray" },
+  proposed: { label: "Proposed", color: "blue" },
+  farmer_accepted: { label: "Farmer Accepted", color: "gold" },
+  buyer_accepted: { label: "Buyer Accepted", color: "gold" },
+  in_transit: { label: "In Transit", color: "orange" },
   disputed: { label: "Disputed", color: "red" },
 };
 

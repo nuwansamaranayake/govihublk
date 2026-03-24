@@ -19,7 +19,7 @@ from app.listings.models import (
     CropTaxonomy,
     DemandPosting,
     HarvestListing,
-    ListingStatus,
+    HarvestStatus,
     DemandStatus,
 )
 from app.matching.models import Match, MatchStatus
@@ -79,7 +79,7 @@ class AdminService:
         active_harvest_r = await self.db.execute(
             select(func.count())
             .select_from(HarvestListing)
-            .where(HarvestListing.status == ListingStatus.active)
+            .where(HarvestListing.status.in_([HarvestStatus.planned, HarvestStatus.ready]))
         )
         active_harvest_listings = active_harvest_r.scalar_one()
 
@@ -91,7 +91,7 @@ class AdminService:
         active_demand_r = await self.db.execute(
             select(func.count())
             .select_from(DemandPosting)
-            .where(DemandPosting.status == DemandStatus.active)
+            .where(DemandPosting.status.in_([DemandStatus.open, DemandStatus.reviewing]))
         )
         active_demand_postings = active_demand_r.scalar_one()
 

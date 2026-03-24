@@ -21,7 +21,7 @@ interface Listing {
   price: number;
   location: string;
   harvestDate: string;
-  status: "active" | "completed" | "pending";
+  status: "planned" | "ready" | "fulfilled" | "cancelled" | "expired";
 }
 
 const CROPS = [
@@ -32,15 +32,15 @@ const CROPS = [
 const UNITS = ["kg","ton","crate","bunch","bag"];
 
 const MOCK: Listing[] = [
-  { id:"1", crop:"Tomato", quantity:500, unit:"kg", price:120, location:"Kandy", harvestDate:"2026-04-10", status:"active" },
-  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", price:85, location:"Nuwara Eliya", harvestDate:"2026-04-15", status:"active" },
-  { id:"3", crop:"Carrot", quantity:200, unit:"kg", price:155, location:"Badulla", harvestDate:"2026-03-20", status:"completed" },
+  { id:"1", crop:"Tomato", quantity:500, unit:"kg", price:120, location:"Kandy", harvestDate:"2026-04-10", status:"ready" },
+  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", price:85, location:"Nuwara Eliya", harvestDate:"2026-04-15", status:"planned" },
+  { id:"3", crop:"Carrot", quantity:200, unit:"kg", price:155, location:"Badulla", harvestDate:"2026-03-20", status:"fulfilled" },
 ];
 
 const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", price:"", location:"", harvestDate:"", expiryDate:"", description:"" };
 type FormData = typeof EMPTY_FORM;
 
-const STATUS_COLOR: Record<string, "green"|"gray"|"gold"> = { active:"green", completed:"gray", pending:"gold" };
+const STATUS_COLOR: Record<string, "green"|"gray"|"gold"|"blue"> = { planned:"blue", ready:"green", fulfilled:"gray", cancelled:"gray", expired:"gray" };
 
 export default function FarmerListingsPage() {
   const t = useTranslations();
@@ -78,7 +78,7 @@ export default function FarmerListingsPage() {
       setShowModal(false);
       await load();
     } catch {
-      const item: Listing = { id: editId || String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, price:Number(form.price), location:form.location, harvestDate:form.harvestDate, status:"active" };
+      const item: Listing = { id: editId || String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, price:Number(form.price), location:form.location, harvestDate:form.harvestDate, status:"planned" };
       setListings(prev => editId ? prev.map(l => l.id===editId ? item : l) : [...prev, item]);
       setShowModal(false);
     } finally { setSubmitting(false); }
@@ -94,8 +94,9 @@ export default function FarmerListingsPage() {
 
   const tabs = [
     { key:"all", label:"All", badge: listings.length },
-    { key:"active", label:"Active", badge: listings.filter(l=>l.status==="active").length },
-    { key:"completed", label:"Completed" },
+    { key:"planned", label:"Planned", badge: listings.filter(l=>l.status==="planned").length },
+    { key:"ready", label:"Ready", badge: listings.filter(l=>l.status==="ready").length },
+    { key:"fulfilled", label:"Fulfilled" },
   ];
 
   return (

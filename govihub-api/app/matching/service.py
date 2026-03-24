@@ -11,6 +11,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.listings.models import DemandPosting, DemandStatus, HarvestListing, HarvestStatus
 from app.matching.models import Match, MatchStatus
 from app.users.models import User, UserRole
 
@@ -134,6 +135,10 @@ class MatchService:
             match.status = MatchStatus.confirmed
             match.confirmed_at = datetime.now(timezone.utc)
 
+        # Cascade to listing statuses when match reaches confirmed
+        if match.status == MatchStatus.confirmed:
+            await self._cascade_confirmed(match)
+
         await self.db.flush()
         logger.info(
             "match_accepted",
@@ -162,6 +167,9 @@ class MatchService:
         match.status = MatchStatus.cancelled
         if notes:
             match.notes = notes
+
+        # Revert listing statuses if no remaining active matches
+        await self._cascade_cancelled(match)
 
         await self.db.flush()
         logger.info("match_rejected", match_id=str(match_id), user_id=str(current_user.id))
@@ -200,6 +208,8 @@ class MatchService:
         if notes:
             match.notes = notes
 
+        await self._cascade_confirmed(match)
+
         await self.db.flush()
         logger.info("match_confirmed", match_id=str(match_id), user_id=str(current_user.id))
         return match
@@ -223,6 +233,8 @@ class MatchService:
         match.fulfilled_at = datetime.now(timezone.utc)
         if notes:
             match.notes = notes
+
+        await self._cascade_fulfilled(match)
 
         await self.db.flush()
         logger.info("match_fulfilled", match_id=str(match_id), user_id=str(current_user.id))
@@ -254,6 +266,130 @@ class MatchService:
         await self.db.flush()
         logger.info("match_disputed", match_id=str(match_id), user_id=str(current_user.id))
         return match
+
+    # ------------------------------------------------------------------
+    # Cascade helpers — keep listing statuses in sync with match lifecycle
+    # ------------------------------------------------------------------
+
+    async def _cascade_proposed(self, match: Match) -> None:
+        """When a match is proposed: move demand to 'reviewing' if still 'open'."""
+        demand = await self.db.get(DemandPosting, match.demand_id)
+        if demand and demand.status == DemandStatus.open:
+            demand.status = DemandStatus.reviewing
+            logger.info(
+                "demand_status_cascade",
+                demand_id=str(match.demand_id),
+                new_status="reviewing",
+                reason="match_proposed",
+            )
+
+    async def _cascade_confirmed(self, match: Match) -> None:
+        """When a match is confirmed: harvest→'matched', demand→'confirmed'."""
+        harvest = await self.db.get(HarvestListing, match.harvest_id)
+        if harvest and harvest.status == HarvestStatus.ready:
+            harvest.status = HarvestStatus.matched
+            logger.info(
+                "harvest_status_cascade",
+                harvest_id=str(match.harvest_id),
+                new_status="matched",
+                reason="match_confirmed",
+            )
+
+        demand = await self.db.get(DemandPosting, match.demand_id)
+        if demand and demand.status in (DemandStatus.open, DemandStatus.reviewing):
+            demand.status = DemandStatus.confirmed
+            logger.info(
+                "demand_status_cascade",
+                demand_id=str(match.demand_id),
+                new_status="confirmed",
+                reason="match_confirmed",
+            )
+
+    async def _cascade_fulfilled(self, match: Match) -> None:
+        """When a match is fulfilled: harvest→'fulfilled', demand→'fulfilled' if all matches fulfilled."""
+        harvest = await self.db.get(HarvestListing, match.harvest_id)
+        if harvest and harvest.status == HarvestStatus.matched:
+            harvest.status = HarvestStatus.fulfilled
+            logger.info(
+                "harvest_status_cascade",
+                harvest_id=str(match.harvest_id),
+                new_status="fulfilled",
+                reason="match_fulfilled",
+            )
+
+        # Only move demand to fulfilled if all its non-cancelled matches are fulfilled
+        remaining = await self.db.execute(
+            select(Match).where(
+                and_(
+                    Match.demand_id == match.demand_id,
+                    Match.id != match.id,
+                    Match.status.not_in([MatchStatus.cancelled, MatchStatus.expired, MatchStatus.fulfilled]),
+                )
+            )
+        )
+        if remaining.scalar_one_or_none() is None:
+            demand = await self.db.get(DemandPosting, match.demand_id)
+            if demand and demand.status == DemandStatus.confirmed:
+                demand.status = DemandStatus.fulfilled
+                logger.info(
+                    "demand_status_cascade",
+                    demand_id=str(match.demand_id),
+                    new_status="fulfilled",
+                    reason="all_matches_fulfilled",
+                )
+
+    async def _cascade_cancelled(self, match: Match) -> None:
+        """When a match is cancelled: revert harvest→'ready' if no remaining active matches,
+        and demand→'open' if no remaining active matches."""
+        active_statuses = [
+            MatchStatus.proposed,
+            MatchStatus.accepted_farmer,
+            MatchStatus.accepted_buyer,
+            MatchStatus.confirmed,
+            MatchStatus.in_transit,
+        ]
+
+        # Check for other active matches on this harvest
+        harvest_active = await self.db.execute(
+            select(Match).where(
+                and_(
+                    Match.harvest_id == match.harvest_id,
+                    Match.id != match.id,
+                    Match.status.in_(active_statuses),
+                )
+            )
+        )
+        if harvest_active.scalar_one_or_none() is None:
+            harvest = await self.db.get(HarvestListing, match.harvest_id)
+            if harvest and harvest.status == HarvestStatus.matched:
+                harvest.status = HarvestStatus.ready
+                logger.info(
+                    "harvest_status_cascade",
+                    harvest_id=str(match.harvest_id),
+                    new_status="ready",
+                    reason="match_cancelled_no_remaining",
+                )
+
+        # Check for other active matches on this demand
+        demand_active = await self.db.execute(
+            select(Match).where(
+                and_(
+                    Match.demand_id == match.demand_id,
+                    Match.id != match.id,
+                    Match.status.in_(active_statuses),
+                )
+            )
+        )
+        if demand_active.scalar_one_or_none() is None:
+            demand = await self.db.get(DemandPosting, match.demand_id)
+            if demand and demand.status in (DemandStatus.reviewing, DemandStatus.confirmed):
+                demand.status = DemandStatus.open
+                logger.info(
+                    "demand_status_cascade",
+                    demand_id=str(match.demand_id),
+                    new_status="open",
+                    reason="match_cancelled_no_remaining",
+                )
 
     # ------------------------------------------------------------------
     # Private helpers

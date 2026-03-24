@@ -42,15 +42,15 @@ const MOCK: DashboardData = {
   pendingConfirmations: 3,
   totalValue: 485000,
   pipeline: [
-    { label:"Proposed", count:5, color:"bg-amber-400" },
-    { label:"Active", count:4, color:"bg-green-500" },
-    { label:"Confirmed", count:2, color:"bg-blue-500" },
-    { label:"Fulfilled", count:8, color:"bg-gray-400" },
+    { label:"Proposed", count:5, color:"bg-blue-400" },
+    { label:"Farmer Accepted", count:4, color:"bg-amber-400" },
+    { label:"Buyer Accepted", count:2, color:"bg-amber-500" },
+    { label:"In Transit", count:8, color:"bg-orange-400" },
   ],
   recentMatches: [
-    { id:"1", farmerName:"Kamal Perera", crop:"Tomato", quantity:300, unit:"kg", location:"Kandy", score:92, status:"active" },
+    { id:"1", farmerName:"Kamal Perera", crop:"Tomato", quantity:300, unit:"kg", location:"Kandy", score:92, status:"farmer_accepted" },
     { id:"2", farmerName:"Nimal Silva", crop:"Cabbage", quantity:200, unit:"kg", location:"Nuwara Eliya", score:85, status:"proposed" },
-    { id:"3", farmerName:"Saman Fernando", crop:"Carrot", quantity:150, unit:"kg", location:"Badulla", score:78, status:"active" },
+    { id:"3", farmerName:"Saman Fernando", crop:"Carrot", quantity:150, unit:"kg", location:"Badulla", score:78, status:"buyer_accepted" },
   ],
 };
 
@@ -71,7 +71,7 @@ export default function BuyerDashboardPage() {
   const scoreColor = (score: number) =>
     score>=85 ? "text-green-600" : score>=70 ? "text-amber-500" : "text-red-500";
 
-  const STATUS_COLOR: Record<string, "green"|"gold"|"gray"> = { active:"green", proposed:"gold", completed:"gray" };
+  const STATUS_COLOR: Record<string, "green"|"gold"|"gray"|"blue"|"orange"> = { proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"gray", cancelled:"gray" };
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
