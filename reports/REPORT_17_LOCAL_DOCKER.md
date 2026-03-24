@@ -71,7 +71,7 @@ make local-fresh
 
 ## Dev Login
 
-**Browser:** http://localhost:3000/en/auth/dev-login
+**Browser:** http://localhost:6000/en/auth/dev-login
 
 **curl:**
 ```bash
@@ -88,7 +88,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/me 
 | # | Check | Expected |
 |---|-------|----------|
 | 1 | `curl http://localhost:8000/api/v1/health` | `{"status": "healthy"}` |
-| 2 | `curl http://localhost:3000` | HTML response |
+| 2 | `curl http://localhost:6000` | HTML response |
 | 3 | `POST /api/v1/auth/dev/login/farmer` | JWT token + user object |
 | 4 | Browser: `/en/auth/dev-login` | 4 role buttons |
 | 5 | Click "Farmer" | Redirects to farmer dashboard |
