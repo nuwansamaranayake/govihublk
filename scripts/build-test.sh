@@ -161,7 +161,7 @@ log_success "API is healthy"
 # Wait for frontend
 log_info "Waiting for frontend..."
 RETRY_COUNT=0
-until curl -sf http://localhost:6000 > /dev/null 2>&1; do
+until curl -sf http://localhost:6001 > /dev/null 2>&1; do
   RETRY_COUNT=$((RETRY_COUNT + 1))
   if [[ $RETRY_COUNT -ge 20 ]]; then
     log_warn "Frontend did not respond — continuing without it"

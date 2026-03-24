@@ -27,7 +27,7 @@ This applies to ALL projects, not just GoviHub.
 | Service | Port | Health |
 |---------|------|--------|
 | govihub-api (FastAPI) | 8002 | `GET /api/v1/health` |
-| govihub-web (Next.js) | 6000 | HTTP response |
+| govihub-web (Next.js) | 6001 | HTTP response |
 | postgres (PostGIS 16) | 5434 | `pg_isready` |
 | redis (Redis 7) | 6380 | `redis-cli ping` |
 
@@ -35,8 +35,8 @@ This applies to ALL projects, not just GoviHub.
 
 | What | URL |
 |------|-----|
-| Frontend | http://localhost:6000 |
-| Dev Login | http://localhost:6000/en/auth/dev-login |
+| Frontend | http://localhost:6001 |
+| Dev Login | http://localhost:6001/en/auth/dev-login |
 | API | http://localhost:8002 |
 | Swagger Docs | http://localhost:8002/docs |
 | Health | http://localhost:8002/api/v1/health |

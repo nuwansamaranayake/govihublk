@@ -33,7 +33,7 @@ services:
       - /app/.next
     env_file: .env.frontend
     ports:
-      - "6000:3000"
+      - "6001:3000"
     depends_on:
       - govihub-api
     networks:
