@@ -1,4 +1,4 @@
-"""GoviHub MCP Tools — Definitions and async handler functions for all 10 MCP tools."""
+"""GoviHub MCP Tools — Definitions and async handler functions for all 16 MCP tools."""
 
 from __future__ import annotations
 
@@ -283,6 +283,151 @@ TOOL_DEFINITIONS: list[dict] = [
                     "type": "integer",
                     "description": "Max suppliers to return (default 20)",
                     "default": 20,
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    # ------------------------------------------------------------------
+    # Admin / monitoring tools (6 new)
+    # ------------------------------------------------------------------
+    {
+        "name": "govihub_get_registrations",
+        "description": (
+            "Get user registrations with role breakdown. Filter by number of recent days "
+            "and optionally by role (farmer, buyer, supplier, admin). Returns individual "
+            "registrations and a summary with totals per role."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to look back (default 7)",
+                    "default": 7,
+                },
+                "role": {
+                    "type": "string",
+                    "enum": ["farmer", "buyer", "supplier", "admin"],
+                    "description": "Filter registrations to a specific role",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "govihub_get_user_activity",
+        "description": (
+            "User engagement metrics across the platform. Tracks listing creation, demand "
+            "posting, match activity, diagnosis uploads, feedback submissions, and logins. "
+            "Returns activity counts by type, most active users, and daily trends."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to analyse (default 7)",
+                    "default": 7,
+                },
+                "activity_type": {
+                    "type": "string",
+                    "enum": [
+                        "listing_created",
+                        "demand_created",
+                        "match_activity",
+                        "diagnosis_uploaded",
+                        "feedback_submitted",
+                        "login",
+                    ],
+                    "description": "Filter to a specific activity type",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "govihub_get_feedback",
+        "description": (
+            "Get beta feedback and feature requests. Filter by days, category "
+            "(bug, feature_request, general, wishlist), and language (si, en). "
+            "Returns feedback items with user info and summary statistics."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to look back (default 30)",
+                    "default": 30,
+                },
+                "category": {
+                    "type": "string",
+                    "enum": ["bug", "feature_request", "general", "wishlist"],
+                    "description": "Filter by feedback category",
+                },
+                "language": {
+                    "type": "string",
+                    "enum": ["si", "en"],
+                    "description": "Filter by feedback language",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "govihub_get_platform_stats",
+        "description": (
+            "Comprehensive platform statistics: users by role, listings by status, "
+            "matches by status, diagnoses count, and feedback count. "
+            "No input parameters required."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "govihub_get_listings_summary",
+        "description": (
+            "Harvest and demand listings summary grouped by crop. Shows quantities "
+            "and statuses. Filter by listing status, district, and time period."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "description": "Filter by listing status",
+                },
+                "district": {
+                    "type": "string",
+                    "description": "Filter by district",
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to include (default 30)",
+                    "default": 30,
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "govihub_get_match_performance",
+        "description": (
+            "Matching engine funnel metrics: counts of matches by status "
+            "(proposed -> accepted -> confirmed -> fulfilled), conversion rates "
+            "between stages, average match scores, and dispute rate."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to analyse (default 30)",
+                    "default": 30,
                 },
             },
             "additionalProperties": False,
@@ -1071,6 +1216,461 @@ async def _handle_get_supply_chain_overview(params: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Admin / Monitoring Handlers (6 new)
+# ---------------------------------------------------------------------------
+
+async def _handle_govihub_get_registrations(params: dict) -> dict:
+    """Get user registrations with role breakdown."""
+    days = int(params.get("days", 7))
+    role = params.get("role")
+
+    async with async_session_factory() as session:
+        # Individual registrations
+        reg_stmt = text(f"""
+            SELECT id, name, username, role, district, language, created_at
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL '{days} days'
+              AND (:role IS NULL OR role = :role)
+            ORDER BY created_at DESC
+        """)
+        r = await session.execute(reg_stmt, {"role": role})
+        rows = r.mappings().all()
+
+        # Summary by role
+        summary_stmt = text(f"""
+            SELECT role, COUNT(*) AS count
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY role
+        """)
+        r2 = await session.execute(summary_stmt)
+        summary_rows = r2.mappings().all()
+        by_role = {row["role"]: row["count"] for row in summary_rows}
+
+        registrations = [
+            {
+                "id": str(row["id"]),
+                "name": row["name"],
+                "username": row["username"],
+                "role": row["role"],
+                "district": row["district"],
+                "language": row["language"],
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            }
+            for row in rows
+        ]
+
+        return {
+            "tool": "govihub_get_registrations",
+            "period_days": days,
+            "role_filter": role,
+            "registrations": registrations,
+            "summary": {
+                "total": sum(by_role.values()),
+                "by_role": {
+                    "farmer": by_role.get("farmer", 0),
+                    "buyer": by_role.get("buyer", 0),
+                    "supplier": by_role.get("supplier", 0),
+                    "admin": by_role.get("admin", 0),
+                },
+            },
+        }
+
+
+async def _handle_govihub_get_user_activity(params: dict) -> dict:
+    """User engagement metrics across the platform."""
+    days = int(params.get("days", 7))
+    activity_type = params.get("activity_type")
+
+    activity_queries = {
+        "listing_created": f"""
+            SELECT hl.farmer_id AS user_id, u.name, u.role,
+                   DATE(hl.created_at) AS activity_date, COUNT(*) AS count
+            FROM harvest_listings hl
+            JOIN users u ON u.id = hl.farmer_id
+            WHERE hl.created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY hl.farmer_id, u.name, u.role, DATE(hl.created_at)
+        """,
+        "demand_created": f"""
+            SELECT dp.buyer_id AS user_id, u.name, u.role,
+                   DATE(dp.created_at) AS activity_date, COUNT(*) AS count
+            FROM demand_postings dp
+            JOIN users u ON u.id = dp.buyer_id
+            WHERE dp.created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY dp.buyer_id, u.name, u.role, DATE(dp.created_at)
+        """,
+        "match_activity": f"""
+            SELECT m.updated_by AS user_id, u.name, u.role,
+                   DATE(m.updated_at) AS activity_date, COUNT(*) AS count
+            FROM matches m
+            JOIN users u ON u.id = m.updated_by
+            WHERE m.updated_at >= NOW() - INTERVAL '{days} days'
+              AND m.updated_by IS NOT NULL
+            GROUP BY m.updated_by, u.name, u.role, DATE(m.updated_at)
+        """,
+        "diagnosis_uploaded": f"""
+            SELECT cd.user_id AS user_id, u.name, u.role,
+                   DATE(cd.created_at) AS activity_date, COUNT(*) AS count
+            FROM crop_diagnoses cd
+            JOIN users u ON u.id = cd.user_id
+            WHERE cd.created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY cd.user_id, u.name, u.role, DATE(cd.created_at)
+        """,
+        "feedback_submitted": f"""
+            SELECT bf.user_id AS user_id, u.name, u.role,
+                   DATE(bf.created_at) AS activity_date, COUNT(*) AS count
+            FROM beta_feedback bf
+            JOIN users u ON u.id = bf.user_id
+            WHERE bf.created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY bf.user_id, u.name, u.role, DATE(bf.created_at)
+        """,
+        "login": f"""
+            SELECT id AS user_id, name, role,
+                   DATE(last_login_at) AS activity_date, 1 AS count
+            FROM users
+            WHERE last_login_at >= NOW() - INTERVAL '{days} days'
+        """,
+    }
+
+    # Filter to requested type or run all
+    types_to_run = (
+        {activity_type: activity_queries[activity_type]}
+        if activity_type and activity_type in activity_queries
+        else activity_queries
+    )
+
+    activity_counts: dict[str, int] = {}
+    most_active_users: dict[str, int] = {}
+    daily_trends: dict[str, dict[str, int]] = {}
+
+    async with async_session_factory() as session:
+        for a_type, sql in types_to_run.items():
+            try:
+                r = await session.execute(text(sql))
+                rows = r.mappings().all()
+            except Exception:
+                # Table might not exist yet; skip gracefully
+                rows = []
+
+            type_total = sum(row["count"] for row in rows)
+            activity_counts[a_type] = type_total
+
+            for row in rows:
+                uid = str(row["user_id"])
+                name = row["name"] or uid
+                most_active_users[name] = most_active_users.get(name, 0) + row["count"]
+
+                day_str = row["activity_date"].isoformat() if row["activity_date"] else "unknown"
+                if day_str not in daily_trends:
+                    daily_trends[day_str] = {}
+                daily_trends[day_str][a_type] = daily_trends[day_str].get(a_type, 0) + row["count"]
+
+    # Sort most active
+    top_users = sorted(most_active_users.items(), key=lambda x: x[1], reverse=True)[:10]
+    # Sort daily trends by date
+    sorted_daily = dict(sorted(daily_trends.items()))
+
+    return {
+        "tool": "govihub_get_user_activity",
+        "period_days": days,
+        "activity_type_filter": activity_type,
+        "activity_counts": activity_counts,
+        "most_active_users": [
+            {"name": name, "total_actions": count} for name, count in top_users
+        ],
+        "daily_trends": sorted_daily,
+    }
+
+
+async def _handle_govihub_get_feedback(params: dict) -> dict:
+    """Get beta feedback and feature requests."""
+    days = int(params.get("days", 30))
+    category = params.get("category")
+    language = params.get("language")
+
+    async with async_session_factory() as session:
+        feedback_stmt = text(f"""
+            SELECT
+                bf.id,
+                bf.category,
+                bf.message,
+                bf.rating,
+                bf.language,
+                bf.created_at,
+                u.name,
+                u.role,
+                u.district
+            FROM beta_feedback bf
+            LEFT JOIN users u ON bf.user_id = u.id
+            WHERE bf.created_at >= NOW() - INTERVAL '{days} days'
+              AND (:category IS NULL OR bf.category = :category)
+              AND (:language IS NULL OR bf.language = :language)
+            ORDER BY bf.created_at DESC
+        """)
+        r = await session.execute(feedback_stmt, {
+            "category": category,
+            "language": language,
+        })
+        rows = r.mappings().all()
+
+        # Summary stats
+        summary_stmt = text(f"""
+            SELECT
+                COUNT(*) AS total,
+                AVG(rating) AS avg_rating,
+                category,
+                COUNT(*) AS cat_count
+            FROM beta_feedback
+            WHERE created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY category
+        """)
+        r2 = await session.execute(summary_stmt)
+        summary_rows = r2.mappings().all()
+        by_category = {row["category"]: row["cat_count"] for row in summary_rows}
+        total = sum(by_category.values())
+
+        # Avg rating across all
+        avg_stmt = text(f"""
+            SELECT AVG(rating) AS avg_rating
+            FROM beta_feedback
+            WHERE created_at >= NOW() - INTERVAL '{days} days'
+              AND rating IS NOT NULL
+        """)
+        r3 = await session.execute(avg_stmt)
+        avg_row = r3.mappings().one()
+        avg_rating = round(float(avg_row["avg_rating"]), 2) if avg_row["avg_rating"] else None
+
+        feedback_items = [
+            {
+                "id": str(row["id"]),
+                "category": row["category"],
+                "message": row["message"],
+                "rating": row["rating"],
+                "language": row["language"],
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "user_name": row["name"],
+                "user_role": row["role"],
+                "user_district": row["district"],
+            }
+            for row in rows
+        ]
+
+        return {
+            "tool": "govihub_get_feedback",
+            "period_days": days,
+            "filters": {"category": category, "language": language},
+            "feedback": feedback_items,
+            "summary": {
+                "total": total,
+                "avg_rating": avg_rating,
+                "by_category": by_category,
+            },
+        }
+
+
+async def _handle_govihub_get_platform_stats(params: dict) -> dict:
+    """Comprehensive platform statistics."""
+    async with async_session_factory() as session:
+        # Users by role
+        user_stmt = text("SELECT role, COUNT(*) AS count FROM users GROUP BY role")
+        r = await session.execute(user_stmt)
+        users_by_role = {row["role"]: row["count"] for row in r.mappings().all()}
+
+        # Harvest listings by status
+        hl_stmt = text(
+            "SELECT status, COUNT(*) AS count FROM harvest_listings GROUP BY status"
+        )
+        r2 = await session.execute(hl_stmt)
+        harvest_by_status = {row["status"]: row["count"] for row in r2.mappings().all()}
+
+        # Demand postings by status
+        dp_stmt = text(
+            "SELECT status, COUNT(*) AS count FROM demand_postings GROUP BY status"
+        )
+        r3 = await session.execute(dp_stmt)
+        demand_by_status = {row["status"]: row["count"] for row in r3.mappings().all()}
+
+        # Matches by status
+        m_stmt = text(
+            "SELECT status, COUNT(*) AS count FROM matches GROUP BY status"
+        )
+        r4 = await session.execute(m_stmt)
+        matches_by_status = {row["status"]: row["count"] for row in r4.mappings().all()}
+
+        # Diagnoses total
+        diag_stmt = text("SELECT COUNT(*) AS count FROM crop_diagnoses")
+        r5 = await session.execute(diag_stmt)
+        diagnoses_total = r5.scalar()
+
+        # Feedback total
+        fb_stmt = text("SELECT COUNT(*) AS count FROM beta_feedback")
+        r6 = await session.execute(fb_stmt)
+        feedback_total = r6.scalar()
+
+        return {
+            "tool": "govihub_get_platform_stats",
+            "users": {
+                "total": sum(users_by_role.values()),
+                "by_role": users_by_role,
+            },
+            "harvest_listings": {
+                "total": sum(harvest_by_status.values()),
+                "by_status": harvest_by_status,
+            },
+            "demand_postings": {
+                "total": sum(demand_by_status.values()),
+                "by_status": demand_by_status,
+            },
+            "matches": {
+                "total": sum(matches_by_status.values()),
+                "by_status": matches_by_status,
+            },
+            "diagnoses": {"total": diagnoses_total},
+            "feedback": {"total": feedback_total},
+        }
+
+
+async def _handle_govihub_get_listings_summary(params: dict) -> dict:
+    """Harvest and demand listings summary grouped by crop."""
+    status = params.get("status")
+    district = params.get("district")
+    days = int(params.get("days", 30))
+
+    async with async_session_factory() as session:
+        # Harvest listings grouped by crop
+        harvest_stmt = text(f"""
+            SELECT
+                ct.name_en AS crop_name,
+                ct.code AS crop_code,
+                hl.status,
+                COUNT(*) AS listing_count,
+                COALESCE(SUM(hl.quantity_kg), 0) AS total_quantity_kg,
+                AVG(hl.price_per_kg) AS avg_price_per_kg
+            FROM harvest_listings hl
+            JOIN crop_taxonomy ct ON ct.id = hl.crop_id
+            JOIN users u ON u.id = hl.farmer_id
+            WHERE hl.created_at >= NOW() - INTERVAL '{days} days'
+              AND (:status IS NULL OR hl.status::text = :status)
+              AND (:district IS NULL OR u.district ILIKE :district)
+            GROUP BY ct.name_en, ct.code, hl.status
+            ORDER BY total_quantity_kg DESC
+        """)
+        r = await session.execute(harvest_stmt, {
+            "status": status,
+            "district": f"%{district}%" if district else None,
+        })
+        harvest_rows = r.mappings().all()
+
+        # Demand postings grouped by crop
+        demand_stmt = text(f"""
+            SELECT
+                ct.name_en AS crop_name,
+                ct.code AS crop_code,
+                dp.status,
+                COUNT(*) AS posting_count,
+                COALESCE(SUM(dp.quantity_kg), 0) AS total_quantity_kg,
+                AVG(dp.max_price_per_kg) AS avg_max_price_per_kg
+            FROM demand_postings dp
+            JOIN crop_taxonomy ct ON ct.id = dp.crop_id
+            JOIN users u ON u.id = dp.buyer_id
+            WHERE dp.created_at >= NOW() - INTERVAL '{days} days'
+              AND (:status IS NULL OR dp.status::text = :status)
+              AND (:district IS NULL OR u.district ILIKE :district)
+            GROUP BY ct.name_en, ct.code, dp.status
+            ORDER BY total_quantity_kg DESC
+        """)
+        r2 = await session.execute(demand_stmt, {
+            "status": status,
+            "district": f"%{district}%" if district else None,
+        })
+        demand_rows = r2.mappings().all()
+
+        return {
+            "tool": "govihub_get_listings_summary",
+            "period_days": days,
+            "filters": {"status": status, "district": district},
+            "harvest_by_crop": [
+                {
+                    "crop_name": row["crop_name"],
+                    "crop_code": row["crop_code"],
+                    "status": row["status"],
+                    "listing_count": row["listing_count"],
+                    "total_quantity_kg": float(row["total_quantity_kg"]),
+                    "avg_price_per_kg": round(float(row["avg_price_per_kg"]), 2) if row["avg_price_per_kg"] else None,
+                }
+                for row in harvest_rows
+            ],
+            "demand_by_crop": [
+                {
+                    "crop_name": row["crop_name"],
+                    "crop_code": row["crop_code"],
+                    "status": row["status"],
+                    "posting_count": row["posting_count"],
+                    "total_quantity_kg": float(row["total_quantity_kg"]),
+                    "avg_max_price_per_kg": round(float(row["avg_max_price_per_kg"]), 2) if row["avg_max_price_per_kg"] else None,
+                }
+                for row in demand_rows
+            ],
+        }
+
+
+async def _handle_govihub_get_match_performance(params: dict) -> dict:
+    """Matching engine funnel metrics."""
+    days = int(params.get("days", 30))
+
+    async with async_session_factory() as session:
+        # Counts by status
+        funnel_stmt = text(f"""
+            SELECT status, COUNT(*) AS count, AVG(score) AS avg_score
+            FROM matches
+            WHERE created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY status
+        """)
+        r = await session.execute(funnel_stmt)
+        funnel_rows = r.mappings().all()
+        status_counts = {row["status"]: row["count"] for row in funnel_rows}
+        status_scores = {
+            row["status"]: round(float(row["avg_score"]), 4) if row["avg_score"] else None
+            for row in funnel_rows
+        }
+
+        total = sum(status_counts.values())
+        proposed = status_counts.get("proposed", 0)
+        accepted = status_counts.get("accepted", 0)
+        confirmed = status_counts.get("confirmed", 0)
+        fulfilled = status_counts.get("fulfilled", 0)
+        disputed = status_counts.get("disputed", 0)
+        rejected = status_counts.get("rejected", 0)
+
+        # Conversion rates
+        def _rate(numerator: int, denominator: int) -> float | None:
+            return round(numerator / denominator * 100, 2) if denominator > 0 else None
+
+        return {
+            "tool": "govihub_get_match_performance",
+            "period_days": days,
+            "total_matches": total,
+            "funnel": {
+                "proposed": proposed,
+                "accepted": accepted,
+                "confirmed": confirmed,
+                "fulfilled": fulfilled,
+                "rejected": rejected,
+                "disputed": disputed,
+            },
+            "avg_scores_by_status": status_scores,
+            "conversion_rates": {
+                "proposed_to_accepted_pct": _rate(accepted, proposed),
+                "accepted_to_confirmed_pct": _rate(confirmed, accepted),
+                "confirmed_to_fulfilled_pct": _rate(fulfilled, confirmed),
+                "overall_fulfillment_pct": _rate(fulfilled, total),
+                "dispute_rate_pct": _rate(disputed, total),
+                "rejection_rate_pct": _rate(rejected, total),
+            },
+        }
+
+
+# ---------------------------------------------------------------------------
 # Handler Dispatch Map
 # ---------------------------------------------------------------------------
 
@@ -1085,4 +1685,11 @@ TOOL_HANDLERS: dict[str, Any] = {
     "search_knowledge_base": _handle_search_knowledge_base,
     "get_farmer_profile": _handle_get_farmer_profile,
     "get_supply_chain_overview": _handle_get_supply_chain_overview,
+    # Admin / monitoring tools
+    "govihub_get_registrations": _handle_govihub_get_registrations,
+    "govihub_get_user_activity": _handle_govihub_get_user_activity,
+    "govihub_get_feedback": _handle_govihub_get_feedback,
+    "govihub_get_platform_stats": _handle_govihub_get_platform_stats,
+    "govihub_get_listings_summary": _handle_govihub_get_listings_summary,
+    "govihub_get_match_performance": _handle_govihub_get_match_performance,
 }

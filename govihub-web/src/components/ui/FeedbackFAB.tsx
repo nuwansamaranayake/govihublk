@@ -3,11 +3,20 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
+type FeedbackCategory = "bug" | "idea" | "general";
+
+const CATEGORIES: { key: FeedbackCategory; label: string; icon: string }[] = [
+  { key: "bug", label: "Bug", icon: "\uD83D\uDC1B" },
+  { key: "idea", label: "Idea", icon: "\uD83D\uDCA1" },
+  { key: "general", label: "General", icon: "\uD83D\uDCAC" },
+];
+
 export default function FeedbackFAB() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [category, setCategory] = useState<FeedbackCategory>("general");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +28,9 @@ export default function FeedbackFAB() {
         setOpen(false);
         setMessage("");
         setRating(0);
+        setCategory("general");
         setError(null);
-      }, 2000);
+      }, 2500);
       return () => clearTimeout(timer);
     }
   }, [sent]);
@@ -44,6 +54,7 @@ export default function FeedbackFAB() {
         body: JSON.stringify({
           message: message.trim(),
           rating: rating || null,
+          category,
           page_url: typeof window !== "undefined" ? window.location.pathname : "",
         }),
       });
@@ -87,7 +98,7 @@ export default function FeedbackFAB() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg font-semibold text-neutral-900">Thank you!</p>
+                <p className="text-lg font-semibold text-green-700">Thank you!</p>
                 <p className="text-sm text-neutral-500 mt-1">Your feedback has been sent.</p>
               </div>
             ) : (
@@ -100,6 +111,25 @@ export default function FeedbackFAB() {
                 <p className="text-sm text-neutral-500 mb-4">
                   What&apos;s working? What&apos;s broken? What would you change?
                 </p>
+
+                {/* Category Selector */}
+                <div className="flex rounded-xl border border-neutral-200 overflow-hidden mb-4">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setCategory(cat.key)}
+                      className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                        category === cat.key
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "text-neutral-500 hover:bg-neutral-50"
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
 
                 <textarea
                   value={message}
