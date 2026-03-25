@@ -43,6 +43,7 @@ export default function AdminSettingsPage() {
   const [cacheMessage, setCacheMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // TODO: /admin/system-info and /admin/health may not exist. Keep mock fallback until implemented.
     async function fetchData() {
       try {
         const [sys, h] = await Promise.all([

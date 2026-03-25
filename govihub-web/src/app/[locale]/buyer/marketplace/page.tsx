@@ -26,16 +26,6 @@ interface SupplierProduct {
   verified: boolean;
 }
 
-const MOCK_PRODUCTS: SupplierProduct[] = [
-  { id:"1", name:"Organic NPK Fertilizer 50kg", supplier:"Agri Lanka Supplies", category:"fertilizer", description:"High-quality organic fertilizer suitable for all vegetables and paddy.", price:2500, unit:"bag", coverageArea:"All Island", availability:"In Stock", rating:4.5, verified:true },
-  { id:"2", name:"Tomato Hybrid Seeds F1", supplier:"Golden Seeds Ltd", category:"seeds", description:"High-yield, disease-resistant tomato seeds. 500 seeds per pack.", price:350, unit:"pack", coverageArea:"All Island", availability:"In Stock", rating:4.2, verified:true },
-  { id:"3", name:"Backpack Sprayer 15L", supplier:"FarmTech Equipment", category:"equipment", description:"Durable manual sprayer for pesticide application.", price:4500, unit:"unit", coverageArea:"Central & North Central", availability:"Limited Stock", rating:4.7, verified:true },
-  { id:"4", name:"Glyphosate Herbicide 1L", supplier:"PestGuard Solutions", category:"pesticide", description:"Broad-spectrum herbicide for weed control in paddy fields.", price:850, unit:"liter", coverageArea:"Southern Province", availability:"In Stock", rating:3.9, verified:false },
-  { id:"5", name:"Drip Irrigation Kit (1 acre)", supplier:"IrriSystems Lanka", category:"irrigation", description:"Complete drip irrigation system for small-scale farming.", price:18500, unit:"set", coverageArea:"All Island", availability:"Pre-order", rating:4.3, verified:true },
-  { id:"6", name:"Paddy Seeds BG 352", supplier:"CIC Seeds", category:"seeds", description:"Government-recommended paddy variety for dry zone cultivation.", price:280, unit:"kg", coverageArea:"North Central Province", availability:"In Stock", rating:4.6, verified:true },
-  { id:"7", name:"Tractor Hiring - Land Prep", supplier:"MechaFarm Services", category:"equipment", description:"Tractor service for land preparation, ploughing and levelling.", price:3500, unit:"hour", coverageArea:"Anuradhapura District", availability:"Available", rating:4.1, verified:false },
-  { id:"8", name:"Lorry Transport 5-Ton", supplier:"AgriHaul Lanka", category:"transport", description:"Refrigerated lorry service for perishable crop transport.", price:12000, unit:"trip", coverageArea:"All Island", availability:"Available", rating:4.4, verified:true },
-];
 
 const CATEGORIES: { key: Category; label: string; icon: string }[] = [
   { key:"all", label:"All", icon:"🏪" },
@@ -55,13 +45,20 @@ export default function BuyerMarketplacePage() {
   const t = useTranslations();
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<Category>("all");
 
   useEffect(() => {
-    api.get<SupplierProduct[]>("/marketplace/supplier-products")
-      .then(setProducts)
-      .catch(() => setProducts(MOCK_PRODUCTS))
+    api.get<any>("/marketplace/search")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
+        setProducts(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load marketplace");
+        setProducts([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -35,36 +35,59 @@ const CATEGORY_ICON: Record<Category, string> = {
   fertilizer:"🌿", seeds:"🌱", pesticide:"🧪", equipment:"🚜", irrigation:"💧", other:"📦",
 };
 
-const MOCK: DashboardData = {
-  supplierName: "Sunil Fernando",
-  totalListings: 8,
-  activeListings: 6,
-  totalViews: 245,
-  totalInquiries: 34,
-  listingsByCategory: [
-    { category:"fertilizer", count:3 },
-    { category:"seeds", count:2 },
-    { category:"equipment", count:2 },
-    { category:"irrigation", count:1 },
-  ],
-  recentListings: [
-    { id:"1", title:"NPK Fertilizer 50kg", category:"fertilizer", price:2500, unit:"bag", active:true, views:45, inquiries:8 },
-    { id:"2", title:"Paddy Seeds (BG 352)", category:"seeds", price:350, unit:"pack", active:true, views:32, inquiries:5 },
-    { id:"3", title:"Organic Compost 25kg", category:"fertilizer", price:1200, unit:"bag", active:true, views:28, inquiries:6 },
-  ],
-};
 
 export default function SupplierDashboardPage() {
   const t = useTranslations();
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hour = new Date().getHours();
   const greeting = hour<12 ? t("greeting.morning") : hour<17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
-    api.get<DashboardData>("/supplier/dashboard")
-      .then(setData)
-      .catch(() => setData(MOCK))
+    Promise.all([
+      api.get<any>("/users/me").catch(() => null),
+      api.get<any>("/marketplace/search").catch(() => null),
+    ])
+      .then(([userRes, listingsRes]) => {
+        const rawListings = Array.isArray(listingsRes) ? listingsRes : listingsRes?.results ?? listingsRes?.data ?? [];
+
+        const activeListings = rawListings.filter((l: any) => l.active !== false);
+        const totalViews = rawListings.reduce((s: number, l: any) => s + (l.views || 0), 0);
+        const totalInquiries = rawListings.reduce((s: number, l: any) => s + (l.inquiries || 0), 0);
+
+        // Group by category
+        const catMap: Record<string, number> = {};
+        rawListings.forEach((l: any) => {
+          const cat = l.category || "other";
+          catMap[cat] = (catMap[cat] || 0) + 1;
+        });
+
+        setData({
+          supplierName: userRes?.name || userRes?.business_name || "Supplier",
+          totalListings: rawListings.length,
+          activeListings: activeListings.length,
+          totalViews,
+          totalInquiries,
+          listingsByCategory: Object.entries(catMap).map(([category, count]) => ({
+            category: category as Category,
+            count,
+          })),
+          recentListings: rawListings.slice(0, 5).map((l: any) => ({
+            id: l.id || String(Math.random()),
+            title: l.title || l.name || "",
+            category: (l.category || "other") as Category,
+            price: l.price || 0,
+            unit: l.unit || "unit",
+            active: l.active !== false,
+            views: l.views || 0,
+            inquiries: l.inquiries || 0,
+          })),
+        });
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load dashboard");
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -21,29 +21,33 @@ interface Notification {
 
 const NOTIF_ICON: Record<NotifType, string> = { match:"🤝", price:"📊", advisory:"💬", system:"⚙️", offer:"💰" };
 
-const MOCK: Notification[] = [
-  { id:"1", type:"match", title:"3 New Farmer Matches", body:"3 farmers match your Tomato demand in the Colombo area.", read:false, createdAt:"1h ago", deepLink:"/buyer/matches" },
-  { id:"2", type:"offer", title:"Counter-offer Received", body:"Kamal Perera sent a counter-offer for your Cabbage demand.", read:false, createdAt:"3h ago", deepLink:"/buyer/matches" },
-  { id:"3", type:"price", title:"Market Price Update", body:"Vegetable prices have stabilized this week in Colombo market.", read:true, createdAt:"1d ago" },
-  { id:"4", type:"system", title:"Payment Method Reminder", body:"Add a payment method to complete transactions faster.", read:true, createdAt:"3d ago" },
-];
 
 export default function BuyerNotificationsPage() {
   const t = useTranslations();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Notification[]>("/users/me/notifications").then(setNotifications).catch(() => setNotifications(MOCK)).finally(() => setLoading(false));
+    api.get<any>("/notifications")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setNotifications(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load notifications");
+        setNotifications([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const markRead = async (id: string) => {
-    await api.post(`/users/me/notifications/${id}/read`).catch(()=>{});
+    await api.post(`/notifications/${id}/read`).catch(()=>{});
     setNotifications(prev => prev.map(n => n.id===id ? {...n, read:true} : n));
   };
 
   const markAllRead = async () => {
-    await api.post("/users/me/notifications/read-all").catch(()=>{});
+    await api.post("/notifications/read-all").catch(()=>{});
     setNotifications(prev => prev.map(n => ({...n, read:true})));
   };
 

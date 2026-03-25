@@ -67,4 +67,19 @@
   a {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* ── Mobile stat card labels ──────────────────────────────────────────── */
+  .stat-label {
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Header logo text: hide on very small screens ─────────────────────── */
+  @media (max-width: 374px) {
+    .header-logo-text {
+      display: none;
+    }
+  }
 }

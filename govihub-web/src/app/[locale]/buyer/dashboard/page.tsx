@@ -35,36 +35,59 @@ interface DashboardData {
   recentMatches: RecentMatch[];
 }
 
-const MOCK: DashboardData = {
-  buyerName: "Nimal Silva",
-  activeDemands: 4,
-  matchedFarmers: 12,
-  pendingConfirmations: 3,
-  totalValue: 485000,
-  pipeline: [
-    { label:"Proposed", count:5, color:"bg-blue-400" },
-    { label:"Farmer Accepted", count:4, color:"bg-amber-400" },
-    { label:"Buyer Accepted", count:2, color:"bg-amber-500" },
-    { label:"In Transit", count:8, color:"bg-orange-400" },
-  ],
-  recentMatches: [
-    { id:"1", farmerName:"Kamal Perera", crop:"Tomato", quantity:300, unit:"kg", location:"Kandy", score:92, status:"farmer_accepted" },
-    { id:"2", farmerName:"Nimal Silva", crop:"Cabbage", quantity:200, unit:"kg", location:"Nuwara Eliya", score:85, status:"proposed" },
-    { id:"3", farmerName:"Saman Fernando", crop:"Carrot", quantity:150, unit:"kg", location:"Badulla", score:78, status:"buyer_accepted" },
-  ],
-};
 
 export default function BuyerDashboardPage() {
   const t = useTranslations();
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hour = new Date().getHours();
   const greeting = hour<12 ? t("greeting.morning") : hour<17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
-    api.get<DashboardData>("/buyer/dashboard")
-      .then(setData)
-      .catch(() => setData(MOCK))
+    Promise.all([
+      api.get<any>("/users/me").catch(() => null),
+      api.get<any>("/listings/demand").catch(() => null),
+      api.get<any>("/matches").catch(() => null),
+      api.get<any>("/alerts/prices").catch(() => null),
+    ])
+      .then(([userRes, demandsRes, matchesRes, _pricesRes]) => {
+        const demands = Array.isArray(demandsRes) ? demandsRes : demandsRes?.data ?? [];
+        const matches = Array.isArray(matchesRes) ? matchesRes : matchesRes?.data ?? [];
+
+        const proposed = matches.filter((m: any) => m.status === "proposed").length;
+        const farmerAccepted = matches.filter((m: any) => m.status === "farmer_accepted").length;
+        const buyerAccepted = matches.filter((m: any) => m.status === "buyer_accepted").length;
+        const inTransit = matches.filter((m: any) => m.status === "in_transit").length;
+        const pendingConfirmations = proposed + farmerAccepted;
+
+        setData({
+          buyerName: userRes?.name || "Buyer",
+          activeDemands: demands.length,
+          matchedFarmers: matches.length,
+          pendingConfirmations,
+          totalValue: matches.reduce((sum: number, m: any) => sum + ((m.price || 0) * (m.quantity || 0)), 0),
+          pipeline: [
+            { label: "Proposed", count: proposed, color: "bg-blue-400" },
+            { label: "Farmer Accepted", count: farmerAccepted, color: "bg-amber-400" },
+            { label: "Buyer Accepted", count: buyerAccepted, color: "bg-amber-500" },
+            { label: "In Transit", count: inTransit, color: "bg-orange-400" },
+          ],
+          recentMatches: matches.slice(0, 5).map((m: any) => ({
+            id: m.id || String(Math.random()),
+            farmerName: m.farmer_name || m.farmerName || "Farmer",
+            crop: m.crop || "",
+            quantity: m.quantity || 0,
+            unit: m.unit || "kg",
+            location: m.location || "",
+            score: m.score || 0,
+            status: m.status || "proposed",
+          })),
+        });
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load dashboard");
+      })
       .finally(() => setLoading(false));
   }, []);
 

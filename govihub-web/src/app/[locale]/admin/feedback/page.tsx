@@ -77,8 +77,8 @@ export default function AdminFeedbackPage() {
   useEffect(() => {
     api
       .get<FeedbackEntry[]>("/admin/feedback")
-      .then(setFeedback)
-      .catch(() => setFeedback(MOCK_FEEDBACK))
+      .then((data) => setFeedback(Array.isArray(data) ? data : []))
+      .catch(() => setFeedback([]))
       .finally(() => setLoading(false));
   }, []);
 

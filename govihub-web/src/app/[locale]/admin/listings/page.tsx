@@ -68,14 +68,21 @@ export default function AdminListingsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Try /admin/listings first, fall back to individual listing endpoints
         const [h, d, s] = await Promise.all([
-          api.get<Listing[]>("/admin/listings?type=harvest"),
-          api.get<Listing[]>("/admin/listings?type=demand"),
-          api.get<Listing[]>("/admin/listings?type=supply"),
+          api.get<Listing[]>("/admin/listings?type=harvest").catch(() =>
+            api.get<Listing[]>("/listings/harvest").catch(() => [] as Listing[])
+          ),
+          api.get<Listing[]>("/admin/listings?type=demand").catch(() =>
+            api.get<Listing[]>("/listings/demand").catch(() => [] as Listing[])
+          ),
+          api.get<Listing[]>("/admin/listings?type=supply").catch(() =>
+            api.get<Listing[]>("/marketplace/search").catch(() => [] as Listing[])
+          ),
         ]);
-        setHarvests(h);
-        setDemands(d);
-        setSupply(s);
+        setHarvests(Array.isArray(h) ? h : []);
+        setDemands(Array.isArray(d) ? d : []);
+        setSupply(Array.isArray(s) ? s : []);
       } catch {
         // Fallback to mock data
         setHarvests(MOCK_HARVESTS);

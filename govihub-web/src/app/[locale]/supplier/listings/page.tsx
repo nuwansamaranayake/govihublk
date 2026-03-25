@@ -35,11 +35,6 @@ const CATEGORY_ICON: Record<Category, string> = {
   fertilizer:"🌿", seeds:"🌱", pesticide:"🧪", equipment:"🚜", irrigation:"💧", other:"📦",
 };
 
-const MOCK: Listing[] = [
-  { id:"1", title:"Organic NPK Fertilizer 50kg", category:"fertilizer", description:"High-quality organic fertilizer suitable for all vegetables.", price:2500, unit:"bag", coverageArea:"Southern Province", availability:"In Stock", active:true, views:45 },
-  { id:"2", title:"Tomato Hybrid Seeds F1", category:"seeds", description:"High-yield, disease-resistant tomato seeds.", price:350, unit:"pack", coverageArea:"All Island", availability:"In Stock", active:true, views:32 },
-  { id:"3", title:"Backpack Sprayer 15L", category:"equipment", description:"Durable manual sprayer for pesticide application.", price:4500, unit:"unit", coverageArea:"Central Province", availability:"Limited Stock", active:true, views:28 },
-];
 
 const EMPTY_FORM = { title:"", category:"fertilizer" as Category, description:"", price:"", unit:"kg", coverageArea:"", availability:"In Stock", active:true };
 type FormData = typeof EMPTY_FORM;
@@ -52,12 +47,22 @@ export default function SupplierListingsPage() {
   const [editId, setEditId] = useState<string|null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = () =>
-    api.get<Listing[]>("/supplier/listings")
-      .then(setListings)
-      .catch(() => setListings(MOCK))
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    api.get<any>("/marketplace/search")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
+        setListings(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load listings");
+        setListings([]);
+      })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -72,21 +77,23 @@ export default function SupplierListingsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/supplier/listings/${editId}`, form);
-      else await api.post("/supplier/listings", form);
+      if (editId) await api.put(`/marketplace/listings/${editId}`, form);
+      else await api.post("/marketplace/listings", form);
       setShowModal(false);
       await load();
-    } catch {
-      const item: Listing = { id: editId||String(Date.now()), title:form.title, category:form.category, description:form.description, price:Number(form.price), unit:form.unit, coverageArea:form.coverageArea, availability:form.availability, active:form.active, views:0 };
-      setListings(prev => editId ? prev.map(l => l.id===editId ? item : l) : [...prev, item]);
-      setShowModal(false);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save listing");
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t("common.deleteConfirmListing"))) return;
-    await api.delete(`/supplier/listings/${id}`).catch(()=>{});
-    setListings(prev => prev.filter(l => l.id !== id));
+    try {
+      await api.delete(`/marketplace/listings/${id}`);
+      setListings(prev => prev.filter(l => l.id !== id));
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete listing");
+    }
   };
 
   const f = (key: keyof FormData, val: string|boolean) => setForm(p => ({...p, [key]: val}));

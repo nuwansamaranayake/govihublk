@@ -25,33 +25,33 @@ const NOTIF_ICON: Record<NotifType, string> = {
   match:"🤝", price:"📊", advisory:"💬", system:"⚙️", offer:"💰",
 };
 
-const MOCK: Notification[] = [
-  { id:"1", type:"match", title:"New Match Found", body:"A buyer in Colombo is looking for 300kg of Tomato matching your listing.", read:false, createdAt:"5m ago", deepLink:"/farmer/matches" },
-  { id:"2", type:"price", title:"Tomato Price Alert", body:"Tomato prices have increased 8% in the Kandy market today.", read:false, createdAt:"2h ago" },
-  { id:"3", type:"offer", title:"Offer Accepted", body:"Colombo Fresh Mart accepted your counter-offer for Cabbage.", read:false, createdAt:"5h ago", deepLink:"/farmer/matches" },
-  { id:"4", type:"advisory", title:"Seasonal Advisory", body:"Heavy rains expected next week — apply preventive fungicide.", read:true, createdAt:"1d ago" },
-  { id:"5", type:"system", title:"Profile Updated", body:"Your farm profile has been verified successfully.", read:true, createdAt:"2d ago" },
-];
 
 export default function FarmerNotificationsPage() {
   const t = useTranslations();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Notification[]>("/users/me/notifications")
-      .then(setNotifications)
-      .catch(() => setNotifications(MOCK))
+    api.get<any>("/notifications")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setNotifications(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load notifications");
+        setNotifications([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const markRead = async (id: string) => {
-    await api.post(`/users/me/notifications/${id}/read`).catch(()=>{});
+    await api.post(`/notifications/${id}/read`).catch(()=>{});
     setNotifications(prev => prev.map(n => n.id===id ? {...n, read:true} : n));
   };
 
   const markAllRead = async () => {
-    await api.post("/users/me/notifications/read-all").catch(()=>{});
+    await api.post("/notifications/read-all").catch(()=>{});
     setNotifications(prev => prev.map(n => ({...n, read:true})));
   };
 

@@ -88,18 +88,16 @@ export default function BetaLoginPage() {
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
-        // Clear stale data first
-        sessionStorage.removeItem("govihub_token");
-        sessionStorage.removeItem("govihub_dev_token");
-        sessionStorage.removeItem("govihub_dev_user");
-        // Then store new data
+        // Clear ALL previous session data first
+        sessionStorage.clear();
+        // Store ONLY the new token
         sessionStorage.setItem("govihub_token", data.access_token);
-        sessionStorage.setItem("govihub_dev_token", data.access_token);
-        sessionStorage.setItem("govihub_dev_user", JSON.stringify(data.user));
-        document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
+        // Set the cookie
+        document.cookie = "govihub_token=" + data.access_token + ";path=/;max-age=86400";
       }
       const role = data.user?.role || "farmer";
-      router.push(`/${locale}/${role}/dashboard`);
+      // Full page navigation to reset all React state
+      window.location.href = `/${locale}/${role}/dashboard`;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {
@@ -137,18 +135,15 @@ export default function BetaLoginPage() {
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
-        // Clear stale data first
-        sessionStorage.removeItem("govihub_token");
-        sessionStorage.removeItem("govihub_dev_token");
-        sessionStorage.removeItem("govihub_dev_user");
-        // Then store new data
+        // Clear ALL previous session data first
+        sessionStorage.clear();
+        // Store ONLY the new token
         sessionStorage.setItem("govihub_token", data.access_token);
-        sessionStorage.setItem("govihub_dev_token", data.access_token);
-        sessionStorage.setItem("govihub_dev_user", JSON.stringify(data.user));
-        document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
+        // Set the cookie
+        document.cookie = "govihub_token=" + data.access_token + ";path=/;max-age=86400";
       }
       const role = data.user?.role || regRole;
-      // Full page navigation to reset all in-memory state
+      // Full page navigation to reset all React state
       window.location.href = `/${locale}/${role}/dashboard`;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Registration failed");

@@ -31,11 +31,6 @@ interface Demand {
 const CROPS = ["Tomato","Cabbage","Carrot","Beans","Potato","Onion","Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish"];
 const UNITS = ["kg","ton","crate","bunch","bag"];
 
-const MOCK: Demand[] = [
-  { id:"1", crop:"Tomato", quantity:500, unit:"kg", minPrice:100, maxPrice:130, location:"Colombo", radius:50, startDate:"2026-04-01", endDate:"2026-04-30", recurring:true, status:"open" },
-  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", minPrice:70, maxPrice:90, location:"Gampaha", radius:30, startDate:"2026-04-10", endDate:"2026-04-20", recurring:false, status:"reviewing" },
-  { id:"3", crop:"Carrot", quantity:150, unit:"kg", minPrice:140, maxPrice:165, location:"Kandy", radius:20, startDate:"2026-03-01", endDate:"2026-03-31", recurring:false, status:"closed" },
-];
 
 const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", minPrice:"", maxPrice:"", location:"", radius:"50", startDate:"", endDate:"", recurring:false };
 type FormData = typeof EMPTY_FORM;
@@ -50,12 +45,22 @@ export default function BuyerDemandsPage() {
   const [editId, setEditId] = useState<string|null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = () =>
-    api.get<Demand[]>("/buyer/demands")
-      .then(setDemands)
-      .catch(() => setDemands(MOCK))
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    api.get<any>("/listings/demand")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setDemands(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load demands");
+        setDemands([]);
+      })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -70,21 +75,23 @@ export default function BuyerDemandsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/buyer/demands/${editId}`, form);
-      else await api.post("/buyer/demands", form);
+      if (editId) await api.put(`/listings/demand/${editId}`, form);
+      else await api.post("/listings/demand", form);
       setShowModal(false);
       await load();
-    } catch {
-      const item: Demand = { id: editId||String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, minPrice:Number(form.minPrice), maxPrice:Number(form.maxPrice), location:form.location, radius:Number(form.radius), startDate:form.startDate, endDate:form.endDate, recurring:form.recurring, status:"open" };
-      setDemands(prev => editId ? prev.map(d => d.id===editId ? item : d) : [...prev, item]);
-      setShowModal(false);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save demand");
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t("common.deleteConfirmDemand"))) return;
-    await api.delete(`/buyer/demands/${id}`).catch(()=>{});
-    setDemands(prev => prev.filter(d => d.id !== id));
+    try {
+      await api.delete(`/listings/demand/${id}`);
+      setDemands(prev => prev.filter(d => d.id !== id));
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete demand");
+    }
   };
 
   const f = (key: keyof FormData, val: string|boolean) => setForm(p => ({...p, [key]: val}));

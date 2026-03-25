@@ -24,13 +24,6 @@ interface Supplier {
   verified: boolean;
 }
 
-const MOCK_SUPPLIERS: Supplier[] = [
-  { id:"1", name:"Agri Lanka Supplies", category:"fertilizer", description:"Quality organic and chemical fertilizers for all crops.", location:"Kandy", distance:3.2, rating:4.5, phone:"+94 77 123 4567", verified:true },
-  { id:"2", name:"Golden Seeds Ltd", category:"seeds", description:"Certified hybrid and open-pollinated vegetable seeds.", location:"Peradeniya", distance:5.1, rating:4.2, phone:"+94 81 234 5678", verified:true },
-  { id:"3", name:"PestGuard Solutions", category:"pesticide", description:"EPA-approved crop protection products.", location:"Matale", distance:12.4, rating:3.9, phone:"+94 66 345 6789", verified:false },
-  { id:"4", name:"FarmTech Equipment", category:"equipment", description:"Tractors, tillers, sprayers and farm tools.", location:"Kurunegala", distance:28.7, rating:4.7, phone:"+94 37 456 7890", verified:true },
-  { id:"5", name:"IrriSystems Lanka", category:"irrigation", description:"Drip and sprinkler irrigation systems.", location:"Dambulla", distance:35.0, rating:4.3, phone:"+94 66 567 8901", verified:true },
-];
 
 const CATEGORIES: { key: Category; label: string; icon: string }[] = [
   { key:"all", label:"All", icon:"🏪" },
@@ -45,13 +38,20 @@ export default function FarmerMarketplacePage() {
   const t = useTranslations();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<Category>("all");
 
   useEffect(() => {
-    api.get<Supplier[]>("/marketplace/suppliers")
-      .then(setSuppliers)
-      .catch(() => setSuppliers(MOCK_SUPPLIERS))
+    api.get<any>("/marketplace/search")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
+        setSuppliers(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load marketplace");
+        setSuppliers([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

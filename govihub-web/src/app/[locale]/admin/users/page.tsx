@@ -56,8 +56,8 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     api.get<User[]>("/admin/users")
-      .then(setUsers)
-      .catch(() => setUsers(MOCK_USERS))
+      .then((data) => setUsers(Array.isArray(data) ? data : []))
+      .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   }, []);
 

@@ -54,8 +54,8 @@ export default function FarmAdvisoryPage() {
 
   useEffect(() => {
     api.get<HistoryItem[]>("/advisory/history")
-      .then(setHistory)
-      .catch(() => setHistory(MOCK_HISTORY))
+      .then((data) => setHistory(Array.isArray(data) ? data : []))
+      .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
   }, []);
 
@@ -70,7 +70,7 @@ export default function FarmAdvisoryPage() {
     setInput("");
     setLoading(true);
     try {
-      const res = await api.post<{ answer:string; sources?:string[] }>("/advisory/ask", { question });
+      const res = await api.post<{ answer:string; sources?:string[] }>("/advisory/ask", { question, language: "en" });
       const assistantMsg: Message = {
         id: String(Date.now()+1),
         role:"assistant",
@@ -79,12 +79,11 @@ export default function FarmAdvisoryPage() {
         timestamp: new Date().toLocaleTimeString(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-    } catch {
+    } catch (err) {
       const assistantMsg: Message = {
         id: String(Date.now()+1),
         role:"assistant",
-        content: "I can help you with that farming question. For tomato blight, apply copper-based fungicide and ensure proper air circulation between plants. Remove infected leaves promptly and avoid overhead irrigation.",
-        sources: ["GoviHub Knowledge Base", "Department of Agriculture, Sri Lanka"],
+        content: "Sorry, I could not process your question right now. Please try again later.",
         timestamp: new Date().toLocaleTimeString(),
       };
       setMessages(prev => [...prev, assistantMsg]);

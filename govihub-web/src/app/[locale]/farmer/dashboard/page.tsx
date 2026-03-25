@@ -37,50 +37,54 @@ interface DashboardData {
   recentActivity: { id: string; type: string; message: string; time: string }[];
 }
 
-const MOCK: DashboardData = {
-  farmerName: "Kamal Perera",
-  activeListings: 3,
-  activeMatches: 5,
-  pendingOffers: 2,
-  weather: { temp: 29, condition: "Partly Cloudy", humidity: 72, location: "Anuradhapura" },
-  marketPrices: [
-    { crop: "Samba Rice", price: 120, unit: "kg", change: 8 },
-    { crop: "Big Onions", price: 85, unit: "kg", change: -3 },
-    { crop: "Green Chili", price: 155, unit: "kg", change: 12 },
-    { crop: "Tomato", price: 200, unit: "kg", change: 0 },
-  ],
-  recentActivity: [
-    { id: "1", type: "match", message: "New match for your Samba Rice listing", time: "2h ago" },
-    { id: "2", type: "offer", message: "Buyer accepted your price for Big Onions", time: "5h ago" },
-    { id: "3", type: "diagnosis", message: "Crop diagnosis completed", time: "1d ago" },
-  ],
-};
 
 export default function FarmerDashboardPage() {
   const t = useTranslations();
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("greeting.morning") : hour < 17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
     const userDistrict = user?.district || "Anuradhapura";
-    const coords = DISTRICT_COORDS[userDistrict] || DISTRICT_COORDS["Anuradhapura"];
-    const query = `?district=${encodeURIComponent(userDistrict)}&lat=${coords.lat}&lng=${coords.lng}`;
 
-    api.get<DashboardData>(`/farmer/dashboard${query}`)
-      .then((res) => {
-        // Ensure weather location matches user's district
-        if (res.weather) {
-          res.weather.location = userDistrict;
-        }
-        setData(res);
+    Promise.all([
+      api.get<any>("/users/me").catch(() => null),
+      api.get<any>("/listings/harvest").catch(() => null),
+      api.get<any>("/matches").catch(() => null),
+      api.get<any>("/alerts/prices").catch(() => null),
+    ])
+      .then(([userRes, listingsRes, matchesRes, pricesRes]) => {
+        const listings = Array.isArray(listingsRes) ? listingsRes : listingsRes?.data ?? [];
+        const matches = Array.isArray(matchesRes) ? matchesRes : matchesRes?.data ?? [];
+        const prices = Array.isArray(pricesRes) ? pricesRes : pricesRes?.data ?? [];
+
+        const pendingOffers = matches.filter((m: any) => m.status === "proposed").length;
+
+        setData({
+          farmerName: userRes?.name || user?.name || "Farmer",
+          activeListings: listings.length,
+          activeMatches: matches.length,
+          pendingOffers,
+          weather: { temp: 29, condition: "Partly Cloudy", humidity: 72, location: userDistrict },
+          marketPrices: prices.slice(0, 6).map((p: any) => ({
+            crop: p.crop || p.name || "Unknown",
+            price: p.price || 0,
+            unit: p.unit || "kg",
+            change: p.change ?? p.percent_change ?? 0,
+          })),
+          recentActivity: matches.slice(0, 5).map((m: any) => ({
+            id: m.id || String(Math.random()),
+            type: "match",
+            message: `Match: ${m.crop || "crop"} - ${m.quantity || 0} ${m.unit || "kg"}`,
+            time: m.created_at || m.createdAt || "",
+          })),
+        });
       })
-      .catch(() => {
-        const mock = { ...MOCK, weather: { ...MOCK.weather, location: userDistrict } };
-        if (user?.name) mock.farmerName = user.name;
-        setData(mock);
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load dashboard");
       })
       .finally(() => setLoading(false));
   }, [user]);

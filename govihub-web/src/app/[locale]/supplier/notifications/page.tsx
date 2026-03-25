@@ -21,29 +21,33 @@ interface Notification {
 
 const NOTIF_ICON: Record<NotifType, string> = { inquiry:"❓", price:"📊", system:"⚙️", listing:"📦" };
 
-const MOCK: Notification[] = [
-  { id:"1", type:"inquiry", title:"New Inquiry", body:"A farmer in Kandy is inquiring about your NPK Fertilizer stock.", read:false, createdAt:"30m ago", deepLink:"/supplier/listings" },
-  { id:"2", type:"listing", title:"Listing Views Milestone", body:"Your Tomato Seeds listing reached 100 views!", read:false, createdAt:"4h ago" },
-  { id:"3", type:"price", title:"Price Trend Alert", body:"Fertilizer prices are expected to rise 5% next month.", read:true, createdAt:"2d ago" },
-  { id:"4", type:"system", title:"Verification Complete", body:"Your supplier account has been verified.", read:true, createdAt:"5d ago" },
-];
 
 export default function SupplierNotificationsPage() {
   const t = useTranslations();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Notification[]>("/users/me/notifications").then(setNotifications).catch(() => setNotifications(MOCK)).finally(() => setLoading(false));
+    api.get<any>("/notifications")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setNotifications(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load notifications");
+        setNotifications([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const markRead = async (id: string) => {
-    await api.post(`/users/me/notifications/${id}/read`).catch(()=>{});
+    await api.post(`/notifications/${id}/read`).catch(()=>{});
     setNotifications(prev => prev.map(n => n.id===id ? {...n, read:true} : n));
   };
 
   const markAllRead = async () => {
-    await api.post("/users/me/notifications/read-all").catch(()=>{});
+    await api.post("/notifications/read-all").catch(()=>{});
     setNotifications(prev => prev.map(n => ({...n, read:true})));
   };
 

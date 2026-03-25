@@ -72,9 +72,11 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // TODO: /admin/analytics endpoint may not exist yet (404). Using mock data as fallback.
         const res = await api.get<AnalyticsData>("/admin/analytics");
         setData(res);
       } catch {
+        // TODO: Remove mock fallback once /admin/analytics endpoint is implemented
         setData(MOCK_DATA);
       } finally {
         setLoading(false);

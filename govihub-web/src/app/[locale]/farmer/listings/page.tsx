@@ -32,11 +32,6 @@ const CROPS = [
 ];
 const UNITS = ["kg","ton","crate","bunch","bag"];
 
-const MOCK: Listing[] = [
-  { id:"1", crop:"Tomato", quantity:500, unit:"kg", price:120, location:"Kandy", harvestDate:"2026-04-10", status:"ready" },
-  { id:"2", crop:"Cabbage", quantity:300, unit:"kg", price:85, location:"Nuwara Eliya", harvestDate:"2026-04-15", status:"planned" },
-  { id:"3", crop:"Carrot", quantity:200, unit:"kg", price:155, location:"Badulla", harvestDate:"2026-03-20", status:"fulfilled" },
-];
 
 const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", price:"", location:"", harvestDate:"", expiryDate:"", description:"" };
 type FormData = typeof EMPTY_FORM;
@@ -51,12 +46,22 @@ export default function FarmerListingsPage() {
   const [editId, setEditId] = useState<string|null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = () =>
-    api.get<Listing[]>("/farmer/listings")
-      .then(setListings)
-      .catch(() => setListings(MOCK))
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    api.get<any>("/listings/harvest")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setListings(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load listings");
+        setListings([]);
+      })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -72,23 +77,25 @@ export default function FarmerListingsPage() {
     setSubmitting(true);
     try {
       if (editId) {
-        await api.put(`/farmer/listings/${editId}`, form);
+        await api.put(`/listings/harvest/${editId}`, form);
       } else {
-        await api.post("/farmer/listings", form);
+        await api.post("/listings/harvest", form);
       }
       setShowModal(false);
       await load();
-    } catch {
-      const item: Listing = { id: editId || String(Date.now()), crop:form.crop, quantity:Number(form.quantity), unit:form.unit, price:Number(form.price), location:form.location, harvestDate:form.harvestDate, status:"planned" };
-      setListings(prev => editId ? prev.map(l => l.id===editId ? item : l) : [...prev, item]);
-      setShowModal(false);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save listing");
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t("common.deleteConfirmListing"))) return;
-    await api.delete(`/farmer/listings/${id}`).catch(()=>{});
-    setListings(prev => prev.filter(l => l.id !== id));
+    try {
+      await api.delete(`/listings/harvest/${id}`);
+      setListings(prev => prev.filter(l => l.id !== id));
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete listing");
+    }
   };
 
   const f = (key: keyof FormData, val: string) => setForm(p => ({...p, [key]: val}));

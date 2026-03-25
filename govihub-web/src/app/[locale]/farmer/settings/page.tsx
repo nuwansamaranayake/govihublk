@@ -29,11 +29,6 @@ const DISTRICTS = [
   "Puttalam","Ratnapura","Trincomalee","Vavuniya",
 ];
 
-const MOCK_PROFILE: UserProfile = {
-  name:"Kamal Perera", email:"kamal@example.com", phone:"+94771234567",
-  district:"Kandy", language:"si",
-  notifyMatches:true, notifyPrices:true, notifyAdvisory:false, notifySystem:true,
-};
 
 export default function FarmerSettingsPage() {
   const t = useTranslations();
@@ -41,12 +36,15 @@ export default function FarmerSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
-    api.get<UserProfile>("/users/me/profile")
+    api.get<UserProfile>("/users/me")
       .then(setProfile)
-      .catch(() => setProfile(MOCK_PROFILE))
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load profile");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -55,9 +53,9 @@ export default function FarmerSettingsPage() {
     if (!profile) return;
     setSaving(true);
     try {
-      await api.put("/users/me/profile", profile);
-    } catch {
-      // optimistic
+      await api.put("/users/me", profile);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save profile");
     } finally {
       setSaving(false);
       setSaved(true);

@@ -48,7 +48,7 @@ export function BottomNav({ items }: BottomNavProps) {
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] font-medium leading-none">{item.label}</span>
+                <span className="text-[10px] font-medium leading-none truncate max-w-[64px] text-center">{item.label}</span>
               </Link>
             </li>
           );

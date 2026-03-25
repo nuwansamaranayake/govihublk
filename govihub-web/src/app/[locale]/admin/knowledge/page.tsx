@@ -68,6 +68,7 @@ export default function AdminKnowledgePage() {
   const [ingesting, setIngesting] = useState(false);
 
   useEffect(() => {
+    // TODO: /admin/knowledge endpoint may not exist yet. Using mock data as fallback.
     Promise.all([
       api.get<KnowledgeChunk[]>("/admin/knowledge"),
       api.get<KnowledgeStats>("/admin/knowledge/stats"),

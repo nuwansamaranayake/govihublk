@@ -27,20 +27,6 @@ interface HistoryItem {
   date: string;
 }
 
-const MOCK_RESULT: DiagnosisResult = {
-  disease: "Early Blight (Alternaria solani)",
-  confidence: 88,
-  severity: "medium",
-  advice: "Apply copper-based fungicide every 7-10 days. Remove infected leaves immediately. Ensure good air circulation.",
-  adviceSinhala: "තඹ පදනම් දිලීර නාශකය දින 7-10 කට වරක් යොදන්න. ආසාදිත කොළ ඉවත් කරන්න. හොඳ වාතාශ්‍රය සහතික කරන්න.",
-  treatments: ["Copper fungicide spray", "Remove infected leaves", "Improve drainage", "Reduce overhead irrigation"],
-};
-
-const MOCK_HISTORY: HistoryItem[] = [
-  { id:"1", imageUrl:"", disease:"Early Blight", confidence:88, date:"2026-03-20" },
-  { id:"2", imageUrl:"", disease:"Healthy", confidence:95, date:"2026-03-15" },
-  { id:"3", imageUrl:"", disease:"Leaf Miner", confidence:72, date:"2026-03-10" },
-];
 
 export default function CropDiagnosisPage() {
   const t = useTranslations();
@@ -50,13 +36,20 @@ export default function CropDiagnosisPage() {
   const [result, setResult] = useState<DiagnosisResult|null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<"helpful"|"not_helpful"|null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.get<HistoryItem[]>("/farmer/diagnosis/history")
-      .then(setHistory)
-      .catch(() => setHistory(MOCK_HISTORY))
+    api.get<any>("/diagnosis/history")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setHistory(items);
+      })
+      .catch((err: any) => {
+        setHistoryError(err?.message || "Failed to load diagnosis history");
+        setHistory([]);
+      })
       .finally(() => setHistoryLoading(false));
   }, []);
 
@@ -77,8 +70,8 @@ export default function CropDiagnosisPage() {
     try {
       const res = await api.upload<DiagnosisResult>("/diagnosis", formData);
       setResult(res);
-    } catch {
-      setResult(MOCK_RESULT);
+    } catch (err: any) {
+      setHistoryError(err?.message || "Diagnosis failed");
     } finally {
       setProcessing(false);
     }

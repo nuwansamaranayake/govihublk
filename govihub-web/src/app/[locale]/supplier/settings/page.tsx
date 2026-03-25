@@ -23,7 +23,6 @@ interface UserProfile {
 }
 
 const DISTRICTS = ["Ampara","Anuradhapura","Badulla","Colombo","Galle","Gampaha","Hambantota","Jaffna","Kalutara","Kandy","Kurunegala","Matale","Matara","Nuwara Eliya","Polonnaruwa","Puttalam","Ratnapura","Trincomalee"];
-const MOCK: UserProfile = { name:"Rohan Jayasuriya", email:"rohan@example.com", phone:"+94773456789", district:"Gampaha", businessName:"Agri Lanka Supplies", language:"en", notifyInquiries:true, notifyPrices:true, notifySystem:true };
 
 export default function SupplierSettingsPage() {
   const t = useTranslations();
@@ -31,17 +30,23 @@ export default function SupplierSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
-    api.get<UserProfile>("/users/me/profile").then(setProfile).catch(() => setProfile(MOCK)).finally(() => setLoading(false));
+    api.get<UserProfile>("/users/me")
+      .then(setProfile)
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load profile");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
-    try { await api.put("/users/me/profile", profile); } catch {}
+    try { await api.put("/users/me", profile); } catch (err: any) { setError(err?.message || "Failed to save"); }
     finally { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }
   };
 

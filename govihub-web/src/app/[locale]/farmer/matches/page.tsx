@@ -26,12 +26,6 @@ interface Match {
   createdAt: string;
 }
 
-const MOCK: Match[] = [
-  { id:"1", buyerName:"Colombo Fresh Mart", crop:"Tomato", quantity:300, unit:"kg", price:115, location:"Colombo", score:92, status:"proposed", createdAt:"2026-03-20" },
-  { id:"2", buyerName:"Lanka Supermart", crop:"Cabbage", quantity:200, unit:"kg", price:80, location:"Gampaha", score:78, status:"farmer_accepted", createdAt:"2026-03-18" },
-  { id:"3", buyerName:"Green Foods Ltd", crop:"Carrot", quantity:150, unit:"kg", price:150, location:"Kandy", score:85, status:"in_transit", createdAt:"2026-03-10" },
-  { id:"4", buyerName:"City Vegetables", crop:"Beans", quantity:100, unit:"kg", price:195, location:"Matale", score:70, status:"disputed", createdAt:"2026-03-05" },
-];
 
 const STATUS_COLOR: Record<MatchStatus, "gold"|"green"|"gray"|"red"|"blue"|"orange"> = {
   proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"red", cancelled:"gray",
@@ -49,24 +43,32 @@ export default function FarmerMatchesPage() {
   const t = useTranslations();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string|null>(null);
 
-  useEffect(() => {
-    api.get<Match[]>("/farmer/matches")
-      .then(setMatches)
-      .catch(() => setMatches(MOCK))
+  const loadMatches = () => {
+    setError(null);
+    api.get<any>("/matches")
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.data ?? [];
+        setMatches(items);
+      })
+      .catch((err: any) => {
+        setError(err?.message || "Failed to load matches");
+        setMatches([]);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadMatches(); }, []);
 
   const handleAction = async (matchId: string, action: string) => {
     setActionLoading(`${matchId}-${action}`);
     try {
-      await api.post(`/farmer/matches/${matchId}/${action.toLowerCase()}`);
-      const updated = await api.get<Match[]>("/farmer/matches");
-      setMatches(updated);
-    } catch {
-      const map: Record<string, MatchStatus> = { Accept:"farmer_accepted", Reject:"cancelled", Confirm:"buyer_accepted", Fulfill:"in_transit" };
-      if (map[action]) setMatches(prev => prev.map(m => m.id===matchId ? {...m, status:map[action]} : m));
+      await api.post(`/matches/${matchId}/${action.toLowerCase()}`);
+      loadMatches();
+    } catch (err: any) {
+      setError(err?.message || "Action failed");
     } finally { setActionLoading(null); }
   };
 
