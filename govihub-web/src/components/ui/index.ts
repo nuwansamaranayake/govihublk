@@ -20,6 +20,7 @@ export { PriceTag } from "./PriceTag";
 export { QuantityDisplay } from "./QuantityDisplay";
 export { DateRange } from "./DateRange";
 export { LanguageSwitcher } from "./LanguageSwitcher";
+export { default as FeedbackFAB } from "./FeedbackFAB";
 
 export type { BottomNavItem } from "./BottomNav";
 export type { ListingStatus } from "./StatusBadge";

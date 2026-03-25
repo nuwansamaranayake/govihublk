@@ -22,6 +22,9 @@ class UserRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
+    username: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    auth_provider: Mapped[Optional[str]] = mapped_column(String(20), default="beta", server_default="beta")
     phone: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     role: Mapped[UserRole] = mapped_column(

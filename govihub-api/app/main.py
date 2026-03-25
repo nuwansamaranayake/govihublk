@@ -127,6 +127,16 @@ def create_app() -> FastAPI:
     app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
     app.include_router(mcp_router, prefix="/mcp", tags=["MCP"])
 
+    # Beta auth — username/password login for beta testing
+    if settings.APP_ENV in ("beta", "development"):
+        from app.auth.beta_router import router as beta_auth_router
+        app.include_router(beta_auth_router, prefix="/api/v1/auth", tags=["Beta Auth"])
+        logger.info("beta_auth_enabled", note="Username/password login is active")
+
+        # Beta feedback endpoint
+        from app.feedback.router import router as feedback_router
+        app.include_router(feedback_router, prefix="/api/v1", tags=["Feedback"])
+
     # Dev auth bypass — only in development mode
     if settings.APP_ENV == "development":
         from app.auth.dev_router import router as dev_auth_router
