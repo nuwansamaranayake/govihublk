@@ -3,10 +3,29 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+
+const DISTRICT_COORDS: Record<string, { lat: number; lng: number }> = {
+  Anuradhapura: { lat: 8.3114, lng: 80.4037 },
+  Polonnaruwa: { lat: 7.9403, lng: 81.0188 },
+  Colombo: { lat: 6.9271, lng: 79.8612 },
+  Kurunegala: { lat: 7.4863, lng: 80.3647 },
+  Kandy: { lat: 7.2906, lng: 80.6337 },
+  Matale: { lat: 7.4675, lng: 80.6234 },
+  Galle: { lat: 6.0535, lng: 80.2210 },
+  Jaffna: { lat: 9.6615, lng: 80.0255 },
+  Batticaloa: { lat: 7.7310, lng: 81.6747 },
+  Badulla: { lat: 6.9934, lng: 81.0550 },
+  Ratnapura: { lat: 6.6828, lng: 80.4028 },
+  Trincomalee: { lat: 8.5874, lng: 81.2152 },
+  Hambantota: { lat: 6.1429, lng: 81.1212 },
+  Matara: { lat: 5.9549, lng: 80.5550 },
+  Nuwara_Eliya: { lat: 6.9497, lng: 80.7891 },
+};
 
 interface DashboardData {
   farmerName: string;
@@ -23,33 +42,48 @@ const MOCK: DashboardData = {
   activeListings: 3,
   activeMatches: 5,
   pendingOffers: 2,
-  weather: { temp: 29, condition: "Partly Cloudy", humidity: 72, location: "Kandy" },
+  weather: { temp: 29, condition: "Partly Cloudy", humidity: 72, location: "Anuradhapura" },
   marketPrices: [
-    { crop: "Tomato", price: 120, unit: "kg", change: 8 },
-    { crop: "Cabbage", price: 85, unit: "kg", change: -3 },
-    { crop: "Carrot", price: 155, unit: "kg", change: 12 },
-    { crop: "Beans", price: 200, unit: "kg", change: 0 },
+    { crop: "Samba Rice", price: 120, unit: "kg", change: 8 },
+    { crop: "Big Onions", price: 85, unit: "kg", change: -3 },
+    { crop: "Green Chili", price: 155, unit: "kg", change: 12 },
+    { crop: "Tomato", price: 200, unit: "kg", change: 0 },
   ],
   recentActivity: [
-    { id: "1", type: "match", message: "New match for your Tomato listing", time: "2h ago" },
-    { id: "2", type: "offer", message: "Buyer accepted your price for Cabbage", time: "5h ago" },
+    { id: "1", type: "match", message: "New match for your Samba Rice listing", time: "2h ago" },
+    { id: "2", type: "offer", message: "Buyer accepted your price for Big Onions", time: "5h ago" },
     { id: "3", type: "diagnosis", message: "Crop diagnosis completed", time: "1d ago" },
   ],
 };
 
 export default function FarmerDashboardPage() {
   const t = useTranslations();
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
 
   useEffect(() => {
-    api.get<DashboardData>("/farmer/dashboard")
-      .then(setData)
-      .catch(() => setData(MOCK))
+    const userDistrict = user?.district || "Anuradhapura";
+    const coords = DISTRICT_COORDS[userDistrict] || DISTRICT_COORDS["Anuradhapura"];
+    const query = `?district=${encodeURIComponent(userDistrict)}&lat=${coords.lat}&lng=${coords.lng}`;
+
+    api.get<DashboardData>(`/farmer/dashboard${query}`)
+      .then((res) => {
+        // Ensure weather location matches user's district
+        if (res.weather) {
+          res.weather.location = userDistrict;
+        }
+        setData(res);
+      })
+      .catch(() => {
+        const mock = { ...MOCK, weather: { ...MOCK.weather, location: userDistrict } };
+        if (user?.name) mock.farmerName = user.name;
+        setData(mock);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const activityIcon = (type: string) =>
     type === "match" ? "🤝" : type === "offer" ? "💰" : "🔬";

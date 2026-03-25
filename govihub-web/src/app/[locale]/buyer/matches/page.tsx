@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { formatStatus } from "@/lib/utils";
 
 type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
@@ -76,7 +77,7 @@ export default function BuyerMatchesPage() {
   const tabs = [
     { key:"all", label:"All", badge: matches.length },
     ...allStatuses.map(s => ({
-      key: s, label: s.charAt(0).toUpperCase()+s.slice(1),
+      key: s, label: formatStatus(s),
       badge: matches.filter(m=>m.status===s).length,
     })),
   ];
@@ -108,7 +109,7 @@ export default function BuyerMatchesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-neutral-900 text-sm">{match.farmerName}</h3>
-                          <Badge color={STATUS_COLOR[match.status]} size="sm" dot>{match.status}</Badge>
+                          <Badge color={STATUS_COLOR[match.status]} size="sm" dot>{formatStatus(match.status)}</Badge>
                           {match.clusterSize && (
                             <Badge color="blue" size="sm">Cluster of {match.clusterSize}</Badge>
                           )}

@@ -22,7 +22,7 @@ export default function BuyerMorePage() {
     try {
       await logout();
     } finally {
-      router.push(`/${locale}/auth/dev-login`);
+      router.push(`/${locale}/auth/beta-login`);
     }
   };
 

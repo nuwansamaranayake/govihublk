@@ -55,15 +55,24 @@ export default function FarmerMarketplacePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = suppliers
-    .filter(s => category==="all" || s.category===category)
-    .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b) => a.distance - b.distance);
+  const searchFiltered = suppliers.filter(
+    (s) =>
+      !search ||
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.description.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const tabs = CATEGORIES.map(c => ({
+  const filtered = searchFiltered
+    .filter((s) => category === "all" || s.category === category)
+    .sort((a, b) => a.distance - b.distance);
+
+  const tabs = CATEGORIES.map((c) => ({
     key: c.key,
     label: c.label,
-    badge: c.key==="all" ? suppliers.length : suppliers.filter(s=>s.category===c.key).length,
+    badge:
+      c.key === "all"
+        ? searchFiltered.length
+        : searchFiltered.filter((s) => s.category === c.key).length,
   }));
 
   return (

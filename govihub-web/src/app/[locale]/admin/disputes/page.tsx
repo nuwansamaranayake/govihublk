@@ -54,7 +54,33 @@ export default function AdminDisputesPage() {
         const res = await api.get<Dispute[]>("/admin/disputes");
         setDisputes(res);
       } catch {
-        setDisputes(MOCK_DISPUTES);
+        // Fallback: try to get disputed matches from the matches endpoint
+        try {
+          const matches = await api.get<Array<{
+            id: string;
+            farmer_name: string;
+            buyer_name: string;
+            crop: string;
+            status: string;
+            created_at: string;
+            reason?: string;
+          }>>("/admin/matches?status=disputed");
+          const disputesFromMatches: Dispute[] = matches
+            .filter((m) => m.status === "disputed")
+            .map((m) => ({
+              id: `dispute-${m.id}`,
+              match_id: m.id,
+              farmer_name: m.farmer_name,
+              buyer_name: m.buyer_name,
+              crop: m.crop,
+              status: "open" as DisputeStatus,
+              reported_at: m.created_at,
+              reason: m.reason,
+            }));
+          setDisputes(disputesFromMatches);
+        } catch {
+          setDisputes(MOCK_DISPUTES);
+        }
       } finally {
         setLoading(false);
       }

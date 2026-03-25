@@ -48,9 +48,9 @@ const MOCK: DashboardData = {
     { category:"irrigation", count:1 },
   ],
   recentListings: [
-    { id:"1", title:"Organic NPK Fertilizer 50kg", category:"fertilizer", price:2500, unit:"bag", active:true, views:45, inquiries:8 },
-    { id:"2", title:"Tomato Hybrid Seeds F1", category:"seeds", price:350, unit:"pack", active:true, views:32, inquiries:5 },
-    { id:"3", title:"Backpack Sprayer 15L", category:"equipment", price:4500, unit:"unit", active:true, views:28, inquiries:6 },
+    { id:"1", title:"NPK Fertilizer 50kg", category:"fertilizer", price:2500, unit:"bag", active:true, views:45, inquiries:8 },
+    { id:"2", title:"Paddy Seeds (BG 352)", category:"seeds", price:350, unit:"pack", active:true, views:32, inquiries:5 },
+    { id:"3", title:"Organic Compost 25kg", category:"fertilizer", price:1200, unit:"bag", active:true, views:28, inquiries:6 },
   ],
 };
 

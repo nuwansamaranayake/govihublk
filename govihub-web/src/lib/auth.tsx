@@ -124,6 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setAccessToken(null);
       setUser(null);
+      // Clear all session data
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("govihub_token");
+        sessionStorage.removeItem("govihub_dev_token");
+        sessionStorage.removeItem("govihub_dev_user");
+        // Clear auth cookie so middleware redirects
+        document.cookie = "govihub_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
     }
   }, []);
 

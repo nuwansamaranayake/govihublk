@@ -87,8 +87,15 @@ export default function BetaLoginPage() {
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
+        // Clear stale data first
+        sessionStorage.removeItem("govihub_token");
+        sessionStorage.removeItem("govihub_dev_token");
+        sessionStorage.removeItem("govihub_dev_user");
+        // Then store new data
+        sessionStorage.setItem("govihub_token", data.access_token);
         sessionStorage.setItem("govihub_dev_token", data.access_token);
         sessionStorage.setItem("govihub_dev_user", JSON.stringify(data.user));
+        document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
       }
       const role = data.user?.role || "farmer";
       router.push(`/${locale}/${role}/dashboard`);
@@ -129,8 +136,15 @@ export default function BetaLoginPage() {
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
+        // Clear stale data first
+        sessionStorage.removeItem("govihub_token");
+        sessionStorage.removeItem("govihub_dev_token");
+        sessionStorage.removeItem("govihub_dev_user");
+        // Then store new data
+        sessionStorage.setItem("govihub_token", data.access_token);
         sessionStorage.setItem("govihub_dev_token", data.access_token);
         sessionStorage.setItem("govihub_dev_user", JSON.stringify(data.user));
+        document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
       }
       const role = data.user?.role || regRole;
       router.push(`/${locale}/${role}/dashboard`);

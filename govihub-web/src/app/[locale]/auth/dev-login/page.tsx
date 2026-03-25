@@ -38,6 +38,7 @@ export default function DevLoginPage() {
       if (typeof window !== "undefined") {
         sessionStorage.setItem("govihub_dev_token", data.access_token);
         sessionStorage.setItem("govihub_dev_user", JSON.stringify(data.user));
+        document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
       }
 
       // Redirect to role-specific dashboard

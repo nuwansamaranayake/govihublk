@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
+import { formatStatus } from "@/lib/utils";
 
 interface Listing {
   id: string;
@@ -131,7 +132,7 @@ export default function FarmerListingsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-neutral-900">{listing.crop}</h3>
-                          <Badge color={STATUS_COLOR[listing.status]||"gray"} size="sm" dot>{listing.status}</Badge>
+                          <Badge color={STATUS_COLOR[listing.status]||"gray"} size="sm" dot>{formatStatus(listing.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">{listing.quantity} {listing.unit} · Rs. {listing.price}/{listing.unit}</p>
                         <p className="text-xs text-neutral-400 mt-1">📍 {listing.location} · 🗓 {listing.harvestDate}</p>

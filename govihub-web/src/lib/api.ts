@@ -3,7 +3,7 @@
 // - Auto-refresh on 401 using httpOnly refresh cookie
 // - Credentials: 'include' for cookies
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002/api/v1";
 
 // ── In-memory token store ──────────────────────────────────────────────────
 let accessToken: string | null = null;
