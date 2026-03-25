@@ -1,6 +1,10 @@
-"""
-Seed realistic beta marketplace data — harvest listings, demands, supplies.
-Run: docker compose -f docker-compose.dev.yml exec govihub-api python scripts/seed_beta_data.py
+"""Seed beta marketplace data -- harvest listings, demand postings, supply listings.
+
+Usage:
+    python scripts/seed_beta_data.py
+
+Idempotent -- checks for existing data before inserting.
+Requires beta users to be seeded first (seed_beta_users.py).
 """
 
 import asyncio
@@ -10,9 +14,15 @@ from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy import select, func
 from app.database import async_session_factory
 from app.users.models import User
-from sqlalchemy import select, text
+from app.listings.models import (
+    HarvestListing, HarvestStatus,
+    DemandPosting, DemandStatus,
+    CropTaxonomy,
+)
+from app.marketplace.models import SupplyListing, SupplyCategory, SupplyStatus
 
 
 # Coordinates
@@ -23,180 +33,323 @@ COORDS = {
     "Kurunegala": (7.4863, 80.3647),
 }
 
-TODAY = date.today()
+
+def make_point(district):
+    """Return a WKT POINT string for a district."""
+    lat, lon = COORDS[district]
+    return f"SRID=4326;POINT({lon} {lat})"
+
+
+async def get_user(db, username):
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
+
+
+async def get_crop(db, name_en):
+    result = await db.execute(
+        select(CropTaxonomy).where(func.lower(CropTaxonomy.name_en) == name_en.lower())
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_fallback_crop_id(db):
+    result = await db.execute(select(CropTaxonomy.id).limit(1))
+    return result.scalar()
 
 
 async def seed():
-    print("\n=== GoviHub Beta Data Seeder ===\n")
+    print("\n" + "=" * 48)
+    print("  GoviHub Beta -- Seeding Market Data")
+    print("=" * 48 + "\n")
+
+    today = date.today()
+    harvest_count = 0
+    demand_count = 0
+    supply_count = 0
 
     async with async_session_factory() as db:
-        # Look up beta users
-        users = {}
-        for username in ["kamal_farmer", "saman_goviya", "kumari_farm",
-                         "nimal_buyer", "chaminda_buyer", "sunil_supplier"]:
-            result = await db.execute(
-                select(User).where(User.username == username)
-            )
-            user = result.scalar_one_or_none()
-            if user:
-                users[username] = user
-            else:
-                print(f"  WARN: {username} not found — run seed_beta_users.py first")
+        # Resolve users
+        kamal = await get_user(db, "kamal_farmer")
+        saman = await get_user(db, "saman_goviya")
+        kumari = await get_user(db, "kumari_farm")
+        nimal = await get_user(db, "nimal_buyer")
+        chaminda = await get_user(db, "chaminda_buyer")
+        sunil = await get_user(db, "sunil_supplier")
 
-        if not users:
-            print("  ERROR: No beta users found. Run seed_beta_users.py first.")
+        missing = []
+        for name, user in [
+            ("kamal_farmer", kamal), ("saman_goviya", saman),
+            ("kumari_farm", kumari), ("nimal_buyer", nimal),
+            ("chaminda_buyer", chaminda), ("sunil_supplier", sunil),
+        ]:
+            if not user:
+                missing.append(name)
+        if missing:
+            print(f"  ERROR: Missing users: {', '.join(missing)}")
+            print("  Run seed_beta_users.py first!")
             return
 
-        # Look up crop IDs from taxonomy
+        fallback_crop_id = await get_fallback_crop_id(db)
+
+        # Resolve crop IDs
+        crop_names = [
+            "Samba Rice", "Big Onion", "Green Chili", "Nadu Rice",
+            "Tomato", "Long Bean", "Brinjal", "Pumpkin",
+        ]
         crop_map = {}
-        result = await db.execute(text(
-            "SELECT id, name_en FROM crop_taxonomy WHERE name_en IS NOT NULL"
-        ))
-        for row in result.fetchall():
-            crop_map[row[1].lower()] = row[0]
+        for cn in crop_names:
+            crop = await get_crop(db, cn)
+            if crop:
+                crop_map[cn] = crop.id
+            else:
+                print(f"  WARN  Crop '{cn}' not found in taxonomy, using fallback")
+                crop_map[cn] = fallback_crop_id
 
-        print(f"  Found {len(crop_map)} crops in taxonomy")
+        def cid(name):
+            return crop_map.get(name, fallback_crop_id)
 
-        # Helper to find crop ID
-        def find_crop(name):
-            name_l = name.lower()
-            for key, cid in crop_map.items():
-                if name_l in key or key in name_l:
-                    return cid
-            return None
+        # ---- HARVEST LISTINGS (idempotent check) ----
+        existing_harvests = (await db.execute(
+            select(func.count()).select_from(HarvestListing).where(
+                HarvestListing.farmer_id.in_([kamal.id, saman.id, kumari.id])
+            )
+        )).scalar()
 
-        harvest_count = 0
-        demand_count = 0
-        supply_count = 0
+        if existing_harvests and existing_harvests > 0:
+            print(f"  SKIP  Harvest listings ({existing_harvests} already exist)")
+        else:
+            harvest_data = [
+                # Kamal: 500kg Samba Rice
+                dict(
+                    farmer_id=kamal.id, crop_id=cid("Samba Rice"), variety="Samba",
+                    quantity_kg=500, price_per_kg=220, quality_grade="A",
+                    harvest_date=today - timedelta(days=5),
+                    available_from=today, available_until=today + timedelta(days=30),
+                    location=make_point("Anuradhapura"),
+                    description="Fresh Samba rice from Anuradhapura. Organically grown, sun-dried.",
+                    status=HarvestStatus.ready, is_organic=True,
+                    delivery_available=True, delivery_radius_km=50,
+                ),
+                # Kamal: 200kg Big Onions
+                dict(
+                    farmer_id=kamal.id, crop_id=cid("Big Onion"), variety="Big Onion",
+                    quantity_kg=200, price_per_kg=350, quality_grade="A",
+                    harvest_date=today - timedelta(days=3),
+                    available_from=today, available_until=today + timedelta(days=14),
+                    location=make_point("Anuradhapura"),
+                    description="Large red onions, well-cured and ready for market.",
+                    status=HarvestStatus.ready, is_organic=False,
+                    delivery_available=False,
+                ),
+                # Kamal: 100kg Green Chili
+                dict(
+                    farmer_id=kamal.id, crop_id=cid("Green Chili"), variety="MI Green",
+                    quantity_kg=100, price_per_kg=480, quality_grade="B",
+                    harvest_date=today - timedelta(days=1),
+                    available_from=today, available_until=today + timedelta(days=7),
+                    location=make_point("Anuradhapura"),
+                    description="Fresh green chilies. Spicy MI variety.",
+                    status=HarvestStatus.ready, is_organic=False,
+                    delivery_available=True, delivery_radius_km=30,
+                ),
+                # Saman: 1000kg Nadu Rice
+                dict(
+                    farmer_id=saman.id, crop_id=cid("Nadu Rice"), variety="Nadu",
+                    quantity_kg=1000, price_per_kg=195, quality_grade="A",
+                    harvest_date=today - timedelta(days=7),
+                    available_from=today, available_until=today + timedelta(days=45),
+                    location=make_point("Polonnaruwa"),
+                    description="Premium Nadu rice from Polonnaruwa irrigated fields. Bulk available.",
+                    status=HarvestStatus.ready, is_organic=False,
+                    delivery_available=True, delivery_radius_km=100,
+                ),
+                # Saman: 300kg Tomatoes
+                dict(
+                    farmer_id=saman.id, crop_id=cid("Tomato"), variety="Thilina",
+                    quantity_kg=300, price_per_kg=280, quality_grade="A",
+                    harvest_date=today,
+                    available_from=today, available_until=today + timedelta(days=10),
+                    location=make_point("Polonnaruwa"),
+                    description="Vine-ripened Thilina tomatoes. Firm and red.",
+                    status=HarvestStatus.ready, is_organic=False,
+                    delivery_available=False,
+                ),
+                # Kumari: 150kg Long Beans
+                dict(
+                    farmer_id=kumari.id, crop_id=cid("Long Bean"), variety="Local",
+                    quantity_kg=150, price_per_kg=320, quality_grade="A",
+                    harvest_date=today - timedelta(days=2),
+                    available_from=today, available_until=today + timedelta(days=7),
+                    location=make_point("Anuradhapura"),
+                    description="Fresh long beans, hand-picked daily from home garden.",
+                    status=HarvestStatus.ready, is_organic=True,
+                    delivery_available=False,
+                ),
+                # Kumari: 80kg Brinjal
+                dict(
+                    farmer_id=kumari.id, crop_id=cid("Brinjal"), variety="Purple Long",
+                    quantity_kg=80, price_per_kg=260, quality_grade="B",
+                    harvest_date=today - timedelta(days=1),
+                    available_from=today, available_until=today + timedelta(days=10),
+                    location=make_point("Anuradhapura"),
+                    description="Purple long brinjal, ideal for curry.",
+                    status=HarvestStatus.ready, is_organic=True,
+                    delivery_available=False,
+                ),
+                # Kumari: 200kg Pumpkin
+                dict(
+                    farmer_id=kumari.id, crop_id=cid("Pumpkin"), variety="Butternut",
+                    quantity_kg=200, price_per_kg=120, quality_grade="A",
+                    harvest_date=today + timedelta(days=5),
+                    available_from=today + timedelta(days=5),
+                    available_until=today + timedelta(days=30),
+                    location=make_point("Anuradhapura"),
+                    description="Large butternut pumpkins, maturing on the vine. Available next week.",
+                    status=HarvestStatus.planned, is_organic=True,
+                    delivery_available=True, delivery_radius_km=25,
+                ),
+            ]
 
-        # ---- HARVEST LISTINGS ----
-        print("\n  Harvest Listings:")
-
-        harvests = [
-            # (username, crop_search, qty_kg, price_per_kg, available_from, available_to, status)
-            ("kamal_farmer", "samba", 500, 220, TODAY + timedelta(days=14), TODAY + timedelta(days=28), "ready"),
-            ("kamal_farmer", "onion", 200, 350, TODAY, TODAY + timedelta(days=7), "ready"),
-            ("kamal_farmer", "chili", 100, 450, TODAY, TODAY + timedelta(days=5), "ready"),
-            ("saman_goviya", "nadu", 1000, 200, TODAY + timedelta(days=7), TODAY + timedelta(days=21), "ready"),
-            ("saman_goviya", "tomato", 300, 280, TODAY, TODAY + timedelta(days=5), "ready"),
-            ("kumari_farm", "long bean", 150, 320, TODAY, TODAY + timedelta(days=7), "ready"),
-            ("kumari_farm", "brinjal", 80, 180, TODAY, TODAY + timedelta(days=5), "ready"),
-            ("kumari_farm", "pumpkin", 200, 120, TODAY + timedelta(days=21), TODAY + timedelta(days=35), "planned"),
-        ]
-
-        for uname, crop_search, qty, price, avail_from, avail_to, status in harvests:
-            user = users.get(uname)
-            if not user:
-                continue
-            crop_id = find_crop(crop_search)
-            lat, lng = COORDS.get(user.district, (8.0, 80.0))
-
-            try:
-                await db.execute(text("""
-                    INSERT INTO harvest_listings (
-                        id, farmer_id, crop_id, quantity_kg, price_per_kg,
-                        available_from, available_to, status,
-                        pickup_latitude, pickup_longitude, pickup_address,
-                        created_at, updated_at
-                    ) VALUES (
-                        gen_random_uuid(), :farmer_id, :crop_id, :qty, :price,
-                        :avail_from, :avail_to, :status,
-                        :lat, :lng, :address,
-                        NOW(), NOW()
-                    )
-                """), {
-                    "farmer_id": user.id, "crop_id": crop_id, "qty": qty, "price": price,
-                    "avail_from": avail_from, "avail_to": avail_to, "status": status,
-                    "lat": lat, "lng": lng, "address": user.district,
-                })
+            for h in harvest_data:
+                db.add(HarvestListing(**h))
                 harvest_count += 1
-                print(f"    ADD  {uname}: {qty}kg {crop_search} @ Rs.{price}/kg")
-            except Exception as e:
-                print(f"    SKIP {uname}: {crop_search} — {e}")
-                await db.rollback()
+            print(f"  ADD   {harvest_count} harvest listings")
 
-        # ---- DEMAND POSTINGS ----
-        print("\n  Demand Postings:")
+        # ---- DEMAND POSTINGS (idempotent check) ----
+        existing_demands = (await db.execute(
+            select(func.count()).select_from(DemandPosting).where(
+                DemandPosting.buyer_id.in_([nimal.id, chaminda.id])
+            )
+        )).scalar()
 
-        demands = [
-            ("nimal_buyer", "rice", 500, 250, TODAY + timedelta(days=14), "open"),
-            ("nimal_buyer", "tomato", 100, 300, TODAY + timedelta(days=3), "open"),
-            ("chaminda_buyer", "vegetable", 300, 350, TODAY + timedelta(days=7), "open"),
-            ("chaminda_buyer", "onion", 200, 380, TODAY + timedelta(days=5), "open"),
-        ]
+        if existing_demands and existing_demands > 0:
+            print(f"  SKIP  Demand postings ({existing_demands} already exist)")
+        else:
+            demand_data = [
+                # Nimal: 500kg Rice
+                dict(
+                    buyer_id=nimal.id, crop_id=cid("Samba Rice"),
+                    variety="Any rice variety",
+                    quantity_kg=500, max_price_per_kg=230, quality_grade="A",
+                    needed_by=today + timedelta(days=14),
+                    location=make_point("Colombo"), radius_km=150,
+                    description="Need 500kg of quality rice for distribution. Samba or Nadu preferred.",
+                    status=DemandStatus.open, is_recurring=True,
+                    recurrence_pattern={"frequency": "biweekly", "quantity_kg": 500},
+                ),
+                # Nimal: 100kg Tomatoes
+                dict(
+                    buyer_id=nimal.id, crop_id=cid("Tomato"),
+                    quantity_kg=100, max_price_per_kg=300, quality_grade="A",
+                    needed_by=today + timedelta(days=7),
+                    location=make_point("Colombo"), radius_km=150,
+                    description="Fresh firm tomatoes for restaurant supply chain.",
+                    status=DemandStatus.open, is_recurring=False,
+                ),
+                # Chaminda: 300kg Mixed Vegetables
+                dict(
+                    buyer_id=chaminda.id, crop_id=cid("Long Bean"),
+                    variety="Mixed vegetables",
+                    quantity_kg=300, max_price_per_kg=350, quality_grade="A",
+                    needed_by=today + timedelta(days=10),
+                    location=make_point("Colombo"), radius_km=200,
+                    description="Mixed vegetable lot for supermarket shelves - beans, brinjal, pumpkin.",
+                    status=DemandStatus.open, is_recurring=True,
+                    recurrence_pattern={"frequency": "weekly", "quantity_kg": 300},
+                ),
+                # Chaminda: 200kg Onions
+                dict(
+                    buyer_id=chaminda.id, crop_id=cid("Big Onion"),
+                    quantity_kg=200, max_price_per_kg=380, quality_grade="A",
+                    needed_by=today + timedelta(days=21),
+                    location=make_point("Colombo"), radius_km=200,
+                    description="Large red onions for supermarket chain. Consistent supply needed.",
+                    status=DemandStatus.open, is_recurring=True,
+                    recurrence_pattern={"frequency": "monthly", "quantity_kg": 200},
+                ),
+            ]
 
-        for uname, crop_search, qty, max_price, delivery_by, status in demands:
-            user = users.get(uname)
-            if not user:
-                continue
-            crop_id = find_crop(crop_search)
-            lat, lng = COORDS.get(user.district, (7.0, 80.0))
-
-            try:
-                await db.execute(text("""
-                    INSERT INTO demand_postings (
-                        id, buyer_id, crop_id, quantity_kg, max_price_per_kg,
-                        delivery_by, status,
-                        sourcing_latitude, sourcing_longitude, sourcing_radius_km,
-                        created_at, updated_at
-                    ) VALUES (
-                        gen_random_uuid(), :buyer_id, :crop_id, :qty, :max_price,
-                        :delivery_by, :status,
-                        :lat, :lng, :radius,
-                        NOW(), NOW()
-                    )
-                """), {
-                    "buyer_id": user.id, "crop_id": crop_id, "qty": qty, "max_price": max_price,
-                    "delivery_by": delivery_by, "status": status,
-                    "lat": lat, "lng": lng, "radius": 150,
-                })
+            for d in demand_data:
+                db.add(DemandPosting(**d))
                 demand_count += 1
-                print(f"    ADD  {uname}: {qty}kg {crop_search} max Rs.{max_price}/kg")
-            except Exception as e:
-                print(f"    SKIP {uname}: {crop_search} — {e}")
-                await db.rollback()
+            print(f"  ADD   {demand_count} demand postings")
 
-        # ---- SUPPLY LISTINGS ----
-        print("\n  Supply Listings:")
+        # ---- SUPPLY LISTINGS (idempotent check) ----
+        existing_supplies = (await db.execute(
+            select(func.count()).select_from(SupplyListing).where(
+                SupplyListing.supplier_id == sunil.id
+            )
+        )).scalar()
 
-        supplies = [
-            ("sunil_supplier", "NPK Fertilizer 50kg", "fertilizer", 8500, "bag", 100),
-            ("sunil_supplier", "Paddy Seeds (BG 352) 10kg", "seeds", 2200, "bag", 200),
-            ("sunil_supplier", "Organic Compost 25kg", "fertilizer", 1500, "bag", 150),
-            ("sunil_supplier", "Carbofuran 3G 1kg", "pesticide", 950, "kg", 50),
-        ]
+        if existing_supplies and existing_supplies > 0:
+            print(f"  SKIP  Supply listings ({existing_supplies} already exist)")
+        else:
+            supply_data = [
+                # NPK Fertilizer
+                dict(
+                    supplier_id=sunil.id,
+                    name="NPK Fertilizer (50kg bag)",
+                    name_si="NPK pohora (kilo 50 malla)",
+                    description="High-quality NPK 15-15-15 compound fertilizer. Suitable for all crops.",
+                    category=SupplyCategory.fertilizer,
+                    price=8500, unit="bag", stock_quantity=200,
+                    location=make_point("Kurunegala"),
+                    delivery_available=True, delivery_radius_km=100,
+                    status=SupplyStatus.active,
+                ),
+                # Paddy Seeds
+                dict(
+                    supplier_id=sunil.id,
+                    name="Paddy Seeds - BG 352 (5kg pack)",
+                    name_si="Vee beeja - BG 352 (kilo 5 asuruma)",
+                    description="Certified BG 352 paddy seeds. High yield variety for Yala and Maha seasons.",
+                    category=SupplyCategory.seeds,
+                    price=2200, unit="pack", stock_quantity=500,
+                    location=make_point("Kurunegala"),
+                    delivery_available=True, delivery_radius_km=150,
+                    status=SupplyStatus.active,
+                ),
+                # Organic Compost
+                dict(
+                    supplier_id=sunil.id,
+                    name="Organic Compost (25kg bag)",
+                    name_si="Kabanika compost (kilo 25 malla)",
+                    description="Premium organic compost from cow dung and plant matter. SLSI certified.",
+                    category=SupplyCategory.fertilizer,
+                    price=1500, unit="bag", stock_quantity=350,
+                    location=make_point("Kurunegala"),
+                    delivery_available=True, delivery_radius_km=75,
+                    status=SupplyStatus.active,
+                ),
+                # Carbofuran
+                dict(
+                    supplier_id=sunil.id,
+                    name="Carbofuran 3G (1kg pack)",
+                    name_si="Carbofuran 3G (kilo 1 asuruma)",
+                    description="Granular insecticide for paddy stem borer and brown planthopper control.",
+                    category=SupplyCategory.pesticide,
+                    price=950, unit="pack", stock_quantity=150,
+                    location=make_point("Kurunegala"),
+                    delivery_available=False,
+                    status=SupplyStatus.active,
+                ),
+            ]
 
-        for uname, name, category, price, unit, stock in supplies:
-            user = users.get(uname)
-            if not user:
-                continue
-
-            try:
-                await db.execute(text("""
-                    INSERT INTO supply_listings (
-                        id, supplier_id, name, category, price, unit, stock_quantity,
-                        status, created_at, updated_at
-                    ) VALUES (
-                        gen_random_uuid(), :supplier_id, :name, :category, :price, :unit, :stock,
-                        'active', NOW(), NOW()
-                    )
-                """), {
-                    "supplier_id": user.id, "name": name, "category": category,
-                    "price": price, "unit": unit, "stock": stock,
-                })
+            for s in supply_data:
+                db.add(SupplyListing(**s))
                 supply_count += 1
-                print(f"    ADD  {uname}: {name} Rs.{price}/{unit}")
-            except Exception as e:
-                print(f"    SKIP {uname}: {name} — {e}")
-                await db.rollback()
+            print(f"  ADD   {supply_count} supply listings")
 
         await db.commit()
 
-    print(f"\n--- Summary ---")
-    print(f"  Harvest listings: {harvest_count}")
-    print(f"  Demand postings:  {demand_count}")
-    print(f"  Supply listings:  {supply_count}")
-    print()
+    # Summary
+    print("\n" + "-" * 48)
+    print("  Beta Data Summary")
+    print("-" * 48)
+    print(f"  Harvest Listings  : {harvest_count}")
+    print(f"  Demand Postings   : {demand_count}")
+    print(f"  Supply Listings   : {supply_count}")
+    print("-" * 48 + "\n")
 
 
 if __name__ == "__main__":

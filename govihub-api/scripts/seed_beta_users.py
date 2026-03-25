@@ -1,13 +1,17 @@
-"""
-Seed beta test users with realistic Sri Lankan farming data.
-Run: docker compose -f docker-compose.dev.yml exec govihub-api python scripts/seed_beta_users.py
+"""Seed beta test users for GoviHub beta environment.
+
+Usage:
+    python scripts/seed_beta_users.py
+
+Idempotent — skips users that already exist (matched by username).
 """
 
 import asyncio
 import sys
-import os
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure app is importable when running from scripts/
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.auth.password import hash_password
 from app.database import async_session_factory
@@ -16,6 +20,7 @@ from sqlalchemy import select
 
 
 BETA_USERS = [
+    # ── Farmers ──
     {
         "username": "kamal_farmer",
         "password": "govihub123",
@@ -24,10 +29,9 @@ BETA_USERS = [
         "district": "Anuradhapura",
         "language": "si",
         "phone": "+94771001001",
-        "profile_type": "farmer",
         "profile": {
+            "type": "farmer",
             "farm_size_acres": 5.0,
-            "primary_crops": [],
             "irrigation_type": "rainfed",
             "cooperative": "Anuradhapura Farmer Cooperative",
         },
@@ -40,10 +44,9 @@ BETA_USERS = [
         "district": "Polonnaruwa",
         "language": "si",
         "phone": "+94771001002",
-        "profile_type": "farmer",
         "profile": {
+            "type": "farmer",
             "farm_size_acres": 8.0,
-            "primary_crops": [],
             "irrigation_type": "canal",
             "cooperative": "Polonnaruwa Rice Growers",
         },
@@ -56,14 +59,14 @@ BETA_USERS = [
         "district": "Anuradhapura",
         "language": "si",
         "phone": "+94771001003",
-        "profile_type": "farmer",
         "profile": {
+            "type": "farmer",
             "farm_size_acres": 3.5,
-            "primary_crops": [],
             "irrigation_type": "well",
-            "cooperative": "",
+            "cooperative": None,
         },
     },
+    # ── Buyers ──
     {
         "username": "nimal_buyer",
         "password": "govihub123",
@@ -72,8 +75,8 @@ BETA_USERS = [
         "district": "Colombo",
         "language": "en",
         "phone": "+94771002001",
-        "profile_type": "buyer",
         "profile": {
+            "type": "buyer",
             "business_name": "Silva Fresh Produce",
             "business_type": "distributor",
             "preferred_districts": ["Anuradhapura", "Polonnaruwa"],
@@ -88,14 +91,15 @@ BETA_USERS = [
         "district": "Colombo",
         "language": "en",
         "phone": "+94771002002",
-        "profile_type": "buyer",
         "profile": {
+            "type": "buyer",
             "business_name": "Green Valley Supermarkets",
             "business_type": "supermarket",
             "preferred_districts": ["Anuradhapura", "Kurunegala", "Polonnaruwa"],
             "preferred_radius_km": 200,
         },
     },
+    # ── Supplier ──
     {
         "username": "sunil_supplier",
         "password": "govihub123",
@@ -104,15 +108,15 @@ BETA_USERS = [
         "district": "Kurunegala",
         "language": "si",
         "phone": "+94771003001",
-        "profile_type": "supplier",
         "profile": {
+            "type": "supplier",
             "business_name": "Rathnayake Agri Supplies",
             "categories": ["fertilizer", "seeds"],
             "coverage_area": ["Kurunegala", "Anuradhapura", "Polonnaruwa"],
-            "contact_phone": "+94771003001",
             "contact_whatsapp": "+94771003001",
         },
     },
+    # ── Admin ──
     {
         "username": "admin",
         "password": "govihub_admin_2026",
@@ -121,39 +125,44 @@ BETA_USERS = [
         "district": "Colombo",
         "language": "en",
         "phone": "+94771000001",
-        "profile_type": None,
         "profile": None,
     },
 ]
 
 
 async def seed():
-    print("\n=== GoviHub Beta User Seeder ===\n")
-    created = 0
-    skipped = 0
+    print("\n" + "=" * 48)
+    print("  GoviHub Beta -- Seeding Test Users")
+    print("=" * 48 + "\n")
+
+    created = []
+    skipped = []
 
     async with async_session_factory() as db:
-        for ud in BETA_USERS:
-            # Check if username already exists
+        for user_data in BETA_USERS:
+            username = user_data["username"]
+
+            # Check if user already exists
             result = await db.execute(
-                select(User).where(User.username == ud["username"])
+                select(User).where(User.username == username)
             )
-            if result.scalar_one_or_none():
-                print(f"  SKIP  {ud['username']:20s} ({ud['role'].value}) — already exists")
-                skipped += 1
+            existing = result.scalar_one_or_none()
+            if existing:
+                print(f"  SKIP  {username:<20} (already exists)")
+                skipped.append(username)
                 continue
 
             # Create user
             user = User(
-                username=ud["username"],
-                password_hash=hash_password(ud["password"]),
-                email=f"{ud['username']}@beta.govihub.lk",
-                name=ud["name"],
-                role=ud["role"],
-                district=ud["district"],
-                language=ud["language"],
-                phone=ud.get("phone"),
+                username=username,
+                password_hash=hash_password(user_data["password"]),
                 auth_provider="beta",
+                email=f"{username}@beta.govihub.lk",
+                name=user_data["name"],
+                role=user_data["role"],
+                district=user_data["district"],
+                language=user_data["language"],
+                phone=user_data["phone"],
                 is_active=True,
                 is_verified=True,
             )
@@ -161,25 +170,54 @@ async def seed():
             await db.flush()
 
             # Create role-specific profile
-            if ud["profile_type"] == "farmer" and ud["profile"]:
-                db.add(FarmerProfile(user_id=user.id, **ud["profile"]))
-            elif ud["profile_type"] == "buyer" and ud["profile"]:
-                db.add(BuyerProfile(user_id=user.id, **ud["profile"]))
-            elif ud["profile_type"] == "supplier" and ud["profile"]:
-                db.add(SupplierProfile(user_id=user.id, **ud["profile"]))
+            profile_data = user_data.get("profile")
+            if profile_data:
+                ptype = profile_data["type"]
+                if ptype == "farmer":
+                    profile = FarmerProfile(
+                        user_id=user.id,
+                        farm_size_acres=profile_data.get("farm_size_acres"),
+                        irrigation_type=profile_data.get("irrigation_type"),
+                        cooperative=profile_data.get("cooperative"),
+                    )
+                    db.add(profile)
+                elif ptype == "buyer":
+                    profile = BuyerProfile(
+                        user_id=user.id,
+                        business_name=profile_data.get("business_name"),
+                        business_type=profile_data.get("business_type"),
+                        preferred_districts=profile_data.get("preferred_districts"),
+                        preferred_radius_km=profile_data.get("preferred_radius_km", 50),
+                    )
+                    db.add(profile)
+                elif ptype == "supplier":
+                    profile = SupplierProfile(
+                        user_id=user.id,
+                        business_name=profile_data.get("business_name"),
+                        categories=profile_data.get("categories"),
+                        coverage_area=profile_data.get("coverage_area"),
+                        contact_whatsapp=profile_data.get("contact_whatsapp"),
+                    )
+                    db.add(profile)
 
-            print(f"  ADD   {ud['username']:20s} ({ud['role'].value})")
-            created += 1
+            print(f"  ADD   {username:<20} ({user_data['role'].value})")
+            created.append(username)
 
         await db.commit()
 
-    print(f"\n--- Summary ---")
-    print(f"  Created: {created}")
-    print(f"  Skipped: {skipped}")
-    print(f"  Total:   {len(BETA_USERS)}")
-    print(f"\n  Login URL: /en/auth/beta-login")
-    print(f"  All beta passwords: govihub123 (except admin: govihub_admin_2026)")
-    print()
+    # Summary
+    print("\n" + "-" * 48)
+    print("  Summary")
+    print("-" * 48)
+    print(f"  Created : {len(created)}")
+    print(f"  Skipped : {len(skipped)}")
+    print("-" * 48)
+    print(f"  {'Username':<22} {'Role':<10} {'Status'}")
+    print("-" * 48)
+    for user_data in BETA_USERS:
+        status = "NEW" if user_data["username"] in created else "---"
+        print(f"  {user_data['username']:<22} {user_data['role'].value:<10} {status}")
+    print("-" * 48 + "\n")
 
 
 if __name__ == "__main__":

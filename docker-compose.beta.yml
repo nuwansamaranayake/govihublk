@@ -1,28 +1,33 @@
+version: '3.8'
+
 services:
   govihub-api-beta:
     build:
       context: ./govihub-api
       dockerfile: Dockerfile
+    command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
+    env_file: .env.beta
     ports:
       - "8001:8000"
-    env_file:
-      - .env.beta
     depends_on:
       postgres-beta:
         condition: service_healthy
       redis-beta:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - govihub-beta-net
 
   govihub-web-beta:
     build:
       context: ./govihub-web
       dockerfile: Dockerfile
+    env_file: .env.beta.frontend
     ports:
       - "3001:3000"
-    env_file:
-      - .env.beta.frontend
     restart: unless-stopped
+    networks:
+      - govihub-beta-net
 
   postgres-beta:
     image: postgis/postgis:16-3.4
@@ -32,28 +37,35 @@ services:
       POSTGRES_PASSWORD: ${DB_PASS:-govihub_beta_2026_secure}
     volumes:
       - beta_pgdata:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U govihub -d govihub_beta"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
+    networks:
+      - govihub-beta-net
 
   redis-beta:
     image: redis:7-alpine
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6381:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
+    networks:
+      - govihub-beta-net
 
 volumes:
   beta_pgdata:
     driver: local
+
+networks:
+  govihub-beta-net:
+    driver: bridge
