@@ -50,7 +50,7 @@
   },
   "auth": {
     "login": "පිවිසීම",
-    "register": "නොමේතිවීම",
+    "register": "ලියාපදිංචි වන්න",
     "loginWithGoogle": "Google මගින් පිවිසෙන්න",
     "registerWithGoogle": "Google මගින් ලියාපදිංචි වන්න",
     "welcome": "GoviHub වෙත සාදරයෙන් පිළිගනිමු",
@@ -69,8 +69,8 @@
   },
   "roles": {
     "farmer": "ගොවියා",
-    "buyer": "ගනුදෙනුකරු",
-    "supplier": "සපයන්නා",
+    "buyer": "ගැනුම්කරු",
+    "supplier": "සැපයුම්කරු",
     "admin": "පරිපාලක"
   },
   "roleDesc": {
@@ -113,7 +113,7 @@
     "saveDraft": "කෙටුම්පත සුරකින්න"
   },
   "buyer": {
-    "dashboard": "ගනුදෙනුකරු ඩැෂ්බෝඩ්",
+    "dashboard": "ගැනුම්කරු ඩැෂ්බෝඩ්",
     "myDemands": "මගේ ඉල්ලීම්",
     "addDemand": "ඉල්ලීමක් ප්‍රකාශ කරන්න",
     "viewMatches": "ගැළපීම් බලන්න",
@@ -129,7 +129,7 @@
     "postDemand": "ඉල්ලීම ලිවීම"
   },
   "supplier": {
-    "dashboard": "සපයන්නා ඩැෂ්බෝඩ්",
+    "dashboard": "සැපයුම්කරු ඩැෂ්බෝඩ්",
     "myListings": "මගේ සැපයුම් දැන්වීම්",
     "addListing": "සැපයුම් එකතු කරන්න",
     "inquiries": "විමසීම්",
@@ -197,7 +197,7 @@
     "confirmMatch": "ගැළපීම තහවුරු කරන්න",
     "matchedOn": "ගැළපුණු දිනය",
     "farmer": "ගොවියා",
-    "buyer": "ගනුදෙනුකරු",
+    "buyer": "ගැනුම්කරු",
     "quantity": "ප්‍රමාණය",
     "price": "එකඟ වූ මිල"
   },
