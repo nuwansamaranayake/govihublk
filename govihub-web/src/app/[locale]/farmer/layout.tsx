@@ -3,6 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import BottomNav, { BottomNavItem } from "@/components/ui/BottomNav";
 import TopBar from "@/components/ui/TopBar";
 
@@ -131,7 +132,10 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
     <div className="flex flex-col min-h-dvh bg-neutral-50">
       <TopBar
         leftAction={
-          <span className="text-base font-bold text-primary-600">GoviHub</span>
+          <span className="flex items-center gap-2">
+            <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="rounded-lg" />
+            <span className="text-base font-bold text-primary-600">GoviHub</span>
+          </span>
         }
         rightActions={
           <span className="text-xs font-semibold text-accent-600 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">

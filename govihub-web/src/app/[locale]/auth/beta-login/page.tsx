@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 
 const DISTRICTS = [
   "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
@@ -160,10 +161,8 @@ export default function BetaLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600 text-white text-2xl font-bold mb-3 shadow-lg">
-            GH
-          </div>
-          <h1 className="text-2xl font-semibold text-neutral-900">GoviHub Beta</h1>
+          <Image src="/images/logo-icon.png" alt="GoviHub" width={80} height={80} className="rounded-2xl mx-auto mb-3 shadow-lg" />
+          <h1 className="text-2xl font-semibold text-neutral-900">GoviHub</h1>
           <p className="text-neutral-500 text-sm mt-1">Smart Farming Marketplace</p>
           <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">
             NOT FOR PRODUCTION

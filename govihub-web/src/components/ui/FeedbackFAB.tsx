@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function FeedbackFAB() {
   const [open, setOpen] = useState(false);
@@ -92,7 +93,10 @@ export default function FeedbackFAB() {
             ) : (
               /* Form */
               <div className="p-5">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-1">Send Feedback</h3>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-1 flex items-center gap-2">
+                  <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={24} height={24} className="rounded-md" />
+                  Send Feedback
+                </h3>
                 <p className="text-sm text-neutral-500 mb-4">
                   What&apos;s working? What&apos;s broken? What would you change?
                 </p>

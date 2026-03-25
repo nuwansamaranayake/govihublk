@@ -10,6 +10,14 @@ export const metadata = {
   description:
     "AI-driven smart farming marketplace connecting farmers, buyers, and suppliers in Sri Lanka",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "GoviHub — Sri Lanka's AI Farming Marketplace",
+    images: ["/images/og-image.jpg"],
+  },
 };
 
 export default async function LocaleLayout({
@@ -23,6 +31,19 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root {
+                --govihub-green-dark: #1B5E20;
+                --govihub-green: #2D6A2E;
+                --govihub-gold: #E8A838;
+              }
+            `,
+          }}
+        />
+      </head>
       <body>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>

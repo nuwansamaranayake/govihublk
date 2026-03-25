@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 interface TopBarProps {
@@ -46,6 +47,9 @@ export function TopBar({
     >
       {/* Left slot */}
       <div className="flex items-center gap-2 min-w-[40px]">
+        {!showBack && !leftAction && (
+          <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={28} height={28} className="rounded-md" />
+        )}
         {showBack && (
           <button
             onClick={handleBack}

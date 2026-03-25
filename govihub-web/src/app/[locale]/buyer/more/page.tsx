@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
+import Image from "next/image";
 
 export default function BuyerMorePage() {
   const t = useTranslations();
@@ -38,6 +39,10 @@ export default function BuyerMorePage() {
       <div className="bg-gradient-to-br from-amber-700 to-amber-500 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">More</h1>
         <p className="text-amber-200 text-sm mt-1">Account &amp; preferences</p>
+      </div>
+
+      <div className="flex justify-center pt-4">
+        <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={48} height={48} className="rounded-xl" />
       </div>
 
       <div className="px-4 py-4 space-y-4">
@@ -258,10 +263,12 @@ export default function BuyerMorePage() {
           {loggingOut ? "Logging out..." : "Log Out"}
         </button>
 
-        {/* App Version */}
-        <p className="text-center text-xs text-neutral-400 pt-2 pb-4">
-          GoviHub v1.0.0
-        </p>
+        {/* App Branding */}
+        <div className="text-center py-4 space-y-1">
+          <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={24} height={24} className="mx-auto rounded-md" />
+          <p className="text-xs text-neutral-400">GoviHub v1.0.0</p>
+          <p className="text-xs text-neutral-300">Powered by AiGNITE</p>
+        </div>
       </div>
     </div>
   );

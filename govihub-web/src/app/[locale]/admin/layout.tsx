@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Avatar from "@/components/ui/Avatar";
@@ -79,11 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Logo */}
       <div className="px-6 py-5 border-b border-neutral-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary-500 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
-            </svg>
-          </div>
+          <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="rounded-xl" />
           <div>
             <p className="font-bold text-primary-700 leading-tight">GoviHub</p>
             <p className="text-xs text-neutral-400">Admin Console</p>
@@ -174,7 +171,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="ml-3 font-bold text-primary-600">GoviHub Admin</span>
+          <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="ml-3 rounded-lg" />
+          <span className="ml-2 font-bold text-primary-600">GoviHub Admin</span>
         </div>
 
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
