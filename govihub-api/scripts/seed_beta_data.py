@@ -15,6 +15,7 @@ from datetime import date, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import select, func
+import app.models  # noqa: register all models
 from app.database import async_session_factory
 from app.users.models import User
 from app.listings.models import (

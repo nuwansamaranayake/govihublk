@@ -8,13 +8,20 @@ services:
     command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
     env_file: .env.beta
     ports:
-      - "8001:8000"
+      - "8002:8000"
     depends_on:
       postgres-beta:
         condition: service_healthy
       redis-beta:
         condition: service_healthy
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.govihub-api-beta.rule=Host(`beta.govihublk.com`) && (PathPrefix(`/api`) || PathPrefix(`/mcp`))"
+      - "traefik.http.routers.govihub-api-beta.entrypoints=websecure"
+      - "traefik.http.routers.govihub-api-beta.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.govihub-api-beta.priority=20"
+      - "traefik.http.services.govihub-api-beta.loadbalancer.server.port=8000"
     networks:
       - govihub-beta-net
 
@@ -24,8 +31,15 @@ services:
       dockerfile: Dockerfile
     env_file: .env.beta.frontend
     ports:
-      - "3001:3000"
+      - "3002:3000"
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.govihub-web-beta.rule=Host(`beta.govihublk.com`)"
+      - "traefik.http.routers.govihub-web-beta.entrypoints=websecure"
+      - "traefik.http.routers.govihub-web-beta.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.govihub-web-beta.priority=10"
+      - "traefik.http.services.govihub-web-beta.loadbalancer.server.port=3000"
     networks:
       - govihub-beta-net
 

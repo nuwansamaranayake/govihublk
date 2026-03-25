@@ -58,6 +58,8 @@ def upgrade() -> None:
     op.execute("UPDATE harvest_listings SET status = 'ready'    WHERE status = 'active'")
     op.execute("UPDATE harvest_listings SET status = 'fulfilled' WHERE status = 'sold'")
 
+    # Drop default that references the old enum
+    op.execute("ALTER TABLE harvest_listings ALTER COLUMN status DROP DEFAULT")
     # Drop old listing_status ENUM type
     conn.execute(sa.text("DROP TYPE IF EXISTS listing_status"))
 
@@ -104,6 +106,8 @@ def upgrade() -> None:
     op.execute("UPDATE demand_postings SET status = 'open'      WHERE status = 'active'")
     op.execute("UPDATE demand_postings SET status = 'reviewing' WHERE status = 'matched'")
 
+    # Drop default that references the old enum
+    op.execute("ALTER TABLE demand_postings ALTER COLUMN status DROP DEFAULT")
     # Drop old demand_status ENUM type
     conn.execute(sa.text("DROP TYPE IF EXISTS demand_status"))
 

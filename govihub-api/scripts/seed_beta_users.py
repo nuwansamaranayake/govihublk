@@ -13,6 +13,7 @@ from pathlib import Path
 # Ensure app is importable when running from scripts/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import app.models  # noqa: register all models
 from app.auth.password import hash_password
 from app.database import async_session_factory
 from app.users.models import User, UserRole, FarmerProfile, BuyerProfile, SupplierProfile

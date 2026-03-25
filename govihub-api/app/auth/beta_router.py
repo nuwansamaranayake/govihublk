@@ -18,7 +18,7 @@ from app.users.models import BuyerProfile, FarmerProfile, SupplierProfile, User,
 
 logger = structlog.get_logger()
 
-router = APIRouter(prefix="/auth", tags=["beta-auth"])
+router = APIRouter(tags=["beta-auth"])
 
 
 def _check_beta_env() -> None:

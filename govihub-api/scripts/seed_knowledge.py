@@ -8,6 +8,7 @@ import structlog
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import app.models  # noqa: register all models
 from app.config import settings
 from app.database import async_session_factory
 from app.advisory.models import KnowledgeChunk

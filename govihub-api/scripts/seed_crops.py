@@ -9,6 +9,7 @@ import structlog
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import app.models  # noqa: register all models
 from app.config import settings
 from app.database import async_session_factory
 from app.listings.models import CropTaxonomy
