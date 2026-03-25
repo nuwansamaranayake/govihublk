@@ -218,15 +218,18 @@ class SupplyMarketplaceService:
 
         # Build result dicts with optional distance
         items = []
+        has_distance = filters.latitude is not None and filters.longitude is not None
         for row in rows:
-            if isinstance(row, SupplyListing):
-                # No proximity — row is the model itself
-                d = _listing_to_dict(row)
-            else:
-                # proximity — row is (SupplyListing, distance_km)
-                listing_obj, distance_km = row
+            if has_distance:
+                # proximity query — row is (SupplyListing, distance_km)
+                listing_obj = row[0]
+                distance_km = row[1] if len(row) > 1 else None
                 d = _listing_to_dict(listing_obj)
                 d["distance_km"] = round(float(distance_km), 3) if distance_km else None
+            else:
+                # No proximity — row wraps a single SupplyListing
+                listing_obj = row[0] if hasattr(row, "__getitem__") else row
+                d = _listing_to_dict(listing_obj)
             items.append(d)
 
         return total, items

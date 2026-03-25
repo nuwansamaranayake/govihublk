@@ -191,7 +191,7 @@ def upgrade() -> None:
         sa.Column("delivery_radius_km", sa.Integer, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.CheckConstraint("status IN ('draft', 'active', 'matched', 'sold', 'expired', 'cancelled')", name="harvest_listing_status_check"),
+        # Enum type already enforces valid values; no CHECK constraint needed
     )
     op.create_index("ix_harvest_listings_farmer_id", "harvest_listings", ["farmer_id"])
     op.create_index("ix_harvest_listings_crop_id", "harvest_listings", ["crop_id"])
@@ -218,7 +218,7 @@ def upgrade() -> None:
         sa.Column("recurrence_pattern", postgresql.JSONB, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.CheckConstraint("status IN ('draft', 'active', 'matched', 'fulfilled', 'expired', 'cancelled')", name="demand_posting_status_check"),
+        # Enum type already enforces valid values; no CHECK constraint needed
     )
     op.create_index("ix_demand_postings_buyer_id", "demand_postings", ["buyer_id"])
     op.create_index("ix_demand_postings_crop_id", "demand_postings", ["crop_id"])
@@ -243,11 +243,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.UniqueConstraint("harvest_id", "demand_id", name="uq_matches_harvest_demand"),
-        sa.CheckConstraint(
-            "status IN ('proposed', 'accepted_farmer', 'accepted_buyer', 'confirmed', "
-            "'in_transit', 'fulfilled', 'disputed', 'cancelled', 'expired')",
-            name="match_status_check",
-        ),
+        # Enum type already enforces valid values; no CHECK constraint needed
     )
     op.create_index("ix_matches_harvest_id", "matches", ["harvest_id"])
     op.create_index("ix_matches_demand_id", "matches", ["demand_id"])
@@ -272,10 +268,7 @@ def upgrade() -> None:
         sa.Column("language", sa.String(5), server_default="si"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.CheckConstraint(
-            "user_feedback IN ('helpful', 'not_helpful', 'incorrect') OR user_feedback IS NULL",
-            name="diagnosis_feedback_check",
-        ),
+        # Enum type already enforces valid values; no CHECK constraint needed
     )
     op.create_index("ix_crop_diagnoses_user", "crop_diagnoses", ["user_id"])
 

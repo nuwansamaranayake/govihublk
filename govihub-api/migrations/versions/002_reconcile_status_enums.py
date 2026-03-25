@@ -45,8 +45,13 @@ def upgrade() -> None:
     # 1. Harvest Listings — migrate data first, then swap the ENUM type
     # -----------------------------------------------------------------------
 
-    # Drop old CHECK constraint
-    op.drop_constraint("harvest_listing_status_check", "harvest_listings", type_="check")
+    # Drop old CHECK constraint (may not exist if migration 001 was clean)
+    conn.execute(sa.text(
+        "ALTER TABLE harvest_listings DROP CONSTRAINT IF EXISTS harvest_listing_status_check"
+    ))
+    conn.execute(sa.text(
+        "ALTER TABLE harvest_listings DROP CONSTRAINT IF EXISTS ck_harvest_listings_harvest_listing_status_check"
+    ))
 
     # Cast column to plain text so we can migrate values without the old enum
     op.execute(
@@ -93,8 +98,13 @@ def upgrade() -> None:
     # 2. Demand Postings — migrate data, then extend the ENUM type
     # -----------------------------------------------------------------------
 
-    # Drop old CHECK constraint
-    op.drop_constraint("demand_posting_status_check", "demand_postings", type_="check")
+    # Drop old CHECK constraint (may not exist if migration 001 was clean)
+    conn.execute(sa.text(
+        "ALTER TABLE demand_postings DROP CONSTRAINT IF EXISTS demand_posting_status_check"
+    ))
+    conn.execute(sa.text(
+        "ALTER TABLE demand_postings DROP CONSTRAINT IF EXISTS ck_demand_postings_demand_posting_status_check"
+    ))
 
     # Cast column to plain text
     op.execute(
