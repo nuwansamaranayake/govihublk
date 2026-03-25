@@ -59,7 +59,7 @@ export default function SupplierDashboardPage() {
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
   const hour = new Date().getHours();
-  const greeting = hour<12 ? "Good Morning" : hour<17 ? "Good Afternoon" : "Good Evening";
+  const greeting = hour<12 ? t("greeting.morning") : hour<17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
     api.get<DashboardData>("/supplier/dashboard")
@@ -82,10 +82,10 @@ export default function SupplierDashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label:"Total Listings", value:data?.totalListings, color:"text-blue-600" },
-            { label:"Active", value:data?.activeListings, color:"text-green-600" },
-            { label:"Total Views", value:data?.totalViews, color:"text-purple-600" },
-            { label:"Inquiries", value:data?.totalInquiries, color:"text-amber-500" },
+            { label: t("farmer.totalListings"), value:data?.totalListings, color:"text-blue-600" },
+            { label: t("common.active"), value:data?.activeListings, color:"text-green-600" },
+            { label: t("common.totalViews"), value:data?.totalViews, color:"text-purple-600" },
+            { label: t("supplier.inquiries"), value:data?.totalInquiries, color:"text-amber-500" },
           ].map(s => (
             <Card key={s.label} padding="sm" className="text-center">
               {loading ? <Skeleton className="h-8 w-12 mx-auto mb-1" /> : (
@@ -97,7 +97,7 @@ export default function SupplierDashboardPage() {
         </div>
 
         {/* Listings by Category */}
-        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Listings by Category</h2>} padding="md">
+        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.listingsByCategory")}</h2>} padding="md">
           {loading ? <Skeleton className="h-24 w-full" /> : (
             <div className="grid grid-cols-2 gap-3 mt-2">
               {data?.listingsByCategory.map(item => (
@@ -105,7 +105,7 @@ export default function SupplierDashboardPage() {
                   <span className="text-xl" aria-hidden="true">{CATEGORY_ICON[item.category]}</span>
                   <div>
                     <p className="text-sm font-medium text-neutral-800 capitalize">{item.category}</p>
-                    <p className="text-xs text-neutral-500">{item.count} listings</p>
+                    <p className="text-xs text-neutral-500">{item.count} {t("nav.listings").toLowerCase()}</p>
                   </div>
                 </div>
               ))}
@@ -119,12 +119,12 @@ export default function SupplierDashboardPage() {
           <span className="text-2xl" aria-hidden="true">➕</span>
           <div>
             <p className="font-semibold">{t("supplier.addListing")}</p>
-            <p className="text-blue-100 text-xs">Add a new supply listing</p>
+            <p className="text-blue-100 text-xs">{t("common.addNewSupply")}</p>
           </div>
         </a>
 
         {/* Recent Listings */}
-        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Recent Listings</h2>} padding="none">
+        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.recentListings")}</h2>} padding="none">
           {loading ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
           ) : data?.recentListings.length ? (
@@ -137,21 +137,21 @@ export default function SupplierDashboardPage() {
                         <span className="text-base" aria-hidden="true">{CATEGORY_ICON[item.category]}</span>
                         <span className="font-medium text-neutral-900 text-sm">{item.title}</span>
                         <Badge color={item.active?"green":"gray"} size="sm" dot>
-                          {item.active?"active":"inactive"}
+                          {item.active ? t("common.active").toLowerCase() : t("common.inactive").toLowerCase()}
                         </Badge>
                       </div>
                       <p className="text-sm text-neutral-600 mt-0.5">Rs. {item.price.toLocaleString()}/{item.unit}</p>
                     </div>
                     <div className="text-right shrink-0 text-xs text-neutral-400">
-                      <p>{item.views} views</p>
-                      <p>{item.inquiries} inquiries</p>
+                      <p>{item.views} {t("common.views")}</p>
+                      <p>{item.inquiries} {t("supplier.inquiries").toLowerCase()}</p>
                     </div>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <EmptyState icon="📦" title="No listings yet" description="Add your first listing to start reaching farmers." />
+            <EmptyState icon="📦" title={t("common.noListingsYet")} description={t("common.addFirstSupplyListing")} />
           )}
         </Card>
       </div>

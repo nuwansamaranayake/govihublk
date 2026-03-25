@@ -82,7 +82,7 @@ export default function BuyerDemandsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this demand?")) return;
+    if (!confirm(t("common.deleteConfirmDemand"))) return;
     await api.delete(`/buyer/demands/${id}`).catch(()=>{});
     setDemands(prev => prev.filter(d => d.id !== id));
   };
@@ -90,18 +90,18 @@ export default function BuyerDemandsPage() {
   const f = (key: keyof FormData, val: string|boolean) => setForm(p => ({...p, [key]: val}));
 
   const tabs = [
-    { key:"all", label:"All", badge: demands.length },
-    { key:"open", label:"Open", badge: demands.filter(d=>d.status==="open").length },
-    { key:"reviewing", label:"Reviewing", badge: demands.filter(d=>d.status==="reviewing").length },
-    { key:"confirmed", label:"Confirmed", badge: demands.filter(d=>d.status==="confirmed").length },
-    { key:"closed", label:"Closed" },
+    { key:"all", label: t("common.all"), badge: demands.length },
+    { key:"open", label: t("status.open"), badge: demands.filter(d=>d.status==="open").length },
+    { key:"reviewing", label: t("status.reviewing"), badge: demands.filter(d=>d.status==="reviewing").length },
+    { key:"confirmed", label: t("status.confirmed"), badge: demands.filter(d=>d.status==="confirmed").length },
+    { key:"closed", label: t("status.closed") },
   ];
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-amber-600 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("buyer.myDemands")}</h1>
-        <p className="text-amber-100 text-sm mt-1">{demands.length} total demands</p>
+        <p className="text-amber-100 text-sm mt-1">{demands.length} {t("common.total")}</p>
       </div>
 
       <Tabs tabs={tabs} defaultTab="all">
@@ -116,7 +116,7 @@ export default function BuyerDemandsPage() {
                   </div>
                 ))
               ) : filtered.length===0 ? (
-                <EmptyState icon="📋" title="No demands here" description="Post your first demand to connect with farmers."
+                <EmptyState icon="📋" title={t("common.noDemands")} description={t("common.postFirstDemand")}
                   action={{ label: t("buyer.addDemand"), onClick: openCreate }} />
               ) : (
                 filtered.map(demand => (
@@ -126,7 +126,7 @@ export default function BuyerDemandsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-neutral-900">{demand.crop}</h3>
                           <Badge color={STATUS_COLOR[demand.status]||"gray"} size="sm" dot>{demand.status}</Badge>
-                          {demand.recurring && <Badge color="blue" size="sm">Recurring</Badge>}
+                          {demand.recurring && <Badge color="blue" size="sm">{t("common.recurring")}</Badge>}
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
                           {demand.quantity} {demand.unit} · Rs. {demand.minPrice}–{demand.maxPrice}/{demand.unit}
@@ -136,8 +136,8 @@ export default function BuyerDemandsPage() {
                         </p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(demand)}>Edit</Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(demand.id)}>Delete</Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(demand)}>{t("common.edit")}</Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(demand.id)}>{t("common.delete")}</Button>
                       </div>
                     </div>
                   </Card>
@@ -151,43 +151,43 @@ export default function BuyerDemandsPage() {
       {/* FAB */}
       <button onClick={openCreate}
         className="fixed bottom-20 right-4 w-14 h-14 bg-amber-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-amber-600 active:scale-95 transition-transform z-10"
-        aria-label="Add Demand">+</button>
+        aria-label={t("buyer.addDemand")}>+</button>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)}
-        title={editId ? "Edit Demand" : "New Demand"}
+        title={editId ? t("buyer.editDemand") : t("buyer.newDemand")}
         size="lg"
         footer={
           <Button variant="accent" fullWidth loading={submitting}
             onClick={() => (document.getElementById("demand-form") as HTMLFormElement)?.requestSubmit()}>
-            {editId ? "Update Demand" : "Post Demand"}
+            {editId ? t("buyer.updateDemand") : t("buyer.postDemand")}
           </Button>
         }
       >
         <form id="demand-form" onSubmit={handleSubmit} className="space-y-4">
-          <Select label="Crop" required value={form.crop} onChange={e => f("crop", e.target.value)}
-            placeholder="Select a crop" options={CROPS.map(c => ({value:c,label:c}))} />
+          <Select label={t("buyer.cropName")} required value={form.crop} onChange={e => f("crop", e.target.value)}
+            placeholder={t("listing.selectCrop")} options={CROPS.map(c => ({value:c,label:c}))} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Quantity" type="number" required min="1" value={form.quantity}
+            <Input label={t("buyer.quantity")} type="number" required min="1" value={form.quantity}
               onChange={e => f("quantity", e.target.value)} placeholder="e.g. 500" />
-            <Select label="Unit" value={form.unit} onChange={e => f("unit", e.target.value)}
+            <Select label={t("buyer.unit")} value={form.unit} onChange={e => f("unit", e.target.value)}
               options={UNITS.map(u => ({value:u,label:u}))} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Min Price (Rs.)" type="number" required min="1" value={form.minPrice}
+            <Input label={t("buyer.minPrice")} type="number" required min="1" value={form.minPrice}
               onChange={e => f("minPrice", e.target.value)} placeholder="e.g. 100" />
-            <Input label="Max Price (Rs.)" type="number" required min="1" value={form.maxPrice}
+            <Input label={t("buyer.maxPrice")} type="number" required min="1" value={form.maxPrice}
               onChange={e => f("maxPrice", e.target.value)} placeholder="e.g. 130" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Location" required value={form.location}
+            <Input label={t("buyer.location")} required value={form.location}
               onChange={e => f("location", e.target.value)} placeholder="e.g. Colombo" />
-            <Input label="Radius (km)" type="number" min="1" value={form.radius}
+            <Input label={t("buyer.radius")} type="number" min="1" value={form.radius}
               onChange={e => f("radius", e.target.value)} placeholder="50" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" type="date" required value={form.startDate}
+            <Input label={t("buyer.startDate")} type="date" required value={form.startDate}
               onChange={e => f("startDate", e.target.value)} />
-            <Input label="End Date" type="date" required value={form.endDate}
+            <Input label={t("buyer.endDate")} type="date" required value={form.endDate}
               onChange={e => f("endDate", e.target.value)} />
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
@@ -199,7 +199,7 @@ export default function BuyerDemandsPage() {
             >
               <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.recurring ? "translate-x-5" : "translate-x-0"}`} />
             </div>
-            <span className="text-sm font-medium text-neutral-700">Recurring demand</span>
+            <span className="text-sm font-medium text-neutral-700">{t("buyer.recurringDemand")}</span>
           </label>
         </form>
       </Modal>

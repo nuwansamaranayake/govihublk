@@ -86,7 +86,7 @@ export default function FarmerListingsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this listing?")) return;
+    if (!confirm(t("common.deleteConfirmListing"))) return;
     await api.delete(`/farmer/listings/${id}`).catch(()=>{});
     setListings(prev => prev.filter(l => l.id !== id));
   };
@@ -94,17 +94,17 @@ export default function FarmerListingsPage() {
   const f = (key: keyof FormData, val: string) => setForm(p => ({...p, [key]: val}));
 
   const tabs = [
-    { key:"all", label:"All", badge: listings.length },
-    { key:"planned", label:"Planned", badge: listings.filter(l=>l.status==="planned").length },
-    { key:"ready", label:"Ready", badge: listings.filter(l=>l.status==="ready").length },
-    { key:"fulfilled", label:"Fulfilled" },
+    { key:"all", label: t("common.all"), badge: listings.length },
+    { key:"planned", label: t("status.planned"), badge: listings.filter(l=>l.status==="planned").length },
+    { key:"ready", label: t("status.ready"), badge: listings.filter(l=>l.status==="ready").length },
+    { key:"fulfilled", label: t("status.fulfilled") },
   ];
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-green-700 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("farmer.myListings")}</h1>
-        <p className="text-green-200 text-sm mt-1">{listings.length} total listings</p>
+        <p className="text-green-200 text-sm mt-1">{listings.length} {t("listing.totalListings")}</p>
       </div>
 
       <Tabs tabs={tabs} defaultTab="all">
@@ -121,8 +121,8 @@ export default function FarmerListingsPage() {
               ) : filtered.length === 0 ? (
                 <EmptyState
                   icon="🌾"
-                  title="No listings here"
-                  description="Add your first harvest listing to connect with buyers."
+                  title={t("common.noListings")}
+                  description={t("common.addFirstListing")}
                   action={{ label: t("farmer.addListing"), onClick: openCreate }}
                 />
               ) : (
@@ -138,8 +138,8 @@ export default function FarmerListingsPage() {
                         <p className="text-xs text-neutral-400 mt-1">📍 {listing.location} · 🗓 {listing.harvestDate}</p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(listing)}>Edit</Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(listing.id)}>Delete</Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(listing)}>{t("common.edit")}</Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(listing.id)}>{t("common.delete")}</Button>
                       </div>
                     </div>
                   </Card>
@@ -154,51 +154,51 @@ export default function FarmerListingsPage() {
       <button
         onClick={openCreate}
         className="fixed bottom-20 right-4 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-green-700 active:scale-95 transition-transform z-10"
-        aria-label="Add Listing"
+        aria-label={t("farmer.addListing")}
       >+</button>
 
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editId ? "Edit Listing" : "New Harvest Listing"}
+        title={editId ? t("farmer.editListing") : t("farmer.newHarvestListing")}
         size="lg"
         footer={
           <Button variant="primary" fullWidth loading={submitting}
             onClick={() => (document.getElementById("listing-form") as HTMLFormElement)?.requestSubmit()}>
-            {editId ? "Update Listing" : "Create Listing"}
+            {editId ? t("farmer.updateListing") : t("farmer.createListing")}
           </Button>
         }
       >
         <form id="listing-form" onSubmit={handleSubmit} className="space-y-4">
-          <Select label="Crop" required value={form.crop} onChange={e => f("crop", e.target.value)}
-            placeholder="Select a crop" options={CROPS.map(c => ({value:c, label:c}))} />
+          <Select label={t("farmer.cropName")} required value={form.crop} onChange={e => f("crop", e.target.value)}
+            placeholder={t("listing.selectCrop")} options={CROPS.map(c => ({value:c, label:c}))} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Quantity" type="number" required min="1" value={form.quantity}
+            <Input label={t("farmer.quantity")} type="number" required min="1" value={form.quantity}
               onChange={e => f("quantity", e.target.value)} placeholder="e.g. 500" />
-            <Select label="Unit" value={form.unit} onChange={e => f("unit", e.target.value)}
+            <Select label={t("farmer.unit")} value={form.unit} onChange={e => f("unit", e.target.value)}
               options={UNITS.map(u => ({value:u, label:u}))} />
           </div>
-          <Input label="Price (Rs. per unit)" type="number" required min="1" value={form.price}
+          <Input label={t("farmer.price")} type="number" required min="1" value={form.price}
             onChange={e => f("price", e.target.value)} placeholder="e.g. 120" />
-          <Input label="Location" required value={form.location}
+          <Input label={t("farmer.location")} required value={form.location}
             onChange={e => f("location", e.target.value)} placeholder="e.g. Kandy" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Harvest Date" type="date" required value={form.harvestDate}
+            <Input label={t("farmer.availableFrom")} type="date" required value={form.harvestDate}
               onChange={e => f("harvestDate", e.target.value)} />
-            <Input label="Expiry Date" type="date" value={form.expiryDate}
+            <Input label={t("farmer.availableUntil")} type="date" value={form.expiryDate}
               onChange={e => f("expiryDate", e.target.value)} />
           </div>
           <div>
-            <label className="text-sm font-medium text-neutral-700 block mb-1.5">Description</label>
+            <label className="text-sm font-medium text-neutral-700 block mb-1.5">{t("farmer.description")}</label>
             <textarea value={form.description} onChange={e => f("description", e.target.value)} rows={3}
               className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-              placeholder="Additional details about your harvest..." />
+              placeholder={t("common.additionalDetails")} />
           </div>
           <div>
-            <p className="text-sm font-medium text-neutral-700 mb-1.5">Photos (optional)</p>
+            <p className="text-sm font-medium text-neutral-700 mb-1.5">{t("farmer.photos")}</p>
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-green-400 transition-colors">
               <span className="text-3xl mb-2" aria-hidden="true">📸</span>
-              <span className="text-sm text-neutral-500">Tap to add photos</span>
+              <span className="text-sm text-neutral-500">{t("common.tapToAddPhotos")}</span>
               <input type="file" accept="image/*" multiple className="sr-only" />
             </label>
           </div>

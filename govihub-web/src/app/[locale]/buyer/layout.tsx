@@ -108,6 +108,7 @@ function MoreIcon() {
 
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
+  const tRoles = useTranslations("roles");
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/buyer`;
@@ -117,7 +118,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
     { href: base + "/demands", label: t("demands"), icon: (a) => <DemandsIcon active={a} /> },
     { href: base + "/matches", label: t("matches"), icon: (a) => <MatchIcon active={a} /> },
     { href: base + "/marketplace", label: t("marketplace"), icon: (a) => <MarketIcon active={a} /> },
-    { href: base + "/more", label: "More", icon: () => <MoreIcon /> },
+    { href: base + "/more", label: t("more"), icon: () => <MoreIcon /> },
   ];
 
   return (
@@ -131,7 +132,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         }
         rightActions={
           <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-            Buyer
+            {tRoles("buyer")}
           </span>
         }
       />

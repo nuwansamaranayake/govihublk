@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { pluralize } from "@/lib/utils";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
@@ -94,7 +95,7 @@ export default function AdminMatchesPage() {
     <div className="min-h-screen bg-neutral-50 pb-8">
       <div className="bg-neutral-800 px-6 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">Match Management</h1>
-        <p className="text-neutral-300 text-sm mt-1">{matches.filter(m=>m.status==="disputed").length} disputes pending</p>
+        <p className="text-neutral-300 text-sm mt-1">{pluralize(matches.filter(m=>m.status==="disputed").length, "dispute")} pending</p>
       </div>
 
       {/* Search */}

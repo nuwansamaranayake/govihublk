@@ -59,7 +59,7 @@ export default function BuyerDashboardPage() {
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
   const hour = new Date().getHours();
-  const greeting = hour<12 ? "Good Morning" : hour<17 ? "Good Afternoon" : "Good Evening";
+  const greeting = hour<12 ? t("greeting.morning") : hour<17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
     api.get<DashboardData>("/buyer/dashboard")
@@ -87,10 +87,10 @@ export default function BuyerDashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label:"Active Demands", value:data?.activeDemands, color:"text-amber-600" },
-            { label:"Matched Farmers", value:data?.matchedFarmers, color:"text-green-600" },
-            { label:"Pending Confirmations", value:data?.pendingConfirmations, color:"text-blue-600" },
-            { label:"Total Value (Rs.)", value:data?.totalValue?.toLocaleString(), color:"text-purple-600" },
+            { label: t("buyer.activeDemands"), value:data?.activeDemands, color:"text-amber-600" },
+            { label: t("common.matchedFarmers"), value:data?.matchedFarmers, color:"text-green-600" },
+            { label: t("common.pendingConfirmations"), value:data?.pendingConfirmations, color:"text-blue-600" },
+            { label: t("common.totalValue") + " (Rs.)", value:data?.totalValue?.toLocaleString(), color:"text-purple-600" },
           ].map(s => (
             <Card key={s.label} padding="sm" className="text-center">
               {loading ? <Skeleton className="h-8 w-12 mx-auto mb-1" /> : (
@@ -102,7 +102,7 @@ export default function BuyerDashboardPage() {
         </div>
 
         {/* Procurement Pipeline */}
-        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Procurement Pipeline</h2>} padding="md">
+        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.procurementPipeline")}</h2>} padding="md">
           {loading ? <Skeleton className="h-12 w-full" /> : (
             <div>
               <div className="flex h-4 rounded-full overflow-hidden mb-3">
@@ -139,7 +139,7 @@ export default function BuyerDashboardPage() {
         </div>
 
         {/* Recent Matches */}
-        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Recent Matches</h2>} padding="none">
+        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.recentMatches")}</h2>} padding="none">
           {loading ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
           ) : data?.recentMatches.length ? (
@@ -158,7 +158,7 @@ export default function BuyerDashboardPage() {
               ))}
             </ul>
           ) : (
-            <EmptyState icon="🤝" title="No matches yet" description="Post demands to start receiving farmer matches." />
+            <EmptyState icon="🤝" title={t("common.noMatchesYet")} description={t("common.postDemandsToMatch")} />
           )}
         </Card>
       </div>

@@ -64,7 +64,7 @@ export default function BuyerMorePage() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold text-neutral-900 text-base truncate">
-                {user?.name || "Buyer"}
+                {user?.name || "User"}
               </h2>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />

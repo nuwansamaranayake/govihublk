@@ -62,7 +62,7 @@ export default function FarmerDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+  const greeting = hour < 12 ? t("greeting.morning") : hour < 17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
     const userDistrict = user?.district || "Anuradhapura";
@@ -105,9 +105,9 @@ export default function FarmerDashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Listings", value: data?.activeListings, colorClass: "text-green-600" },
-            { label: "Matches", value: data?.activeMatches, colorClass: "text-amber-500" },
-            { label: "Offers", value: data?.pendingOffers, colorClass: "text-blue-600" },
+            { label: t("nav.listings"), value: data?.activeListings, colorClass: "text-green-600" },
+            { label: t("nav.matches"), value: data?.activeMatches, colorClass: "text-amber-500" },
+            { label: t("farmer.offers"), value: data?.pendingOffers, colorClass: "text-blue-600" },
           ].map((s) => (
             <Card key={s.label} padding="sm" className="text-center">
               {loading ? (
@@ -124,7 +124,7 @@ export default function FarmerDashboardPage() {
         <Card padding="md">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-neutral-400 uppercase tracking-wide font-medium">Weather</p>
+              <p className="text-xs text-neutral-400 uppercase tracking-wide font-medium">{t("common.weather")}</p>
               {loading ? (
                 <Skeleton className="h-9 w-24 mt-1" />
               ) : (
@@ -141,7 +141,7 @@ export default function FarmerDashboardPage() {
             <div className="text-right">
               <span className="text-5xl" aria-hidden="true">⛅</span>
               {!loading && (
-                <p className="text-xs text-neutral-400 mt-1">Humidity {data?.weather.humidity}%</p>
+                <p className="text-xs text-neutral-400 mt-1">{t("common.humidity")} {data?.weather.humidity}%</p>
               )}
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function FarmerDashboardPage() {
 
         {/* Market Prices */}
         <Card
-          header={<h2 className="font-semibold text-neutral-800 text-sm">Market Prices Today</h2>}
+          header={<h2 className="font-semibold text-neutral-800 text-sm">{t("farmer.marketPricesToday")}</h2>}
           padding="none"
         >
           {loading ? (
@@ -174,13 +174,13 @@ export default function FarmerDashboardPage() {
               ))}
             </ul>
           ) : (
-            <EmptyState icon="📊" title="No market data available" />
+            <EmptyState icon="📊" title={t("common.noMarketData")} />
           )}
         </Card>
 
         {/* Quick Actions */}
         <div>
-          <h2 className="font-semibold text-neutral-800 mb-3 text-sm">Quick Actions</h2>
+          <h2 className="font-semibold text-neutral-800 mb-3 text-sm">{t("home.quickActions")}</h2>
           <div className="grid grid-cols-3 gap-3">
             {[
               { icon: "🌾", label: t("farmer.addListing"), href: "listings" },
@@ -201,7 +201,7 @@ export default function FarmerDashboardPage() {
 
         {/* Recent Activity */}
         <Card
-          header={<h2 className="font-semibold text-neutral-800 text-sm">Recent Activity</h2>}
+          header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.recentActivity")}</h2>}
           padding="none"
         >
           {loading ? (
@@ -223,7 +223,7 @@ export default function FarmerDashboardPage() {
               ))}
             </ul>
           ) : (
-            <EmptyState icon="📋" title="No recent activity" />
+            <EmptyState icon="📋" title={t("common.noRecentActivity")} />
           )}
         </Card>
       </div>

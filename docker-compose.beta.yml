@@ -29,6 +29,10 @@ services:
     build:
       context: ./govihub-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://beta.govihublk.com/api/v1
+        NEXT_PUBLIC_APP_URL: https://beta.govihublk.com
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: dev-placeholder.apps.googleusercontent.com
     env_file: .env.beta.frontend
     ports:
       - "3002:3000"

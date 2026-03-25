@@ -85,6 +85,7 @@ function MoreIcon() {
 
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
+  const tRoles = useTranslations("roles");
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/supplier`;
@@ -92,8 +93,8 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
   const navItems: BottomNavItem[] = [
     { href: base + "/dashboard", label: t("home"), icon: (a) => <HomeIcon active={a} /> },
     { href: base + "/listings", label: t("listings"), icon: (a) => <ListingsIcon active={a} /> },
-    { href: base + "/inquiries", label: "Inquiries", icon: (a) => <InquiriesIcon active={a} /> },
-    { href: base + "/more", label: "More", icon: () => <MoreIcon /> },
+    { href: base + "/inquiries", label: t("inquiries"), icon: (a) => <InquiriesIcon active={a} /> },
+    { href: base + "/more", label: t("more"), icon: () => <MoreIcon /> },
   ];
 
   return (
@@ -107,7 +108,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
         }
         rightActions={
           <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-            Supplier
+            {tRoles("supplier")}
           </span>
         }
       />

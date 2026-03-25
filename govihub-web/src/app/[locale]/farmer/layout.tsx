@@ -116,6 +116,7 @@ function MoreIcon({ active }: { active: boolean }) {
 
 export default function FarmerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
+  const tRoles = useTranslations("roles");
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/farmer`;
@@ -125,7 +126,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
     { href: base + "/listings", label: t("listings"), icon: (a) => <ListingsIcon active={a} /> },
     { href: base + "/matches", label: t("matches"), icon: (a) => <MatchIcon active={a} /> },
     { href: base + "/diagnosis", label: t("diagnosis"), icon: (a) => <DiagnosisIcon active={a} /> },
-    { href: base + "/more", label: "More", icon: (a) => <MoreIcon active={a} /> },
+    { href: base + "/more", label: t("more"), icon: (a) => <MoreIcon active={a} /> },
   ];
 
   return (
@@ -139,7 +140,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
         }
         rightActions={
           <span className="text-xs font-semibold text-accent-600 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
-            Farmer
+            {tRoles("farmer")}
           </span>
         }
       />

@@ -148,7 +148,8 @@ export default function BetaLoginPage() {
         document.cookie = `govihub_token=${data.access_token}; path=/; max-age=${60*60*24*30}; SameSite=lax`;
       }
       const role = data.user?.role || regRole;
-      router.push(`/${locale}/${role}/dashboard`);
+      // Full page navigation to reset all in-memory state
+      window.location.href = `/${locale}/${role}/dashboard`;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Registration failed");
     } finally {
