@@ -102,28 +102,35 @@ export default function CropDiagnosisPage() {
     }
   };
 
-  const confidencePct = (c: number) => Math.round(c * 100);
+  const confidencePct = (c: number | null | undefined): number | null => {
+    if (c == null) return null;
+    return Math.round(c <= 1 ? c * 100 : c);
+  };
 
-  const confidenceBadge = (c: number) => {
+  const confidenceBadge = (c: number | null | undefined) => {
     const pct = confidencePct(c);
+    if (pct == null) return { color: "neutral" as const, label: "—" };
     if (pct >= 70) return { color: "green" as const, label: t("diagnosis.highConfidence") };
     if (pct >= 40) return { color: "gold" as const, label: t("diagnosis.mediumConfidence") };
     return { color: "red" as const, label: t("diagnosis.lowConfidence") };
   };
 
-  const severityBadge = (s: string): { color: "green" | "gold" | "red"; label: string } => {
+  const severityBadge = (s: string | null | undefined): { color: "green" | "gold" | "red" | "neutral"; label: string } => {
+    if (!s) return { color: "neutral", label: "—" };
     if (s === "mild") return { color: "green", label: t("diagnosis.mild") };
     if (s === "moderate") return { color: "gold", label: t("diagnosis.moderate") };
     return { color: "red", label: t("diagnosis.severe") };
   };
 
-  const confidenceColor = (c: number) => {
-    const pct = typeof c === "number" && c <= 1 ? Math.round(c * 100) : c;
+  const confidenceColor = (c: number | null | undefined) => {
+    const pct = confidencePct(c);
+    if (pct == null) return "text-neutral-400";
     return pct >= 70 ? "text-green-600" : pct >= 40 ? "text-amber-500" : "text-red-500";
   };
 
-  const confidenceBarColor = (c: number) => {
-    const pct = typeof c === "number" && c <= 1 ? Math.round(c * 100) : c;
+  const confidenceBarColor = (c: number | null | undefined) => {
+    const pct = confidencePct(c);
+    if (pct == null) return "bg-neutral-300";
     return pct >= 70 ? "bg-green-500" : pct >= 40 ? "bg-amber-500" : "bg-red-500";
   };
 
@@ -257,12 +264,12 @@ export default function CropDiagnosisPage() {
                     {confidenceBadge(result.confidence).label}
                   </Badge>
                   <span className={`text-lg font-bold ${confidenceColor(result.confidence)}`}>
-                    {confidencePct(result.confidence)}%
+                    {confidencePct(result.confidence) != null ? `${confidencePct(result.confidence)}%` : "—"}
                   </span>
                   <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${confidenceBarColor(result.confidence)}`}
-                      style={{ width: `${confidencePct(result.confidence)}%` }}
+                      style={{ width: `${confidencePct(result.confidence) ?? 0}%` }}
                     />
                   </div>
                 </div>
@@ -359,13 +366,11 @@ export default function CropDiagnosisPage() {
                 <Card key={item.id} padding="md">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-neutral-900 text-sm">{item.disease}</h3>
+                      <h3 className="font-semibold text-neutral-900 text-sm">{item.disease || "විශ්ලේෂණය අසාර්ථකයි / Analysis failed"}</h3>
                       <p className="text-xs text-neutral-400 mt-0.5">{item.date}</p>
                     </div>
                     <div className={`text-lg font-bold ${confidenceColor(item.confidence)}`}>
-                      {typeof item.confidence === "number" && item.confidence <= 1
-                        ? `${Math.round(item.confidence * 100)}%`
-                        : `${item.confidence}%`}
+                      {confidencePct(item.confidence) != null ? `${confidencePct(item.confidence)}%` : "—"}
                     </div>
                   </div>
                 </Card>
