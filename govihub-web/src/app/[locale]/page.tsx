@@ -64,6 +64,30 @@ export default function HomePage({ params }: { params: { locale: string } }) {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#E8A838] opacity-[0.06] blur-[120px]" />
 
         <div className="relative z-10 flex flex-col items-center px-6 text-center max-w-3xl mx-auto">
+          {/* Language Selector */}
+          <div className="flex items-center gap-1 mb-8 bg-white/10 backdrop-blur-sm rounded-full px-1 py-1">
+            <Link
+              href="/si"
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                locale === "si"
+                  ? "bg-white text-green-800 shadow-md"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              🇱🇰 සිංහල
+            </Link>
+            <Link
+              href="/en"
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                locale === "en"
+                  ? "bg-white text-green-800 shadow-md"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              🇬🇧 English
+            </Link>
+          </div>
+
           {/* Logo */}
           <div className="mb-8 drop-shadow-2xl">
             <Image
