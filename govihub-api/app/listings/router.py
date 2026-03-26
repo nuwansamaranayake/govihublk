@@ -5,7 +5,8 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+import structlog
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,8 +24,52 @@ from app.listings.schemas import (
     HarvestStatusUpdate,
 )
 from app.listings.service import ListingService
+from app.matching.tasks import run_matching_for_new_listing
 from app.utils.pagination import PaginationMeta, PaginationParams, paginate
 from app.utils.sri_lanka import get_districts_list
+
+logger = structlog.get_logger()
+
+# ---------------------------------------------------------------------------
+# District centre coordinates (lng, lat) for location fallback
+# ---------------------------------------------------------------------------
+
+DISTRICT_COORDS: dict[str, tuple[float, float]] = {
+    # North Central Province (pilot)
+    "Anuradhapura": (80.4037, 8.3114),
+    "Polonnaruwa": (81.0188, 7.9403),
+    # Western Province
+    "Colombo": (79.8612, 6.9271),
+    "Gampaha": (80.0137, 7.0840),
+    "Kalutara": (80.1486, 6.5854),
+    # Central Province
+    "Kandy": (80.6350, 7.2906),
+    "Matale": (80.6234, 7.4675),
+    "Nuwara Eliya": (80.7673, 6.9497),
+    # Southern Province
+    "Galle": (80.2170, 6.0535),
+    "Matara": (80.5353, 5.9549),
+    "Hambantota": (81.1185, 6.1429),
+    # Northern Province
+    "Jaffna": (80.0255, 9.6615),
+    "Kilinochchi": (80.3770, 9.3803),
+    "Mannar": (79.9083, 8.9810),
+    "Mullaitivu": (80.5671, 9.2671),
+    "Vavuniya": (80.4971, 8.7514),
+    # Eastern Province
+    "Batticaloa": (81.6924, 7.7310),
+    "Ampara": (81.6747, 7.2975),
+    "Trincomalee": (81.2152, 8.5874),
+    # North Western Province
+    "Kurunegala": (80.3636, 7.4863),
+    "Puttalam": (79.8283, 8.0362),
+    # Uva Province
+    "Badulla": (81.0550, 6.9934),
+    "Monaragala": (81.3507, 6.8728),
+    # Sabaragamuwa Province
+    "Ratnapura": (80.3984, 6.6828),
+    "Kegalle": (80.3464, 7.2513),
+}
 
 router = APIRouter()
 
@@ -115,15 +160,31 @@ async def upload_listing_image(
 )
 async def create_harvest_listing(
     data: HarvestListingCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
     """Create a new harvest listing. Requires farmer role."""
+    data_dict = data.model_dump()
+
+    # Auto-set location from farmer's district when no coordinates provided
+    if not data_dict.get("latitude") and not data_dict.get("longitude") and current_user.district:
+        coords = DISTRICT_COORDS.get(current_user.district)
+        if coords:
+            data_dict["longitude"] = coords[0]
+            data_dict["latitude"] = coords[1]
+
     svc = ListingService(db)
     listing = await svc.create_harvest(
         farmer_id=current_user.id,
-        data=data.model_dump(),
+        data=data_dict,
     )
+
+    # Trigger matching engine if listing is ready for market
+    if str(listing.status) in ("ready", "HarvestStatus.ready"):
+        background_tasks.add_task(run_matching_for_new_listing, "harvest", listing.id)
+        logger.info("matching_triggered", listing_type="harvest", listing_id=str(listing.id))
+
     return _harvest_to_read(listing)
 
 
@@ -255,6 +316,7 @@ async def update_harvest_listing(
 async def update_harvest_status(
     listing_id: UUID,
     data: HarvestStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
@@ -265,6 +327,12 @@ async def update_harvest_status(
         farmer_id=current_user.id,
         new_status=data.status,
     )
+
+    # Trigger matching when a harvest transitions to "ready"
+    if str(listing.status) in ("ready", "HarvestStatus.ready"):
+        background_tasks.add_task(run_matching_for_new_listing, "harvest", listing.id)
+        logger.info("matching_triggered", listing_type="harvest", listing_id=str(listing.id))
+
     return _harvest_to_read(listing)
 
 
@@ -295,15 +363,31 @@ async def delete_harvest_listing(
 )
 async def create_demand_posting(
     data: DemandPostingCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
     """Create a new demand posting. Requires buyer role."""
+    data_dict = data.model_dump()
+
+    # Auto-set location from buyer's district when no coordinates provided
+    if not data_dict.get("latitude") and not data_dict.get("longitude") and current_user.district:
+        coords = DISTRICT_COORDS.get(current_user.district)
+        if coords:
+            data_dict["longitude"] = coords[0]
+            data_dict["latitude"] = coords[1]
+
     svc = ListingService(db)
     posting = await svc.create_demand(
         buyer_id=current_user.id,
-        data=data.model_dump(),
+        data=data_dict,
     )
+
+    # Trigger matching engine if demand is open
+    if str(posting.status) in ("open", "DemandStatus.open"):
+        background_tasks.add_task(run_matching_for_new_listing, "demand", posting.id)
+        logger.info("matching_triggered", listing_type="demand", listing_id=str(posting.id))
+
     return _demand_to_read(posting)
 
 
@@ -429,6 +513,7 @@ async def update_demand_posting(
 async def update_demand_status(
     posting_id: UUID,
     data: DemandStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
@@ -439,6 +524,12 @@ async def update_demand_status(
         buyer_id=current_user.id,
         new_status=data.status,
     )
+
+    # Trigger matching when a demand transitions to "open"
+    if str(posting.status) in ("open", "DemandStatus.open"):
+        background_tasks.add_task(run_matching_for_new_listing, "demand", posting.id)
+        logger.info("matching_triggered", listing_type="demand", listing_id=str(posting.id))
+
     return _demand_to_read(posting)
 
 

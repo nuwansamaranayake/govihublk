@@ -16,6 +16,23 @@ from app.exceptions import GoviHubException, govihub_exception_handler
 logger = structlog.get_logger()
 
 
+async def _matching_scheduler():
+    """Run batch matching every 5 minutes in the background."""
+    import asyncio
+
+    await asyncio.sleep(30)  # initial delay — let app fully start
+    while True:
+        try:
+            from scripts.run_matching import run_batch_matching
+
+            count = await run_batch_matching()
+            if count:
+                logger.info("matching_scheduler_cycle", new_matches=count)
+        except Exception as e:
+            logger.error("matching_scheduler_error", error=str(e))
+        await asyncio.sleep(300)  # 5 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -33,9 +50,14 @@ async def lifespan(app: FastAPI):
     await loop.run_in_executor(None, embedding_service.load_model)
     logger.info("embedding_model_ready", placeholder_mode=embedding_service.is_placeholder)
 
+    # Start the periodic matching scheduler as a background task
+    matching_task = asyncio.create_task(_matching_scheduler())
+    logger.info("matching_scheduler_started", interval_seconds=300)
+
     yield
 
-    # Shutdown: dispose engine
+    # Shutdown: cancel scheduler and dispose engine
+    matching_task.cancel()
     await engine.dispose()
     logger.info("govihub_shutdown")
 
