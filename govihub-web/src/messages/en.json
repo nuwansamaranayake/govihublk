@@ -429,7 +429,17 @@
     "helpSupport": "Help & Support",
     "contactUs": "Contact Us",
     "logOut": "Log Out",
-    "loggingOut": "Logging out..."
+    "loggingOut": "Logging out...",
+    "changeRole": "Change Role",
+    "changeRoleTitle": "Change Your Role",
+    "changeRoleWarning": "Changing your role will deactivate your current listings and matches. This cannot be undone.",
+    "changeRoleConfirm": "Change to",
+    "changeRoleSuccess": "Role changed successfully!",
+    "roleDescFarmer": "List harvests and connect with buyers",
+    "roleDescBuyer": "Post demands and source from farmers",
+    "roleDescSupplier": "Supply agricultural inputs and services",
+    "currentRole": "Current Role",
+    "cancel": "Cancel"
   },
   "feedback": {
     "sendFeedback": "Send Feedback",

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
+import { ChangeRoleModal } from "@/components/ui";
 import Image from "next/image";
 
 export default function SupplierMorePage() {
@@ -17,6 +18,7 @@ export default function SupplierMorePage() {
   const [notifyPrices, setNotifyPrices] = useState(true);
   const [notifyStock, setNotifyStock] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -72,6 +74,12 @@ export default function SupplierMorePage() {
                   {user?.role || "supplier"}
                 </span>
               </div>
+              <button
+                onClick={() => setShowRoleModal(true)}
+                className="mt-1 text-sm text-green-700 hover:text-green-800 font-medium"
+              >
+                {t("more.changeRole")}
+              </button>
               {user?.district && (
                 <p className="text-sm text-neutral-500 mt-0.5 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -270,6 +278,12 @@ export default function SupplierMorePage() {
           <p className="text-xs text-neutral-300">Powered by AiGNITE</p>
         </div>
       </div>
+      <ChangeRoleModal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        currentRole={user?.role || "supplier"}
+        locale={locale as string}
+      />
     </div>
   );
 }
