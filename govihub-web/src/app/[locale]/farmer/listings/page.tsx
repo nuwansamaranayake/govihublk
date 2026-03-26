@@ -17,13 +17,27 @@ import { formatStatus, cropName } from "@/lib/utils";
 
 interface Listing {
   id: string;
-  crop: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  location: string;
-  harvestDate: string;
+  crop: any; // object: {id, name_en, name_si, category}
+  crop_id: number;
+  variety: string;
+  quantity_kg: number;
+  price_per_kg: number;
+  min_price_per_kg: number;
+  available_from: string;
+  available_until: string;
+  harvest_date: string;
+  description: string;
+  quality_grade: string;
+  is_organic: boolean;
+  delivery_available: boolean;
+  delivery_radius_km: number;
+  latitude: number;
+  longitude: number;
+  images: any[];
+  farmer_id: string;
   status: "planned" | "ready" | "fulfilled" | "cancelled" | "expired";
+  created_at: string;
+  updated_at: string;
 }
 
 const CROPS = [
@@ -31,10 +45,9 @@ const CROPS = [
   "Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish",
   "Lettuce","Spinach","Peas","Corn","Ginger","Garlic",
 ];
-const UNITS = ["kg","ton","crate","bunch","bag"];
 
 
-const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", price:"", location:"", harvestDate:"", expiryDate:"", description:"" };
+const EMPTY_FORM = { crop_id:"", variety:"", quantity_kg:"", price_per_kg:"", min_price_per_kg:"", available_from:"", available_until:"", description:"", quality_grade:"A", is_organic:false, delivery_available:false };
 type FormData = typeof EMPTY_FORM;
 
 const STATUS_COLOR: Record<string, "green"|"gray"|"gold"|"blue"> = { planned:"blue", ready:"green", fulfilled:"gray", cancelled:"gray", expired:"gray" };
@@ -71,7 +84,7 @@ export default function FarmerListingsPage() {
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
-    setForm({ crop:cropName(l.crop, locale), quantity:String(l.quantity), unit:l.unit, price:String(l.price), location:l.location, harvestDate:l.harvestDate, expiryDate:"", description:"" });
+    setForm({ crop_id:String(l.crop_id || ''), variety:l.variety || '', quantity_kg:String(l.quantity_kg), price_per_kg:String(l.price_per_kg), min_price_per_kg:String(l.min_price_per_kg || ''), available_from:l.available_from?.split('T')[0] || '', available_until:l.available_until?.split('T')[0] || '', description:l.description || '', quality_grade:l.quality_grade || 'A', is_organic:l.is_organic || false, delivery_available:l.delivery_available || false });
     setShowModal(true);
   };
 
@@ -144,8 +157,8 @@ export default function FarmerListingsPage() {
                           <h3 className="font-semibold text-neutral-900">{cropName(listing.crop, locale)}</h3>
                           <Badge color={STATUS_COLOR[listing.status]||"gray"} size="sm" dot>{formatStatus(listing.status)}</Badge>
                         </div>
-                        <p className="text-sm text-neutral-600 mt-1">{listing.quantity} {listing.unit} · Rs. {listing.price}/{listing.unit}</p>
-                        <p className="text-xs text-neutral-400 mt-1">📍 {listing.location} · 🗓 {listing.harvestDate}</p>
+                        <p className="text-sm text-neutral-600 mt-1">{listing.quantity_kg} kg · Rs. {listing.price_per_kg}/kg</p>
+                        <p className="text-xs text-neutral-400 mt-1">{listing.variety && `${listing.variety} · `}🗓 {listing.available_from ? new Date(listing.available_from).toLocaleDateString() : ''}</p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(listing)}>{t("common.edit")}</Button>
@@ -180,23 +193,27 @@ export default function FarmerListingsPage() {
         }
       >
         <form id="listing-form" onSubmit={handleSubmit} className="space-y-4">
-          <Select label={t("farmer.cropName")} required value={form.crop} onChange={e => f("crop", e.target.value)}
-            placeholder={t("listing.selectCrop")} options={CROPS.map(c => ({value:c, label:c}))} />
+          <Select label={t("farmer.cropName")} required value={form.crop_id} onChange={e => f("crop_id", e.target.value)}
+            placeholder={t("listing.selectCrop")} options={CROPS.map((c, i) => ({value:String(i+1), label:c}))} />
+          <Input label={t("farmer.variety")} value={form.variety}
+            onChange={e => f("variety", e.target.value)} placeholder="e.g. Big Beef" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("farmer.quantity")} type="number" required min="1" value={form.quantity}
-              onChange={e => f("quantity", e.target.value)} placeholder="e.g. 500" />
-            <Select label={t("farmer.unit")} value={form.unit} onChange={e => f("unit", e.target.value)}
-              options={UNITS.map(u => ({value:u, label:u}))} />
+            <Input label={t("farmer.quantity") + " (kg)"} type="number" required min="1" value={form.quantity_kg}
+              onChange={e => f("quantity_kg", e.target.value)} placeholder="e.g. 500" />
+            <Select label={t("farmer.qualityGrade")} value={form.quality_grade} onChange={e => f("quality_grade", e.target.value)}
+              options={["A","B","C"].map(g => ({value:g, label:`Grade ${g}`}))} />
           </div>
-          <Input label={t("farmer.price")} type="number" required min="1" value={form.price}
-            onChange={e => f("price", e.target.value)} placeholder="e.g. 120" />
-          <Input label={t("farmer.location")} required value={form.location}
-            onChange={e => f("location", e.target.value)} placeholder="e.g. Kandy" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("farmer.availableFrom")} type="date" required value={form.harvestDate}
-              onChange={e => f("harvestDate", e.target.value)} />
-            <Input label={t("farmer.availableUntil")} type="date" value={form.expiryDate}
-              onChange={e => f("expiryDate", e.target.value)} />
+            <Input label={t("farmer.price") + " (Rs/kg)"} type="number" required min="1" value={form.price_per_kg}
+              onChange={e => f("price_per_kg", e.target.value)} placeholder="e.g. 120" />
+            <Input label={t("farmer.minPrice") + " (Rs/kg)"} type="number" value={form.min_price_per_kg}
+              onChange={e => f("min_price_per_kg", e.target.value)} placeholder="e.g. 100" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={t("farmer.availableFrom")} type="date" required value={form.available_from}
+              onChange={e => f("available_from", e.target.value)} />
+            <Input label={t("farmer.availableUntil")} type="date" value={form.available_until}
+              onChange={e => f("available_until", e.target.value)} />
           </div>
           <div>
             <label className="text-sm font-medium text-neutral-700 block mb-1.5">{t("farmer.description")}</label>

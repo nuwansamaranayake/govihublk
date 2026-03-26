@@ -82,8 +82,8 @@ export default function FarmerDashboardPage() {
           recentActivity: matches.slice(0, 5).map((m: any) => ({
             id: m.id || String(Math.random()),
             type: "match",
-            message: `Match: ${cropName(m.crop, locale)} - ${m.quantity || 0} ${m.unit || "kg"}`,
-            time: m.created_at || m.createdAt || "",
+            message: `Match: Score ${Math.round((m.score || 0) * 100)}% · ${m.agreed_price_per_kg ? `Rs. ${m.agreed_price_per_kg}/kg` : 'Price TBD'}`,
+            time: m.created_at || "",
           })),
         });
       })

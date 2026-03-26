@@ -132,13 +132,14 @@ export default function AdminMatchesPage() {
                           <span className="text-xs text-neutral-400">#{match.id}</span>
                         </div>
                         <p className="text-sm font-semibold text-neutral-900 mt-1">
-                          {cropName(match.crop, locale)} · {match.quantity} {match.unit}
+                          Score: {Math.round((match.score || 0) * 100)}%
                         </p>
                         <p className="text-xs text-neutral-600 mt-0.5">
-                          🌾 {match.farmerName} → 🏪 {match.buyerName}
+                          {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : "Price TBD"}
+                          {match.agreed_quantity_kg ? ` · ${match.agreed_quantity_kg} kg` : ""}
                         </p>
                         <p className="text-xs text-neutral-400 mt-0.5">
-                          Rs. {match.price}/{match.unit} · {match.createdAt}
+                          {match.created_at ? new Date(match.created_at).toLocaleDateString() : ""}
                         </p>
                         {match.disputeReason && (
                           <div className="mt-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
@@ -182,7 +183,7 @@ export default function AdminMatchesPage() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-100 rounded-xl p-3">
               <p className="text-sm font-medium text-red-800">Match #{selected.id}</p>
-              <p className="text-xs text-red-600 mt-1">{cropName(selected.crop, locale)} · {selected.farmerName} ↔ {selected.buyerName}</p>
+              <p className="text-xs text-red-600 mt-1">Score: {Math.round((selected.score || 0) * 100)}% · {formatStatus(selected.status)}</p>
               {selected.disputeReason && (
                 <p className="text-xs text-red-700 mt-1">Reason: {selected.disputeReason}</p>
               )}

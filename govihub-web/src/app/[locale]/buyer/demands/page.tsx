@@ -17,24 +17,29 @@ import { cropName } from "@/lib/utils";
 
 interface Demand {
   id: string;
-  crop: string;
-  quantity: number;
-  unit: string;
-  minPrice: number;
-  maxPrice: number;
-  location: string;
-  radius: number;
-  startDate: string;
-  endDate: string;
-  recurring: boolean;
+  crop: any; // object: {id, name_en, name_si, category}
+  crop_id: number;
+  variety: string;
+  quantity_kg: number;
+  max_price_per_kg: number;
+  needed_by: string;
+  radius_km: number;
+  latitude: number;
+  longitude: number;
+  description: string;
+  quality_grade: string;
+  is_recurring: boolean;
+  recurrence_pattern: string;
+  buyer_id: string;
   status: "open"|"reviewing"|"confirmed"|"closed"|"expired";
+  created_at: string;
+  updated_at: string;
 }
 
 const CROPS = ["Tomato","Cabbage","Carrot","Beans","Potato","Onion","Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish"];
-const UNITS = ["kg","ton","crate","bunch","bag"];
 
 
-const EMPTY_FORM = { crop:"", quantity:"", unit:"kg", minPrice:"", maxPrice:"", location:"", radius:"50", startDate:"", endDate:"", recurring:false };
+const EMPTY_FORM = { crop_id:"", variety:"", quantity_kg:"", max_price_per_kg:"", radius_km:"50", needed_by:"", description:"", quality_grade:"A", is_recurring:false };
 type FormData = typeof EMPTY_FORM;
 
 const STATUS_COLOR: Record<string,"green"|"gold"|"gray"|"red"|"blue"|"darkgreen"> = { open:"blue", reviewing:"gold", confirmed:"darkgreen", closed:"gray", expired:"gray" };
@@ -71,7 +76,7 @@ export default function BuyerDemandsPage() {
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (d: Demand) => {
     setEditId(d.id);
-    setForm({ crop:cropName(d.crop, locale), quantity:String(d.quantity), unit:d.unit, minPrice:String(d.minPrice), maxPrice:String(d.maxPrice), location:d.location, radius:String(d.radius), startDate:d.startDate, endDate:d.endDate, recurring:d.recurring });
+    setForm({ crop_id:String(d.crop_id || ''), variety:d.variety || '', quantity_kg:String(d.quantity_kg), max_price_per_kg:String(d.max_price_per_kg), radius_km:String(d.radius_km || '50'), needed_by:d.needed_by?.split('T')[0] || '', description:d.description || '', quality_grade:d.quality_grade || 'A', is_recurring:d.is_recurring || false });
     setShowModal(true);
   };
 
@@ -137,13 +142,13 @@ export default function BuyerDemandsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-neutral-900">{cropName(demand.crop, locale)}</h3>
                           <Badge color={STATUS_COLOR[demand.status]||"gray"} size="sm" dot>{demand.status}</Badge>
-                          {demand.recurring && <Badge color="blue" size="sm">{t("common.recurring")}</Badge>}
+                          {demand.is_recurring && <Badge color="blue" size="sm">{t("common.recurring")}</Badge>}
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
-                          {demand.quantity} {demand.unit} · Rs. {demand.minPrice}–{demand.maxPrice}/{demand.unit}
+                          {demand.quantity_kg} kg · Rs. {demand.max_price_per_kg}/kg max
                         </p>
                         <p className="text-xs text-neutral-400 mt-1">
-                          📍 {demand.location} ({demand.radius}km) · {demand.startDate} to {demand.endDate}
+                          🗓 Need by: {demand.needed_by ? new Date(demand.needed_by).toLocaleDateString() : ''} · {demand.radius_km}km radius
                         </p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
@@ -175,40 +180,32 @@ export default function BuyerDemandsPage() {
         }
       >
         <form id="demand-form" onSubmit={handleSubmit} className="space-y-4">
-          <Select label={t("buyer.cropName")} required value={form.crop} onChange={e => f("crop", e.target.value)}
-            placeholder={t("listing.selectCrop")} options={CROPS.map(c => ({value:c,label:c}))} />
+          <Select label={t("buyer.cropName")} required value={form.crop_id} onChange={e => f("crop_id", e.target.value)}
+            placeholder={t("listing.selectCrop")} options={CROPS.map((c, i) => ({value:String(i+1),label:c}))} />
+          <Input label={t("buyer.variety")} value={form.variety}
+            onChange={e => f("variety", e.target.value)} placeholder="e.g. Big Beef" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("buyer.quantity")} type="number" required min="1" value={form.quantity}
-              onChange={e => f("quantity", e.target.value)} placeholder="e.g. 500" />
-            <Select label={t("buyer.unit")} value={form.unit} onChange={e => f("unit", e.target.value)}
-              options={UNITS.map(u => ({value:u,label:u}))} />
+            <Input label={t("buyer.quantity") + " (kg)"} type="number" required min="1" value={form.quantity_kg}
+              onChange={e => f("quantity_kg", e.target.value)} placeholder="e.g. 500" />
+            <Input label={t("buyer.maxPrice") + " (Rs/kg)"} type="number" required min="1" value={form.max_price_per_kg}
+              onChange={e => f("max_price_per_kg", e.target.value)} placeholder="e.g. 130" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("buyer.minPrice")} type="number" required min="1" value={form.minPrice}
-              onChange={e => f("minPrice", e.target.value)} placeholder="e.g. 100" />
-            <Input label={t("buyer.maxPrice")} type="number" required min="1" value={form.maxPrice}
-              onChange={e => f("maxPrice", e.target.value)} placeholder="e.g. 130" />
+            <Input label={t("buyer.neededBy")} type="date" required value={form.needed_by}
+              onChange={e => f("needed_by", e.target.value)} />
+            <Input label={t("buyer.radius") + " (km)"} type="number" min="1" value={form.radius_km}
+              onChange={e => f("radius_km", e.target.value)} placeholder="50" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label={t("buyer.location")} required value={form.location}
-              onChange={e => f("location", e.target.value)} placeholder="e.g. Colombo" />
-            <Input label={t("buyer.radius")} type="number" min="1" value={form.radius}
-              onChange={e => f("radius", e.target.value)} placeholder="50" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label={t("buyer.startDate")} type="date" required value={form.startDate}
-              onChange={e => f("startDate", e.target.value)} />
-            <Input label={t("buyer.endDate")} type="date" required value={form.endDate}
-              onChange={e => f("endDate", e.target.value)} />
-          </div>
+          <Select label={t("buyer.qualityGrade")} value={form.quality_grade} onChange={e => f("quality_grade", e.target.value)}
+            options={["A","B","C"].map(g => ({value:g, label:`Grade ${g}`}))} />
           <label className="flex items-center gap-3 cursor-pointer">
             <div
               role="switch"
-              aria-checked={form.recurring}
-              onClick={() => f("recurring", !form.recurring)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${form.recurring ? "bg-amber-500" : "bg-neutral-300"}`}
+              aria-checked={form.is_recurring}
+              onClick={() => f("is_recurring", !form.is_recurring)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${form.is_recurring ? "bg-amber-500" : "bg-neutral-300"}`}
             >
-              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.recurring ? "translate-x-5" : "translate-x-0"}`} />
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_recurring ? "translate-x-5" : "translate-x-0"}`} />
             </div>
             <span className="text-sm font-medium text-neutral-700">{t("buyer.recurringDemand")}</span>
           </label>

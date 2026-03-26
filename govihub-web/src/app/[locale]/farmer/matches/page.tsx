@@ -10,21 +10,20 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus, cropName } from "@/lib/utils";
+import { formatStatus } from "@/lib/utils";
 
 type MatchStatus = "proposed" | "farmer_accepted" | "buyer_accepted" | "in_transit" | "disputed" | "cancelled";
 
 interface Match {
   id: string;
-  buyerName: string;
-  crop: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  location: string;
+  harvest_id: string;
+  demand_id: string;
   score: number;
   status: MatchStatus;
-  createdAt: string;
+  agreed_price_per_kg: number | null;
+  agreed_quantity_kg: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 
@@ -114,16 +113,16 @@ export default function FarmerMatchesPage() {
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-neutral-900 text-sm">{match.buyerName}</h3>
+                          <h3 className="font-semibold text-neutral-900 text-sm">Match #{match.id?.slice(0, 8)}</h3>
                           <Badge color={STATUS_COLOR[match.status]} size="sm" dot>{formatStatus(match.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
-                          {cropName(match.crop, locale)} · {match.quantity} {match.unit} · Rs. {match.price}/{match.unit}
+                          Score: {Math.round(match.score * 100)}% · {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : 'Price TBD'}
                         </p>
-                        <p className="text-xs text-neutral-400 mt-1">📍 {match.location} · {match.createdAt}</p>
+                        <p className="text-xs text-neutral-400 mt-1">{match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg · ` : ''}{new Date(match.created_at).toLocaleDateString()}</p>
                       </div>
                       <div className="text-center shrink-0 bg-neutral-50 rounded-xl px-3 py-2">
-                        <div className={`text-2xl font-bold ${scoreColor(match.score)}`}>{match.score}</div>
+                        <div className={`text-2xl font-bold ${scoreColor(Math.round(match.score * 100))}`}>{Math.round(match.score * 100)}</div>
                         <p className="text-[10px] text-neutral-400">Match %</p>
                       </div>
                     </div>

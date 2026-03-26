@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { cropName } from "@/lib/utils";
+// cropName not needed — matches don't carry crop data
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
@@ -18,13 +18,11 @@ interface PipelineStage {
 
 interface RecentMatch {
   id: string;
-  farmerName: string;
-  crop: string;
-  quantity: number;
-  unit: string;
-  location: string;
   score: number;
   status: string;
+  agreed_price_per_kg: number | null;
+  agreed_quantity_kg: number | null;
+  created_at: string;
 }
 
 interface DashboardData {
@@ -70,7 +68,7 @@ export default function BuyerDashboardPage() {
           activeDemands: demands.length,
           matchedFarmers: matches.length,
           pendingConfirmations,
-          totalValue: matches.reduce((sum: number, m: any) => sum + ((m.price || 0) * (m.quantity || 0)), 0),
+          totalValue: matches.reduce((sum: number, m: any) => sum + ((m.agreed_price_per_kg || 0) * (m.agreed_quantity_kg || 0)), 0),
           pipeline: [
             { label: "Proposed", count: proposed, color: "bg-blue-400" },
             { label: "Farmer Accepted", count: farmerAccepted, color: "bg-amber-400" },
@@ -79,13 +77,11 @@ export default function BuyerDashboardPage() {
           ],
           recentMatches: matches.slice(0, 5).map((m: any) => ({
             id: m.id || String(Math.random()),
-            farmerName: m.farmer_name || m.farmerName || "Farmer",
-            crop: cropName(m.crop, locale),
-            quantity: m.quantity || 0,
-            unit: m.unit || "kg",
-            location: m.location || "",
             score: m.score || 0,
             status: m.status || "proposed",
+            agreed_price_per_kg: m.agreed_price_per_kg,
+            agreed_quantity_kg: m.agreed_quantity_kg,
+            created_at: m.created_at || "",
           })),
         });
       })
@@ -175,12 +171,12 @@ export default function BuyerDashboardPage() {
                 <li key={match.id} className="flex items-center justify-between px-4 py-3 gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-neutral-900 text-sm">{match.farmerName}</span>
+                      <span className="font-medium text-neutral-900 text-sm">Match #{match.id?.slice(0, 8)}</span>
                       <Badge color={STATUS_COLOR[match.status]||"gray"} size="sm" dot>{match.status}</Badge>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">{cropName(match.crop, locale)} · {match.quantity} {match.unit} · {match.location}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : 'Price TBD'} · {match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg` : ''} · {match.created_at ? new Date(match.created_at).toLocaleDateString() : ''}</p>
                   </div>
-                  <div className={`text-lg font-bold shrink-0 ${scoreColor(match.score)}`}>{match.score}%</div>
+                  <div className={`text-lg font-bold shrink-0 ${scoreColor(Math.round(match.score * 100))}`}>{Math.round(match.score * 100)}%</div>
                 </li>
               ))}
             </ul>
