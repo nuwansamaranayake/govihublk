@@ -128,7 +128,7 @@ export function HelpPanel({ pageKey, locale, onClose }: HelpPanelProps) {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 text-base text-neutral-800">
+        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-28 space-y-6 text-base text-neutral-800 max-h-[calc(100vh-60px)]">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-3 border-green-700 border-t-transparent rounded-full animate-spin" />
