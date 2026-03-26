@@ -171,7 +171,6 @@ export default function CropDiagnosisPage() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleImageSelect}
                     className="sr-only"
                   />
