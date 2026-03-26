@@ -354,7 +354,6 @@ class ListingService:
             )
             await self.db.flush()
 
-<<<<<<< HEAD
         await self.db.refresh(posting, ["crop"])
         logger.info("demand_posting_created", posting_id=str(posting.id), buyer_id=str(buyer_id))
         return posting
