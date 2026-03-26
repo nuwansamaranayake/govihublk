@@ -1,569 +1,569 @@
 {
   "farmer.dashboard": {
-    "title": "Farmer Dashboard",
-    "description": "Your central hub for managing your farming activities, viewing market prices, and tracking your listings.",
+    "title": "ගොවියාගේ මුල් පිටුව",
+    "description": "ඔබේ ගොවිතැන් කටයුතු කළමනාකරණය, වෙළඳපොළ මිල බැලීම, සහ ලැයිස්තු නිරීක්ෂණය කිරීමේ ප්‍රධාන තැන.",
     "steps": [
       {
-        "title": "View Market Prices",
-        "content": "The top section shows current market prices for your crops. Tap any crop to see price trends and forecasts."
+        "title": "වෙළඳපොළ මිල බලන්න",
+        "content": "ඉහළ කොටසේ ඔබේ බෝග වල වත්මන් වෙළඳපොළ මිල පෙන්වයි. මිල ප්‍රවණතා සහ අනාවැකි බැලීමට ඕනෑම බෝගයක් තට්ටු කරන්න."
       },
       {
-        "title": "Check Your Listings",
-        "content": "See your active produce listings and their current status. Green means active, yellow means pending review."
+        "title": "ඔබේ ලැයිස්තු පරීක්ෂා කරන්න",
+        "content": "ඔබේ සක්‍රිය අස්වැන්න ලැයිස්තු සහ ඒවායේ තත්ත්වය බලන්න. කොළ පාට යනු සක්‍රියයි, කහ පාට යනු සමාලෝචනය බලාපොරොත්තුවයි."
       },
       {
-        "title": "Review Matches",
-        "content": "New buyer matches appear as notifications. Tap to see buyer details and respond to their interest."
+        "title": "ගැළපීම් බලන්න",
+        "content": "අලුත් ගැනුම්කරු ගැළපීම් දැනුම්දීම් ලෙස පෙන්වයි. ගැනුම්කරුගේ විස්තර බැලීමට සහ ප්‍රතිචාර දීමට තට්ටු කරන්න."
       }
     ],
     "tips": [
-      "Keep your listings updated with accurate quantities to get better buyer matches.",
-      "Check market prices daily to set competitive prices for your produce."
+      "හොඳ ගැනුම්කරු ගැළපීම් ලබා ගැනීමට නිවැරදි ප්‍රමාණ සමඟ ලැයිස්තු යාවත්කාලීන කරන්න.",
+      "ඔබේ අස්වැන්නට තරඟකාරී මිල සැකසීමට දිනපතා වෙළඳපොළ මිල පරීක්ෂා කරන්න."
     ],
     "faq": [
       {
-        "question": "How do I update my crop prices?",
-        "answer": "Go to Listings, tap the listing you want to update, then tap Edit Price. Your new price will be visible to buyers immediately."
+        "question": "මගේ බෝග මිල යාවත්කාලීන කරන්නේ කොහොමද?",
+        "answer": "ලැයිස්තු වලට ගොස්, යාවත්කාලීන කිරීමට අවශ්‍ය ලැයිස්තුව තට්ටු කරන්න, ඊට පස්සේ මිල සංස්කරණය තට්ටු කරන්න. ඔබේ අලුත් මිල ගැනුම්කරුවන්ට වහාම පෙනෙනවා."
       },
       {
-        "question": "Why am I not getting matches?",
-        "answer": "Make sure your listings are active, your location is set correctly, and your prices are competitive with market rates."
+        "question": "මට ගැළපීම් නොලැබෙන්නේ ඇයි?",
+        "answer": "ඔබේ ලැයිස්තු සක්‍රියදැයි, ස්ථානය නිවැරදිදැයි, සහ මිල වෙළඳපොළ මිලට සරිලනවාදැයි පරීක්ෂා කරන්න."
       }
     ]
   },
   "farmer.listings": {
-    "title": "My Listings",
-    "description": "Create and manage your produce listings. Buyers can discover your products through the marketplace.",
+    "title": "මගේ ලැයිස්තු",
+    "description": "ඔබේ අස්වැන්න ලැයිස්තු සාදන්න සහ කළමනාකරණය කරන්න. ගැනුම්කරුවන්ට වෙළඳපොළ හරහා ඔබේ නිෂ්පාදන සොයා ගත හැක.",
     "steps": [
       {
-        "title": "Create a New Listing",
-        "content": "Tap the + button to add a new produce listing. Fill in the crop type, quantity, price, and harvest date."
+        "title": "අලුත් ලැයිස්තුවක් සාදන්න",
+        "content": "අලුත් අස්වැන්න ලැයිස්තුවක් එක් කිරීමට + බොත්තම තට්ටු කරන්න. බෝග වර්ගය, ප්‍රමාණය, මිල, සහ අස්වනු දිනය ඇතුළත් කරන්න."
       },
       {
-        "title": "Add Photos",
-        "content": "Upload clear photos of your produce. Listings with photos get 3x more buyer interest."
+        "title": "ඡායාරූප එක් කරන්න",
+        "content": "ඔබේ අස්වැන්නේ පැහැදිලි ඡායාරූප උඩුගත කරන්න. ඡායාරූප ඇති ලැයිස්තු වලට 3 ගුණයක ගැනුම්කරු උනන්දුවක් ලැබෙනවා."
       },
       {
-        "title": "Set Your Price",
-        "content": "Enter your asking price per kilogram. You can see the current market rate for reference."
+        "title": "මිල සකසන්න",
+        "content": "kg එකකට ඔබේ ඉල්ලන මිල ඇතුළත් කරන්න. යොමු වශයෙන් වත්මන් වෙළඳපොළ මිල බැලිය හැක."
       },
       {
-        "title": "Publish",
-        "content": "Review your listing details and tap Publish. Your listing will be visible to buyers in your area."
+        "title": "ප්‍රකාශ කරන්න",
+        "content": "ඔබේ ලැයිස්තු විස්තර බලලා ප්‍රකාශ කරන්න තට්ටු කරන්න. ඔබේ ප්‍රදේශයේ ගැනුම්කරුවන්ට ලැයිස්තුව පෙනෙනවා."
       }
     ],
     "tips": [
-      "Add at least 2 photos to your listing for better visibility.",
-      "Set harvest dates accurately so buyers can plan their purchases.",
-      "Use the market price reference to set competitive prices."
+      "හොඳ දෘශ්‍යතාවයක් සඳහා ලැයිස්තුවට අවම වශයෙන් ඡායාරූප 2ක් එක් කරන්න.",
+      "ගැනුම්කරුවන්ට ඔවුන්ගේ මිලදී ගැනීම් සැලසුම් කිරීමට හැකි වන පරිදි අස්වනු දිනය නිවැරදිව සකසන්න.",
+      "තරඟකාරී මිල සැකසීමට වෙළඳපොළ මිල යොමුව භාවිතා කරන්න."
     ],
     "faq": [
       {
-        "question": "Can I edit a listing after publishing?",
-        "answer": "Yes, tap the listing and select Edit. You can update price, quantity, and photos at any time."
+        "question": "ප්‍රකාශ කළ පසු ලැයිස්තුවක් සංස්කරණය කළ හැකිද?",
+        "answer": "ඔව්, ලැයිස්තුව තට්ටු කරලා සංස්කරණය තෝරන්න. ඕනෑම වේලාවක මිල, ප්‍රමාණය, සහ ඡායාරූප යාවත්කාලීන කළ හැක."
       },
       {
-        "question": "How long do listings stay active?",
-        "answer": "Listings remain active until you mark them as sold or until the harvest date passes."
+        "question": "ලැයිස්තු කොපමණ කාලයක් සක්‍රියව පවතිනවාද?",
+        "answer": "ඔබ විකුණා ඇති බව සලකුණු කරන තුරු හෝ අස්වනු දිනය පසු වන තුරු ලැයිස්තු සක්‍රියව පවතිනවා."
       }
     ]
   },
   "farmer.matches": {
-    "title": "Buyer Matches",
-    "description": "View and manage buyer matches for your produce listings. GoviHub automatically connects you with interested buyers.",
+    "title": "ගැනුම්කරු ගැළපීම්",
+    "description": "ඔබේ අස්වැන්න ලැයිස්තු සඳහා ගැනුම්කරු ගැළපීම් බලන්න සහ කළමනාකරණය කරන්න. GoviHub ස්වයංක්‍රීයව ඔබව උනන්දු ගැනුම්කරුවන් සමඟ සම්බන්ධ කරයි.",
     "steps": [
       {
-        "title": "Review Match Details",
-        "content": "Each match shows the buyer's name, quantity needed, and offered price. Tap to see full details."
+        "title": "ගැළපීම් විස්තර බලන්න",
+        "content": "සෑම ගැළපීමකම ගැනුම්කරුගේ නම, අවශ්‍ය ප්‍රමාණය, සහ යෝජිත මිල පෙන්වයි. සම්පූර්ණ විස්තර බැලීමට තට්ටු කරන්න."
       },
       {
-        "title": "Accept or Negotiate",
-        "content": "You can accept a match directly or send a counter-offer with your preferred terms."
+        "title": "පිළිගන්න හෝ සාකච්ඡා කරන්න",
+        "content": "ඔබට ගැළපීමක් සෘජුවම පිළිගත හැක, නැතහොත් ඔබේ කොන්දේසි සමඟ ප්‍රති-යෝජනාවක් යැවිය හැක."
       },
       {
-        "title": "Confirm Delivery",
-        "content": "Once agreed, confirm the delivery date and location with the buyer."
+        "title": "බෙදාහැරීම තහවුරු කරන්න",
+        "content": "එකඟ වූ පසු, ගැනුම්කරු සමඟ බෙදාහැරීමේ දිනය සහ ස්ථානය තහවුරු කරන්න."
       }
     ],
     "tips": [
-      "Respond to matches quickly - buyers often contact multiple farmers.",
-      "Check the buyer's rating before accepting a match."
+      "ගැළපීම් වලට ඉක්මනින් ප්‍රතිචාර දෙන්න - ගැනුම්කරුවන් බොහෝ විට ගොවීන් කිහිප දෙනෙකුට සම්බන්ධ වෙනවා.",
+      "ගැළපීමක් පිළිගැනීමට පෙර ගැනුම්කරුගේ ශ්‍රේණිගත කිරීම පරීක්ෂා කරන්න."
     ],
     "faq": [
       {
-        "question": "What happens after I accept a match?",
-        "answer": "The buyer will be notified and you'll both receive contact details to arrange delivery."
+        "question": "මම ගැළපීමක් පිළිගත් පසු මොකද වෙන්නේ?",
+        "answer": "ගැනුම්කරුට දැනුම් දෙනවා, ඔබ දෙදෙනාටම බෙදාහැරීම සැලසුම් කිරීමට සම්බන්ධතා විස්තර ලැබෙනවා."
       },
       {
-        "question": "Can I decline a match?",
-        "answer": "Yes, tap the match and select Decline. You can optionally provide a reason."
+        "question": "මට ගැළපීමක් ප්‍රතික්ෂේප කළ හැකිද?",
+        "answer": "ඔව්, ගැළපීම තට්ටු කරලා ප්‍රතික්ෂේප කරන්න තෝරන්න. අවශ්‍ය නම් හේතුවක් දැක්විය හැක."
       }
     ]
   },
   "farmer.diagnosis": {
-    "title": "Crop Diagnosis",
-    "description": "Use AI-powered diagnosis to identify crop diseases and pests. Take a photo and get instant recommendations.",
+    "title": "බෝග රෝග හඳුනාගැනීම",
+    "description": "AI ආධාරයෙන් බෝග රෝග සහ පළිබෝධ හඳුනාගන්න. ඡායාරූපයක් ගෙන ක්ෂණික නිර්දේශ ලබා ගන්න.",
     "steps": [
       {
-        "title": "Take a Photo",
-        "content": "Tap the camera button and photograph the affected part of your crop. Ensure good lighting and focus."
+        "title": "ඡායාරූපයක් ගන්න",
+        "content": "කැමරා බොත්තම තට්ටු කරලා බෝගයේ අසනීප කොටස ඡායාරූපගත කරන්න. හොඳ ආලෝකය සහ පැහැදිලි බව තියෙන්න ඕන."
       },
       {
-        "title": "Select Crop Type",
-        "content": "Choose the type of crop from the dropdown to improve diagnosis accuracy."
+        "title": "බෝග වර්ගය තෝරන්න",
+        "content": "රෝග හඳුනාගැනීමේ නිවැරදිතාව වැඩි කිරීමට පතන ලැයිස්තුවෙන් බෝග වර්ගය තෝරන්න."
       },
       {
-        "title": "Get Results",
-        "content": "The AI will analyze your photo and provide a diagnosis with treatment recommendations."
+        "title": "ප්‍රතිඵල ලබාගන්න",
+        "content": "AI ඔබේ ඡායාරූපය විශ්ලේෂණය කරලා ප්‍රතිකාර නිර්දේශ සමඟ රෝග විනිශ්චයක් දෙනවා."
       }
     ],
     "tips": [
-      "Take close-up photos of affected leaves or stems for better diagnosis accuracy.",
-      "Include both healthy and affected parts in the photo for comparison.",
-      "Use the diagnosis history to track recurring issues."
+      "හොඳ නිවැරදිතාවයක් සඳහා රෝගී කොළ හෝ කඳන් වල සමීප ඡායාරූප ගන්න.",
+      "සැසඳීම සඳහා සෞඛ්‍ය සම්පන්න සහ රෝගී කොටස් දෙකම ඡායාරූපයට ඇතුළත් කරන්න.",
+      "නැවත නැවත එන ගැටලු නිරීක්ෂණය කිරීමට රෝග හඳුනාගැනීමේ ඉතිහාසය බලන්න."
     ],
     "faq": [
       {
-        "question": "How accurate is the AI diagnosis?",
-        "answer": "The AI provides a confidence score with each diagnosis. For critical issues, we recommend consulting a local agricultural officer."
+        "question": "AI රෝග හඳුනාගැනීම කොතරම් නිවැරදිද?",
+        "answer": "AI සෑම රෝග විනිශ්චයකටම විශ්වාස ලකුණු දෙනවා. බරපතල ගැටලු සඳහා ප්‍රදේශයේ කෘෂි නිලධාරියෙකුගෙන් උපදෙස් ගන්න කියලා අපි නිර්දේශ කරනවා."
       },
       {
-        "question": "Can I save diagnosis results?",
-        "answer": "Yes, all diagnoses are automatically saved in your history for future reference."
+        "question": "රෝග හඳුනාගැනීමේ ප්‍රතිඵල සුරැකිය හැකිද?",
+        "answer": "ඔව්, සියලුම රෝග හඳුනාගැනීම් අනාගත යොමු සඳහා ඔබේ ඉතිහාසයේ ස්වයංක්‍රීයව සුරැකෙනවා."
       }
     ]
   },
   "farmer.advisory": {
-    "title": "Farm Advisory",
-    "description": "Get personalized farming advice based on your location, crops, and weather conditions.",
+    "title": "ගොවි උපදේශන",
+    "description": "ඔබේ ස්ථානය, බෝග, සහ කාලගුණ තත්ත්ව මත පදනම් වූ පුද්ගලික ගොවි උපදෙස් ලබා ගන්න.",
     "steps": [
       {
-        "title": "Set Your Farm Profile",
-        "content": "Enter your farm details including location, soil type, and current crops for personalized advice."
+        "title": "ඔබේ ගොවිපල පැතිකඩ සකසන්න",
+        "content": "පුද්ගලික උපදෙස් සඳහා ස්ථානය, පස් වර්ගය, සහ වත්මන් බෝග ඇතුළු ගොවිපල විස්තර ඇතුළත් කරන්න."
       },
       {
-        "title": "Browse Advisories",
-        "content": "View weather alerts, pest warnings, and seasonal farming tips relevant to your area."
+        "title": "උපදේශන බලන්න",
+        "content": "ඔබේ ප්‍රදේශයට අදාළ කාලගුණ ඇඟවීම්, පළිබෝධ අනතුරු ඇඟවීම්, සහ සෘතුමය ගොවිතැන් ඉඟි බලන්න."
       },
       {
-        "title": "Ask Questions",
-        "content": "Use the chat feature to ask specific farming questions and get expert guidance."
+        "title": "ප්‍රශ්න අසන්න",
+        "content": "නිශ්චිත ගොවිතැන් ප්‍රශ්න ඇසීමට සහ විශේෂඥ මඟ පෙන්වීම් ලබා ගැනීමට චැට් පහසුකම භාවිතා කරන්න."
       }
     ],
     "tips": [
-      "Enable notifications to receive timely weather and pest alerts.",
-      "Check the advisory section before each planting season for best practices."
+      "කාලෝචිත කාලගුණ සහ පළිබෝධ ඇඟවීම් ලබා ගැනීමට දැනුම්දීම් සක්‍රිය කරන්න.",
+      "හොඳම භාවිතයන් සඳහා සෑම වගා කන්නයකටම පෙර උපදේශන කොටස පරීක්ෂා කරන්න."
     ],
     "faq": [
       {
-        "question": "Are the advisories specific to my area?",
-        "answer": "Yes, advisories are tailored to your registered district and the crops you grow."
+        "question": "උපදේශන මගේ ප්‍රදේශයට විශේෂිතද?",
+        "answer": "ඔව්, උපදේශන ඔබේ ලියාපදිංචි දිස්ත්‍රික්කයට සහ ඔබ වගා කරන බෝග වලට අනුව සකසා ඇත."
       }
     ]
   },
   "farmer.marketplace": {
-    "title": "Marketplace",
-    "description": "Browse supplies, equipment, and services available from verified suppliers in your area.",
+    "title": "වෙළඳපොළ",
+    "description": "ඔබේ ප්‍රදේශයේ සත්‍යාපිත සැපයුම්කරුවන්ගෙන් සැපයුම්, උපකරණ, සහ සේවා බලන්න.",
     "steps": [
       {
-        "title": "Search Products",
-        "content": "Use the search bar or browse categories to find fertilizers, seeds, tools, and equipment."
+        "title": "නිෂ්පාදන සොයන්න",
+        "content": "පොහොර, බීජ, මෙවලම්, සහ උපකරණ සොයා ගැනීමට සෙවුම් තීරුව හෝ ප්‍රවර්ග භාවිතා කරන්න."
       },
       {
-        "title": "Compare Prices",
-        "content": "View prices from multiple suppliers and check ratings before purchasing."
+        "title": "මිල සසඳන්න",
+        "content": "මිලදී ගැනීමට පෙර සැපයුම්කරුවන් කිහිප දෙනෙකුගෙන් මිල බලන්න සහ ශ්‍රේණිගත කිරීම් පරීක්ෂා කරන්න."
       },
       {
-        "title": "Place an Order",
-        "content": "Select the quantity needed and confirm your order. The supplier will arrange delivery."
+        "title": "ඇණවුම් කරන්න",
+        "content": "අවශ්‍ය ප්‍රමාණය තෝරලා ඔබේ ඇණවුම තහවුරු කරන්න. සැපයුම්කරු බෙදාහැරීම සකස් කරනවා."
       }
     ],
     "tips": [
-      "Compare prices from multiple suppliers to get the best deal.",
-      "Check supplier ratings and reviews before ordering."
+      "හොඳම ගනුදෙනුව ලබා ගැනීමට සැපයුම්කරුවන් කිහිප දෙනෙකුගෙන් මිල සසඳන්න.",
+      "ඇණවුම් කිරීමට පෙර සැපයුම්කරු ශ්‍රේණිගත කිරීම් සහ සමාලෝචන පරීක්ෂා කරන්න."
     ],
     "faq": [
       {
-        "question": "How do I pay for marketplace orders?",
-        "answer": "Payment is arranged directly with the supplier. GoviHub facilitates the connection but does not process payments."
+        "question": "වෙළඳපොළ ඇණවුම් සඳහා ගෙවන්නේ කොහොමද?",
+        "answer": "ගෙවීම සැපයුම්කරු සමඟ කෙලින්ම සකස් කරනවා. GoviHub සම්බන්ධතාව පහසු කරනවා, ගෙවීම් සකසන්නේ නැහැ."
       }
     ]
   },
   "farmer.more": {
-    "title": "More Options",
-    "description": "Access your profile, settings, language preferences, and support options.",
+    "title": "වැඩි විකල්ප",
+    "description": "ඔබේ පැතිකඩ, සැකසුම්, භාෂා මනාපයන්, සහ සහාය විකල්ප වෙත ප්‍රවේශ වන්න.",
     "steps": [
       {
-        "title": "Edit Profile",
-        "content": "Update your name, phone number, farm location, and the crops you grow."
+        "title": "පැතිකඩ සංස්කරණය",
+        "content": "ඔබේ නම, දුරකථන අංකය, ගොවිපල ස්ථානය, සහ ඔබ වගා කරන බෝග යාවත්කාලීන කරන්න."
       },
       {
-        "title": "Change Language",
-        "content": "Switch between English and Sinhala using the language toggle."
+        "title": "භාෂාව වෙනස් කරන්න",
+        "content": "භාෂා ටොගලය භාවිතා කරලා English සහ සිංහල අතර මාරු කරන්න."
       },
       {
-        "title": "Get Support",
-        "content": "Contact our support team or browse help articles for assistance."
+        "title": "සහාය ලබාගන්න",
+        "content": "අපේ සහාය කණ්ඩායම සම්බන්ධ කරගන්න හෝ උදව් ලිපි බලන්න."
       }
     ],
     "tips": [
-      "Keep your profile updated to receive the most relevant matches and advisories."
+      "වඩාත් අදාළ ගැළපීම් සහ උපදේශන ලබා ගැනීමට ඔබේ පැතිකඩ යාවත්කාලීනව තබන්න."
     ],
     "faq": [
       {
-        "question": "How do I change my phone number?",
-        "answer": "Go to Edit Profile, update your phone number, and verify it with the OTP sent to the new number."
+        "question": "මගේ දුරකථන අංකය වෙනස් කරන්නේ කොහොමද?",
+        "answer": "පැතිකඩ සංස්කරණය වෙත ගොස්, දුරකථන අංකය යාවත්කාලීන කරන්න, අලුත් අංකයට එවන OTP එකෙන් සත්‍යාපනය කරන්න."
       }
     ]
   },
   "buyer.dashboard": {
-    "title": "Buyer Dashboard",
-    "description": "Overview of your buying activity, active demands, and matched farmer listings.",
+    "title": "ගැනුම්කරු මුල් පිටුව",
+    "description": "ඔබේ මිලදී ගැනීමේ ක්‍රියාකාරකම්, සක්‍රිය ඉල්ලුම්, සහ ගැළපූ ගොවි ලැයිස්තු පිළිබඳ සාරාංශය.",
     "steps": [
       {
-        "title": "View Active Demands",
-        "content": "See your current purchase demands and how many farmer matches each has received."
+        "title": "සක්‍රිය ඉල්ලුම් බලන්න",
+        "content": "ඔබේ වත්මන් මිලදී ගැනීමේ ඉල්ලුම් සහ සෑම ඉල්ලුමකට ලැබී ඇති ගොවි ගැළපීම් ගණන බලන්න."
       },
       {
-        "title": "Check New Matches",
-        "content": "Review newly matched farmers who have produce meeting your requirements."
+        "title": "අලුත් ගැළපීම් පරීක්ෂා කරන්න",
+        "content": "ඔබේ අවශ්‍යතාවන්ට ගැළපෙන අස්වැන්න ඇති අලුතින් ගැළපූ ගොවීන් බලන්න."
       },
       {
-        "title": "Track Orders",
-        "content": "Monitor the status of your confirmed purchases and upcoming deliveries."
+        "title": "ඇණවුම් නිරීක්ෂණය කරන්න",
+        "content": "ඔබේ තහවුරු කළ මිලදී ගැනීම් සහ ඉදිරි බෙදාහැරීම් වල තත්ත්වය නිරීක්ෂණය කරන්න."
       }
     ],
     "tips": [
-      "Create specific demands with clear quantity and quality requirements for better matches.",
-      "Respond to farmer matches promptly to secure the best produce."
+      "හොඳ ගැළපීම් සඳහා පැහැදිලි ප්‍රමාණ සහ ගුණාත්මක අවශ්‍යතා සමඟ නිශ්චිත ඉල්ලුම් සාදන්න.",
+      "හොඳම අස්වැන්න ලබා ගැනීමට ගොවි ගැළපීම් වලට ඉක්මනින් ප්‍රතිචාර දෙන්න."
     ],
     "faq": [
       {
-        "question": "How are matches generated?",
-        "answer": "GoviHub uses AI to match your demand requirements with farmer listings based on crop type, quantity, location, and price."
+        "question": "ගැළපීම් ජනනය වන්නේ කොහොමද?",
+        "answer": "GoviHub AI භාවිතා කරලා බෝග වර්ගය, ප්‍රමාණය, ස්ථානය, සහ මිල මත පදනම්ව ඔබේ ඉල්ලුම් අවශ්‍යතා ගොවි ලැයිස්තු සමඟ ගැළපුම් කරනවා."
       }
     ]
   },
   "buyer.demands": {
-    "title": "My Demands",
-    "description": "Create and manage your produce purchase demands. Farmers will be matched to your requirements.",
+    "title": "මගේ ඉල්ලුම්",
+    "description": "ඔබේ අස්වැන්න මිලදී ගැනීමේ ඉල්ලුම් සාදන්න සහ කළමනාකරණය කරන්න. ගොවීන් ඔබේ අවශ්‍යතාවන්ට ගැළපෙනවා.",
     "steps": [
       {
-        "title": "Create a Demand",
-        "content": "Tap + to specify what produce you need, the quantity, your budget, and preferred delivery dates."
+        "title": "ඉල්ලුමක් සාදන්න",
+        "content": "ඔබට අවශ්‍ය අස්වැන්න, ප්‍රමාණය, ඔබේ අයවැය, සහ කැමති බෙදාහැරීමේ දිනයන් සඳහන් කිරීමට + තට්ටු කරන්න."
       },
       {
-        "title": "Set Quality Requirements",
-        "content": "Specify any quality grades, certifications, or special requirements."
+        "title": "ගුණාත්මක අවශ්‍යතා සකසන්න",
+        "content": "ඕනෑම ගුණාත්මක ශ්‍රේණි, සහතික, හෝ විශේෂ අවශ්‍යතා සඳහන් කරන්න."
       },
       {
-        "title": "Review Matches",
-        "content": "As farmers match your demand, review their offers and select the best fit."
+        "title": "ගැළපීම් බලන්න",
+        "content": "ගොවීන් ඔබේ ඉල්ලුමට ගැළපෙන විට, ඔවුන්ගේ යෝජනා බලලා හොඳම එක තෝරන්න."
       }
     ],
     "tips": [
-      "Be flexible with delivery dates to get more matches.",
-      "Set a realistic price range based on current market prices."
+      "වැඩි ගැළපීම් ලබා ගැනීමට බෙදාහැරීමේ දිනයන් සමඟ නම්‍යශීලී වන්න.",
+      "වත්මන් වෙළඳපොළ මිල මත පදනම්ව යථාර්ථවාදී මිල පරාසයක් සකසන්න."
     ],
     "faq": [
       {
-        "question": "Can I have multiple active demands?",
-        "answer": "Yes, you can create as many demands as you need for different crops or requirements."
+        "question": "මට සක්‍රිය ඉල්ලුම් කිහිපයක් තිබිය හැකිද?",
+        "answer": "ඔව්, විවිධ බෝග හෝ අවශ්‍යතා සඳහා ඔබට අවශ්‍ය තරම් ඉල්ලුම් සෑදිය හැක."
       }
     ]
   },
   "buyer.matches": {
-    "title": "Farmer Matches",
-    "description": "View farmers matched to your demands and manage your connections.",
+    "title": "ගොවි ගැළපීම්",
+    "description": "ඔබේ ඉල්ලුම් වලට ගැළපූ ගොවීන් බලන්න සහ ඔබේ සම්බන්ධතා කළමනාකරණය කරන්න.",
     "steps": [
       {
-        "title": "Review Farmer Profiles",
-        "content": "Check each farmer's rating, location, and available produce before connecting."
+        "title": "ගොවි පැතිකඩ බලන්න",
+        "content": "සම්බන්ධ වීමට පෙර සෑම ගොවියෙකුගේම ශ්‍රේණිගත කිරීම, ස්ථානය, සහ ලබා ගත හැකි අස්වැන්න පරීක්ෂා කරන්න."
       },
       {
-        "title": "Send an Offer",
-        "content": "Send your offer with the quantity and price you're willing to pay."
+        "title": "යෝජනාවක් යවන්න",
+        "content": "ඔබට අවශ්‍ය ප්‍රමාණය සහ ගෙවීමට කැමති මිල සමඟ ඔබේ යෝජනාව යවන්න."
       },
       {
-        "title": "Confirm Deal",
-        "content": "Once both parties agree, confirm the deal and arrange logistics."
+        "title": "ගනුදෙනුව තහවුරු කරන්න",
+        "content": "දෙපාර්ශ්වයම එකඟ වූ පසු, ගනුදෙනුව තහවුරු කරලා ප්‍රවාහනය සැලසුම් කරන්න."
       }
     ],
     "tips": [
-      "Farmers closer to your location mean lower transport costs.",
-      "Building relationships with reliable farmers leads to consistent supply."
+      "ඔබේ ස්ථානයට සමීප ගොවීන් යනු අඩු ප්‍රවාහන වියදම් යන්නයි.",
+      "විශ්වාසනීය ගොවීන් සමඟ සබඳතා ගොඩ නැගීමෙන් ස්ථාවර සැපයුමක් ලැබෙනවා."
     ],
     "faq": [
       {
-        "question": "How do I rate a farmer?",
-        "answer": "After a completed transaction, you'll receive a prompt to rate your experience."
+        "question": "ගොවියෙකුට ශ්‍රේණිගත කිරීමක් දෙන්නේ කොහොමද?",
+        "answer": "සම්පූර්ණ කළ ගනුදෙනුවකට පසු, ඔබේ අත්දැකීම ශ්‍රේණිගත කිරීමට ඔබට දැනුම්දීමක් ලැබෙනවා."
       }
     ]
   },
   "buyer.marketplace": {
-    "title": "Marketplace",
-    "description": "Browse all available produce listings from farmers across the platform.",
+    "title": "වෙළඳපොළ",
+    "description": "වේදිකාව පුරා ගොවීන්ගෙන් ලබා ගත හැකි සියලුම අස්වැන්න ලැයිස්තු බලන්න.",
     "steps": [
       {
-        "title": "Browse Listings",
-        "content": "View all available produce sorted by freshness, price, or proximity to your location."
+        "title": "ලැයිස්තු බලන්න",
+        "content": "නැවුම් බව, මිල, හෝ ඔබේ ස්ථානයට ආසන්නතාවය අනුව සකසා ඇති සියලුම ලබා ගත හැකි අස්වැන්න බලන්න."
       },
       {
-        "title": "Filter Results",
-        "content": "Use filters to narrow down by crop type, price range, quantity, and location."
+        "title": "ප්‍රතිඵල පෙරන්න",
+        "content": "බෝග වර්ගය, මිල පරාසය, ප්‍රමාණය, සහ ස්ථානය අනුව පටු කිරීමට පෙරහන් භාවිතා කරන්න."
       },
       {
-        "title": "Contact Farmer",
-        "content": "Tap a listing to view details and send an inquiry to the farmer."
+        "title": "ගොවියා සම්බන්ධ කරගන්න",
+        "content": "විස්තර බැලීමට සහ ගොවියාට විමසුමක් යැවීමට ලැයිස්තුවක් තට්ටු කරන්න."
       }
     ],
     "tips": [
-      "Use location filters to find farmers near your delivery points.",
-      "Check listing photos to assess produce quality before contacting."
+      "ඔබේ බෙදාහැරීමේ ස්ථාන අසල ගොවීන් සොයා ගැනීමට ස්ථාන පෙරහන් භාවිතා කරන්න.",
+      "සම්බන්ධ වීමට පෙර අස්වැන්නේ ගුණාත්මක බව තක්සේරු කිරීමට ලැයිස්තු ඡායාරූප පරීක්ෂා කරන්න."
     ],
     "faq": [
       {
-        "question": "What is the difference between Demands and Marketplace?",
-        "answer": "Demands let farmers come to you based on your requirements. Marketplace lets you browse and find specific farmer listings directly."
+        "question": "ඉල්ලුම් සහ වෙළඳපොළ අතර වෙනස මොකක්ද?",
+        "answer": "ඉල්ලුම් මඟින් ඔබේ අවශ්‍යතා මත පදනම්ව ගොවීන් ඔබ වෙත එනවා. වෙළඳපොළ මඟින් ඔබට සෘජුවම ගොවි ලැයිස්තු බලලා සොයා ගත හැක."
       }
     ]
   },
   "buyer.more": {
-    "title": "More Options",
-    "description": "Manage your profile, business details, and application settings.",
+    "title": "වැඩි විකල්ප",
+    "description": "ඔබේ පැතිකඩ, ව්‍යාපාර විස්තර, සහ යෙදුම් සැකසුම් කළමනාකරණය කරන්න.",
     "steps": [
       {
-        "title": "Business Profile",
-        "content": "Update your business name, registration details, and delivery addresses."
+        "title": "ව්‍යාපාර පැතිකඩ",
+        "content": "ඔබේ ව්‍යාපාර නම, ලියාපදිංචි විස්තර, සහ බෙදාහැරීමේ ලිපිනයන් යාවත්කාලීන කරන්න."
       },
       {
-        "title": "Notification Settings",
-        "content": "Configure which alerts you want to receive - new matches, price changes, etc."
+        "title": "දැනුම්දීම් සැකසුම්",
+        "content": "ඔබට ලැබීමට අවශ්‍ය ඇඟවීම් වින්‍යාස කරන්න - අලුත් ගැළපීම්, මිල වෙනස්වීම්, ආදිය."
       }
     ],
     "tips": [
-      "Complete your business profile to build trust with farmers."
+      "ගොවීන් සමඟ විශ්වාසය ගොඩ නැගීමට ඔබේ ව්‍යාපාර පැතිකඩ සම්පූර්ණ කරන්න."
     ],
     "faq": []
   },
   "supplier.dashboard": {
-    "title": "Supplier Dashboard",
-    "description": "Manage your agricultural supply business - track listings, orders, and customer inquiries.",
+    "title": "සැපයුම්කරු මුල් පිටුව",
+    "description": "ඔබේ කෘෂි සැපයුම් ව්‍යාපාරය කළමනාකරණය කරන්න - ලැයිස්තු, ඇණවුම්, සහ පාරිභෝගික විමසුම් නිරීක්ෂණය කරන්න.",
     "steps": [
       {
-        "title": "View Active Listings",
-        "content": "See all your current product listings and their performance metrics."
+        "title": "සක්‍රිය ලැයිස්තු බලන්න",
+        "content": "ඔබේ සියලුම වත්මන් නිෂ්පාදන ලැයිස්තු සහ ඒවායේ කාර්ය සාධන මිනුම් බලන්න."
       },
       {
-        "title": "Check Inquiries",
-        "content": "Review new inquiries from farmers interested in your products."
+        "title": "විමසුම් පරීක්ෂා කරන්න",
+        "content": "ඔබේ නිෂ්පාදන ගැන උනන්දුවක් ඇති ගොවීන්ගෙන් ලැබුණු අලුත් විමසුම් බලන්න."
       },
       {
-        "title": "Monitor Sales",
-        "content": "Track your sales performance and popular products."
+        "title": "විකුණුම් නිරීක්ෂණය කරන්න",
+        "content": "ඔබේ විකුණුම් කාර්ය සාධනය සහ ජනප්‍රිය නිෂ්පාදන නිරීක්ෂණය කරන්න."
       }
     ],
     "tips": [
-      "Keep stock quantities updated to avoid order cancellations.",
-      "Respond to inquiries within 24 hours for best conversion."
+      "ඇණවුම් අවලංගු වීම වැළැක්වීමට තොග ප්‍රමාණ යාවත්කාලීනව තබන්න.",
+      "හොඳම පරිවර්තනයක් සඳහා පැය 24ක් ඇතුළත විමසුම් වලට ප්‍රතිචාර දෙන්න."
     ],
     "faq": [
       {
-        "question": "How do I boost my listing visibility?",
-        "answer": "Ensure your listings have clear photos, accurate descriptions, and competitive prices."
+        "question": "මගේ ලැයිස්තුවේ දෘශ්‍යතාව වැඩි කරන්නේ කොහොමද?",
+        "answer": "ඔබේ ලැයිස්තු වල පැහැදිලි ඡායාරූප, නිවැරදි විස්තර, සහ තරඟකාරී මිල ඇති බවට සහතික කරන්න."
       }
     ]
   },
   "supplier.listings": {
-    "title": "Product Listings",
-    "description": "Create and manage your supply product listings - fertilizers, seeds, tools, and equipment.",
+    "title": "නිෂ්පාදන ලැයිස්තු",
+    "description": "ඔබේ සැපයුම් නිෂ්පාදන ලැයිස්තු සාදන්න සහ කළමනාකරණය කරන්න - පොහොර, බීජ, මෙවලම්, සහ උපකරණ.",
     "steps": [
       {
-        "title": "Add a Product",
-        "content": "Tap + to create a new listing. Include product name, category, price, and availability."
+        "title": "නිෂ්පාදනයක් එක් කරන්න",
+        "content": "අලුත් ලැයිස්තුවක් සෑදීමට + තට්ටු කරන්න. නිෂ්පාදන නාමය, ප්‍රවර්ගය, මිල, සහ ලබා ගත හැකි බව ඇතුළත් කරන්න."
       },
       {
-        "title": "Upload Images",
-        "content": "Add high-quality product photos. Include packaging details and brand information."
+        "title": "පින්තූර උඩුගත කරන්න",
+        "content": "උසස් ගුණාත්මක නිෂ්පාදන ඡායාරූප එක් කරන්න. ඇසුරුම් විස්තර සහ වෙළඳ නාම තොරතුරු ඇතුළත් කරන්න."
       },
       {
-        "title": "Set Pricing",
-        "content": "Enter your price and any bulk discount tiers you offer."
+        "title": "මිල සකසන්න",
+        "content": "ඔබේ මිල සහ ඔබ පිරිනමන තොග වට්ටම් මට්ටම් ඇතුළත් කරන්න."
       }
     ],
     "tips": [
-      "Offer bulk pricing tiers to attract larger orders from commercial farmers.",
-      "Keep product descriptions detailed and accurate."
+      "වාණිජ ගොවීන්ගෙන් විශාල ඇණවුම් ආකර්ෂණය කිරීමට තොග මිල මට්ටම් පිරිනමන්න.",
+      "නිෂ්පාදන විස්තර සවිස්තරාත්මක සහ නිවැරදිව තබන්න."
     ],
     "faq": [
       {
-        "question": "Can I import products in bulk?",
-        "answer": "Currently, products need to be added individually. Bulk import is coming in a future update."
+        "question": "නිෂ්පාදන තොගයක් ලෙස ආනයනය කළ හැකිද?",
+        "answer": "දැනට නිෂ්පාදන තනි තනිව එක් කළ යුතුයි. තොග ආනයනය අනාගත යාවත්කාලීනයකින් එනවා."
       }
     ]
   },
   "supplier.inquiries": {
-    "title": "Customer Inquiries",
-    "description": "View and respond to inquiries from farmers about your products.",
+    "title": "පාරිභෝගික විමසුම්",
+    "description": "ඔබේ නිෂ්පාදන ගැන ගොවීන්ගෙන් ලැබුණු විමසුම් බලන්න සහ ප්‍රතිචාර දෙන්න.",
     "steps": [
       {
-        "title": "Review Inquiries",
-        "content": "Each inquiry shows the farmer's name, product of interest, and quantity needed."
+        "title": "විමසුම් බලන්න",
+        "content": "සෑම විමසුමකම ගොවියාගේ නම, උනන්දු නිෂ්පාදනය, සහ අවශ්‍ය ප්‍රමාණය පෙන්වයි."
       },
       {
-        "title": "Respond",
-        "content": "Reply with availability, pricing, and delivery options."
+        "title": "ප්‍රතිචාර දෙන්න",
+        "content": "ලබා ගත හැකි බව, මිල, සහ බෙදාහැරීමේ විකල්ප සමඟ පිළිතුරු දෙන්න."
       },
       {
-        "title": "Close the Sale",
-        "content": "Once the farmer confirms, mark the inquiry as converted."
+        "title": "විකුණුම සම්පූර්ණ කරන්න",
+        "content": "ගොවියා තහවුරු කළ පසු, විමසුම පරිවර්තනය කළ ලෙස සලකුණු කරන්න."
       }
     ],
     "tips": [
-      "Quick response times lead to higher conversion rates.",
-      "Offer delivery options to increase your competitive advantage."
+      "ඉක්මන් ප්‍රතිචාර වේලාව ඉහළ පරිවර්තන අනුපාතයකට මඟ පාදනවා.",
+      "ඔබේ තරඟකාරී වාසිය වැඩි කිරීමට බෙදාහැරීමේ විකල්ප පිරිනමන්න."
     ],
     "faq": []
   },
   "supplier.more": {
-    "title": "More Options",
-    "description": "Manage your supplier profile, business details, and settings.",
+    "title": "වැඩි විකල්ප",
+    "description": "ඔබේ සැපයුම්කරු පැතිකඩ, ව්‍යාපාර විස්තර, සහ සැකසුම් කළමනාකරණය කරන්න.",
     "steps": [
       {
-        "title": "Business Profile",
-        "content": "Update your company details, contact information, and delivery areas."
+        "title": "ව්‍යාපාර පැතිකඩ",
+        "content": "ඔබේ සමාගම් විස්තර, සම්බන්ධතා තොරතුරු, සහ බෙදාහැරීමේ ප්‍රදේශ යාවත්කාලීන කරන්න."
       }
     ],
     "tips": [
-      "Add your delivery coverage areas to help farmers find you."
+      "ගොවීන්ට ඔබව සොයා ගැනීමට උදව් කිරීමට ඔබේ බෙදාහැරීමේ ආවරණ ප්‍රදේශ එක් කරන්න."
     ],
     "faq": []
   },
   "admin.dashboard": {
-    "title": "Admin Dashboard",
-    "description": "System-wide overview of GoviHub platform metrics, user activity, and health indicators.",
+    "title": "පරිපාලක මුල් පිටුව",
+    "description": "GoviHub වේදිකාවේ මිනුම්, පරිශීලක ක්‍රියාකාරකම්, සහ සෞඛ්‍ය දර්ශක පිළිබඳ පද්ධති-පුරා සාරාංශය.",
     "steps": [
       {
-        "title": "Monitor KPIs",
-        "content": "View key platform metrics including active users, total listings, and match success rates."
+        "title": "KPI නිරීක්ෂණය කරන්න",
+        "content": "සක්‍රිය පරිශීලකයන්, මුළු ලැයිස්තු, සහ ගැළපීම් සාර්ථකත්ව අනුපාත ඇතුළු ප්‍රධාන වේදිකා මිනුම් බලන්න."
       },
       {
-        "title": "Review Alerts",
-        "content": "Check system alerts for issues requiring attention - flagged content, disputes, etc."
+        "title": "ඇඟවීම් බලන්න",
+        "content": "අවධානය අවශ්‍ය ගැටලු සඳහා පද්ධති ඇඟවීම් පරීක්ෂා කරන්න - දොස් කියන ලද අන්තර්ගතය, ආරවුල්, ආදිය."
       }
     ],
     "tips": [
-      "Review the dashboard daily to catch issues early."
+      "ගැටලු ඉක්මනින් හඳුනා ගැනීමට දිනපතා මුල් පිටුව සමාලෝචනය කරන්න."
     ],
     "faq": []
   },
   "admin.users": {
-    "title": "User Management",
-    "description": "View, search, and manage all platform users - farmers, buyers, and suppliers.",
+    "title": "පරිශීලක කළමනාකරණය",
+    "description": "සියලුම වේදිකා පරිශීලකයන් බලන්න, සොයන්න, සහ කළමනාකරණය කරන්න - ගොවීන්, ගැනුම්කරුවන්, සහ සැපයුම්කරුවන්.",
     "steps": [
       {
-        "title": "Search Users",
-        "content": "Use the search bar to find users by name, email, or phone number."
+        "title": "පරිශීලකයන් සොයන්න",
+        "content": "නම, email, හෝ දුරකථන අංකය මඟින් පරිශීලකයන් සොයා ගැනීමට සෙවුම් තීරුව භාවිතා කරන්න."
       },
       {
-        "title": "View User Profile",
-        "content": "Tap a user to see their full profile, activity history, and account status."
+        "title": "පරිශීලක පැතිකඩ බලන්න",
+        "content": "සම්පූර්ණ පැතිකඩ, ක්‍රියාකාරකම් ඉතිහාසය, සහ ගිණුම් තත්ත්වය බැලීමට පරිශීලකයෙකු තට්ටු කරන්න."
       },
       {
-        "title": "Manage Account",
-        "content": "Suspend, verify, or update user roles as needed."
+        "title": "ගිණුම කළමනාකරණය",
+        "content": "අවශ්‍ය පරිදි අත්හිටුවීම, සත්‍යාපනය, හෝ පරිශීලක භූමිකා යාවත්කාලීන කරන්න."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.listings": {
-    "title": "Listings Management",
-    "description": "Review and moderate all produce and supply listings on the platform.",
+    "title": "ලැයිස්තු කළමනාකරණය",
+    "description": "වේදිකාවේ සියලුම අස්වැන්න සහ සැපයුම් ලැයිස්තු සමාලෝචනය කරන්න සහ මධ්‍යස්ථ කරන්න.",
     "steps": [
       {
-        "title": "Filter Listings",
-        "content": "Use filters to view listings by status, type, or flagged content."
+        "title": "ලැයිස්තු පෙරන්න",
+        "content": "තත්ත්වය, වර්ගය, හෝ දොස් කියන ලද අන්තර්ගතය අනුව ලැයිස්තු බැලීමට පෙරහන් භාවිතා කරන්න."
       },
       {
-        "title": "Review Flagged",
-        "content": "Check flagged listings for policy violations and take appropriate action."
+        "title": "දොස් කියන ලද ඒවා බලන්න",
+        "content": "ප්‍රතිපත්ති උල්ලංඝනය සඳහා දොස් කියන ලද ලැයිස්තු පරීක්ෂා කරලා සුදුසු පියවර ගන්න."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.matches": {
-    "title": "Match Management",
-    "description": "Monitor and manage the AI matching system performance and outcomes.",
+    "title": "ගැළපීම් කළමනාකරණය",
+    "description": "AI ගැළපීම් පද්ධතියේ කාර්ය සාධනය සහ ප්‍රතිඵල නිරීක්ෂණය සහ කළමනාකරණය කරන්න.",
     "steps": [
       {
-        "title": "View Match Stats",
-        "content": "See match success rates, average response times, and conversion metrics."
+        "title": "ගැළපීම් සංඛ්‍යාලේඛන බලන්න",
+        "content": "ගැළපීම් සාර්ථකත්ව අනුපාත, සාමාන්‍ය ප්‍රතිචාර කාලය, සහ පරිවර්තන මිනුම් බලන්න."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.disputes": {
-    "title": "Dispute Resolution",
-    "description": "Review and resolve disputes between buyers and sellers on the platform.",
+    "title": "ආරවුල් නිරාකරණය",
+    "description": "වේදිකාවේ ගැනුම්කරුවන් සහ විකුණුම්කරුවන් අතර ආරවුල් සමාලෝචනය කරන්න සහ නිරාකරණය කරන්න.",
     "steps": [
       {
-        "title": "Review Dispute",
-        "content": "Read both parties' claims and supporting evidence."
+        "title": "ආරවුල සමාලෝචනය කරන්න",
+        "content": "දෙපාර්ශ්වයේම හිමිකම් සහ සාක්ෂි කියවන්න."
       },
       {
-        "title": "Make Decision",
-        "content": "Issue a resolution based on platform policies and evidence provided."
+        "title": "තීරණය ගන්න",
+        "content": "වේදිකා ප්‍රතිපත්ති සහ සපයන ලද සාක්ෂි මත පදනම්ව නිරාකරණයක් නිකුත් කරන්න."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.feedback": {
-    "title": "User Feedback",
-    "description": "View and analyze user feedback submissions to improve the platform.",
+    "title": "පරිශීලක ප්‍රතිචාරය",
+    "description": "වේදිකාව වැඩිදියුණු කිරීමට පරිශීලක ප්‍රතිචාර ඉදිරිපත් කිරීම් බලන්න සහ විශ්ලේෂණය කරන්න.",
     "steps": [
       {
-        "title": "Browse Feedback",
-        "content": "View all user feedback sorted by date, type, or sentiment."
+        "title": "ප්‍රතිචාර බලන්න",
+        "content": "දිනය, වර්ගය, හෝ හැඟීම අනුව අනුපිළිවෙළ කළ සියලුම පරිශීලක ප්‍රතිචාර බලන්න."
       },
       {
-        "title": "Respond",
-        "content": "Reply to feedback to let users know their input is valued."
+        "title": "ප්‍රතිචාර දෙන්න",
+        "content": "පරිශීලකයන්ගේ අදහස් වටිනා බව දැන්වීමට ප්‍රතිචාර වලට පිළිතුරු දෙන්න."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.analytics": {
-    "title": "Platform Analytics",
-    "description": "Deep-dive analytics on platform usage, growth, and performance metrics.",
+    "title": "වේදිකා විශ්ලේෂණ",
+    "description": "වේදිකා භාවිතය, වර්ධනය, සහ කාර්ය සාධන මිනුම් පිළිබඳ ගැඹුරු විශ්ලේෂණ.",
     "steps": [
       {
-        "title": "Select Date Range",
-        "content": "Choose the time period for your analysis using the date picker."
+        "title": "දින පරාසය තෝරන්න",
+        "content": "දින තේරීම භාවිතා කරලා ඔබේ විශ්ලේෂණය සඳහා කාල පරිච්ඡේදය තෝරන්න."
       },
       {
-        "title": "Explore Metrics",
-        "content": "Navigate between different metric categories: Users, Listings, Matches, Revenue."
+        "title": "මිනුම් ගවේෂණය කරන්න",
+        "content": "විවිධ මිනුම් ප්‍රවර්ග අතර සැරිසරන්න: පරිශීලකයන්, ලැයිස්තු, ගැළපීම්, ආදායම."
       }
     ],
     "tips": [],
     "faq": []
   },
   "admin.settings": {
-    "title": "Platform Settings",
-    "description": "Configure platform-wide settings, feature flags, and system parameters.",
+    "title": "වේදිකා සැකසුම්",
+    "description": "වේදිකා-පුරා සැකසුම්, විශේෂාංග කොඩි, සහ පද්ධති පරාමිතීන් වින්‍යාස කරන්න.",
     "steps": [
       {
-        "title": "General Settings",
-        "content": "Update platform name, description, and contact information."
+        "title": "සාමාන්‍ය සැකසුම්",
+        "content": "වේදිකා නාමය, විස්තරය, සහ සම්බන්ධතා තොරතුරු යාවත්කාලීන කරන්න."
       },
       {
-        "title": "Feature Flags",
-        "content": "Enable or disable platform features for gradual rollout."
+        "title": "විශේෂාංග කොඩි",
+        "content": "ක්‍රමික හැරවීම සඳහා වේදිකා විශේෂාංග සක්‍රිය හෝ අක්‍රිය කරන්න."
       }
     ],
     "tips": [],
