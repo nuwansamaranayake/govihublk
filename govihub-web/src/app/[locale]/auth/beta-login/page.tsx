@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 const DISTRICTS = [
   "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
@@ -12,10 +13,10 @@ const DISTRICTS = [
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
 
-const ROLE_OPTIONS = [
-  { key: "farmer", icon: "\uD83C\uDF3E", label: "Farmer", labelSi: "\u0D9C\u0DDC\u0DC0\u0DD2\u0DBA\u0DCF" },
-  { key: "buyer", icon: "\uD83D\uDED2", label: "Buyer", labelSi: "\u0D9C\u0DD0\u0DB1\u0DD4\u0DB8\u0DCA\u0D9A\u0DBB\u0DD4" },
-  { key: "supplier", icon: "\uD83D\uDCE6", label: "Supplier", labelSi: "\u0DC3\u0DD0\u0DB4\u0DBA\u0DD4\u0DB8\u0DCA\u0D9A\u0DBB\u0DD4" },
+const ROLE_KEYS = [
+  { key: "farmer", icon: "\uD83C\uDF3E" },
+  { key: "buyer", icon: "\uD83D\uDED2" },
+  { key: "supplier", icon: "\uD83D\uDCE6" },
 ];
 
 function Spinner({ className = "h-5 w-5" }: { className?: string }) {
@@ -46,8 +47,12 @@ function EyeIcon({ open }: { open: boolean }) {
 export default function BetaLoginPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params.locale as string) || "en";
+  const locale = (params?.locale as string) || "en";
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
+  const t = useTranslations('auth');
+  const tRoles = useTranslations('roles');
+  const tCommon = useTranslations('common');
 
   const [tab, setTab] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
@@ -72,7 +77,7 @@ export default function BetaLoginPage() {
     e.preventDefault();
     setError(null);
     if (!loginUsername.trim() || !loginPassword.trim()) {
-      setError("Username and password are required");
+      setError(t('requiredFields'));
       return;
     }
     setLoading(true);
@@ -84,7 +89,7 @@ export default function BetaLoginPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Login failed (${res.status})`);
+        throw new Error(err.detail || t('invalidCredentials'));
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
@@ -99,7 +104,7 @@ export default function BetaLoginPage() {
       // Full page navigation to reset all React state
       window.location.href = `/${locale}/${role}/dashboard`;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      setError(e instanceof Error ? e.message : t('invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -108,11 +113,11 @@ export default function BetaLoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!regName.trim()) { setError("Full name is required"); return; }
-    if (!regUsername.trim()) { setError("Username is required"); return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(regUsername.trim())) { setError("Username: letters, numbers, underscore only"); return; }
-    if (regPassword.length < 6) { setError("Password must be at least 6 characters"); return; }
-    if (!regDistrict) { setError("Please select your district"); return; }
+    if (!regName.trim()) { setError(t('requiredFields')); return; }
+    if (!regUsername.trim()) { setError(t('requiredFields')); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(regUsername.trim())) { setError(t('usernameHint')); return; }
+    if (regPassword.length < 6) { setError(t('passwordHint')); return; }
+    if (!regDistrict) { setError(t('selectDistrict')); return; }
     setLoading(true);
     try {
       const body: Record<string, string> = {
@@ -158,10 +163,10 @@ export default function BetaLoginPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <Image src="/images/logo-icon.png" alt="GoviHub" width={80} height={80} className="rounded-2xl mx-auto mb-3 shadow-lg" />
-          <h1 className="text-2xl font-semibold text-neutral-900">GoviHub</h1>
-          <p className="text-neutral-500 text-sm mt-1">Smart Farming Marketplace</p>
+          <h1 className="text-2xl font-semibold text-neutral-900">{t('betaTitle')}</h1>
+          <p className="text-neutral-500 text-sm mt-1">{t('smartFarmingMarketplace')}</p>
           <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">
-            NOT FOR PRODUCTION
+            {t('betaNotProduction')}
           </div>
         </div>
 
@@ -175,7 +180,7 @@ export default function BetaLoginPage() {
                 : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            Login
+            {t('login')}
           </button>
           <button
             onClick={() => { setTab("register"); setError(null); }}
@@ -185,7 +190,7 @@ export default function BetaLoginPage() {
                 : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
-            Register
+            {t('register')}
           </button>
         </div>
 
@@ -201,12 +206,12 @@ export default function BetaLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Username</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('username')}</label>
               <input
                 type="text"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder={t('usernamePlaceholder')}
                 autoComplete="username"
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
               />
@@ -214,13 +219,13 @@ export default function BetaLoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('password')}</label>
               <div className="relative">
                 <input
                   type={showLoginPw ? "text" : "password"}
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t('passwordPlaceholder')}
                   autoComplete="current-password"
                   className="w-full px-4 py-3 pr-12 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
                 />
@@ -240,17 +245,17 @@ export default function BetaLoginPage() {
               disabled={loading}
               className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? <><Spinner /> Logging in...</> : "Login"}
+              {loading ? <><Spinner /> {t('loggingIn')}</> : t('login')}
             </button>
 
             <p className="text-center text-sm text-neutral-500 mt-4">
-              Don&apos;t have an account?{" "}
+              {t('noAccount')}{" "}
               <button
                 type="button"
                 onClick={() => { setTab("register"); setError(null); }}
                 className="text-green-600 font-medium hover:underline"
               >
-                Register
+                {t('register')}
               </button>
             </p>
           </form>
@@ -261,39 +266,39 @@ export default function BetaLoginPage() {
           <form onSubmit={handleRegister} className="space-y-4">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('fullName')}</label>
               <input
                 type="text"
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
-                placeholder="e.g. Kamal Perera"
+                placeholder={t('fullNamePlaceholder')}
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
               />
             </div>
 
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Username</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('username')}</label>
               <input
                 type="text"
                 value={regUsername}
                 onChange={(e) => setRegUsername(e.target.value)}
-                placeholder="e.g. kamal_perera"
+                placeholder={t('usernamePlaceholder')}
                 autoComplete="username"
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
               />
-              <p className="text-xs text-neutral-400 mt-1">Letters, numbers, underscore only</p>
+              <p className="text-xs text-neutral-400 mt-1">{t('usernameHint')}</p>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('password')}</label>
               <div className="relative">
                 <input
                   type={showRegPw ? "text" : "password"}
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
-                  placeholder="Create a password"
+                  placeholder={t('passwordPlaceholder')}
                   autoComplete="new-password"
                   className="w-full px-4 py-3 pr-12 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
                 />
@@ -305,14 +310,14 @@ export default function BetaLoginPage() {
                   <EyeIcon open={showRegPw} />
                 </button>
               </div>
-              <p className="text-xs text-neutral-400 mt-1">Minimum 6 characters</p>
+              <p className="text-xs text-neutral-400 mt-1">{t('passwordHint')}</p>
             </div>
 
             {/* Role */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Role</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">{t('role')}</label>
               <div className="grid grid-cols-3 gap-2">
-                {ROLE_OPTIONS.map((r) => (
+                {ROLE_KEYS.map((r) => (
                   <button
                     key={r.key}
                     type="button"
@@ -324,8 +329,7 @@ export default function BetaLoginPage() {
                     }`}
                   >
                     <span className="text-2xl">{r.icon}</span>
-                    <span className="text-xs font-medium text-neutral-800">{r.label}</span>
-                    <span className="text-[10px] text-neutral-500">{r.labelSi}</span>
+                    <span className="text-xs font-medium text-neutral-800">{tRoles(r.key as "farmer" | "buyer" | "supplier")}</span>
                   </button>
                 ))}
               </div>
@@ -333,13 +337,13 @@ export default function BetaLoginPage() {
 
             {/* District */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">District</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">{t('district')}</label>
               <select
                 value={regDistrict}
                 onChange={(e) => setRegDistrict(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition appearance-none"
               >
-                <option value="">Select your district</option>
+                <option value="">{t('selectDistrict')}</option>
                 {DISTRICTS.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
@@ -348,7 +352,7 @@ export default function BetaLoginPage() {
 
             {/* Language Toggle */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Language</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">{t('chooseLanguage')}</label>
               <div className="flex bg-neutral-200 rounded-xl p-1">
                 <button
                   type="button"
@@ -378,13 +382,13 @@ export default function BetaLoginPage() {
             {/* Phone */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Phone <span className="text-neutral-400 font-normal">(optional)</span>
+                {t('phoneOptional')} <span className="text-neutral-400 font-normal">({tCommon('optional')})</span>
               </label>
               <input
                 type="tel"
                 value={regPhone}
                 onChange={(e) => setRegPhone(e.target.value)}
-                placeholder="+94..."
+                placeholder={t('phonePlaceholder')}
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
               />
             </div>
@@ -395,17 +399,17 @@ export default function BetaLoginPage() {
               disabled={loading}
               className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? <><Spinner /> Creating account...</> : "Create Account"}
+              {loading ? <><Spinner /> {t('creatingAccount')}</> : t('createAccount')}
             </button>
 
             <p className="text-center text-sm text-neutral-500 mt-4">
-              Already have an account?{" "}
+              {t('alreadyHaveAccount')}{" "}
               <button
                 type="button"
                 onClick={() => { setTab("login"); setError(null); }}
                 className="text-green-600 font-medium hover:underline"
               >
-                Login
+                {t('login')}
               </button>
             </p>
           </form>
@@ -413,7 +417,7 @@ export default function BetaLoginPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs text-neutral-400">
-          <p>GoviHub Beta &mdash; Smart Farming Marketplace</p>
+          <p>{t('betaFooter')}</p>
           <p className="mt-1">API: {API_URL}</p>
         </div>
       </div>

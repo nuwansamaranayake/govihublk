@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, cropName } from "@/lib/utils";
 
 type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
@@ -44,6 +45,8 @@ const STATUS_COLOR: Record<MatchStatus, "green"|"gold"|"gray"|"red"|"orange"|"bl
 
 export default function AdminMatchesPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -108,7 +111,7 @@ export default function AdminMatchesPage() {
         {(activeTab) => {
           const filtered = matches
             .filter(m => activeTab==="all" || m.status===activeTab)
-            .filter(m => !search || m.farmerName.toLowerCase().includes(search.toLowerCase()) || m.buyerName.toLowerCase().includes(search.toLowerCase()) || m.crop.toLowerCase().includes(search.toLowerCase()));
+            .filter(m => !search || m.farmerName.toLowerCase().includes(search.toLowerCase()) || m.buyerName.toLowerCase().includes(search.toLowerCase()) || cropName(m.crop, locale).toLowerCase().includes(search.toLowerCase()));
           return (
             <div className="px-4 py-4 space-y-3">
               {loading ? (
@@ -129,7 +132,7 @@ export default function AdminMatchesPage() {
                           <span className="text-xs text-neutral-400">#{match.id}</span>
                         </div>
                         <p className="text-sm font-semibold text-neutral-900 mt-1">
-                          {match.crop} · {match.quantity} {match.unit}
+                          {cropName(match.crop, locale)} · {match.quantity} {match.unit}
                         </p>
                         <p className="text-xs text-neutral-600 mt-0.5">
                           🌾 {match.farmerName} → 🏪 {match.buyerName}
@@ -179,7 +182,7 @@ export default function AdminMatchesPage() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-100 rounded-xl p-3">
               <p className="text-sm font-medium text-red-800">Match #{selected.id}</p>
-              <p className="text-xs text-red-600 mt-1">{selected.crop} · {selected.farmerName} ↔ {selected.buyerName}</p>
+              <p className="text-xs text-red-600 mt-1">{cropName(selected.crop, locale)} · {selected.farmerName} ↔ {selected.buyerName}</p>
               {selected.disputeReason && (
                 <p className="text-xs text-red-700 mt-1">Reason: {selected.disputeReason}</p>
               )}

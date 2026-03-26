@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { cropName } from "@/lib/utils";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
@@ -40,6 +42,8 @@ interface DashboardData {
 
 export default function FarmerDashboardPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +74,7 @@ export default function FarmerDashboardPage() {
           pendingOffers,
           weather: { temp: 29, condition: "Partly Cloudy", humidity: 72, location: userDistrict },
           marketPrices: prices.slice(0, 6).map((p: any) => ({
-            crop: p.crop || p.name || "Unknown",
+            crop: cropName(p.crop || p.name, locale),
             price: p.price || 0,
             unit: p.unit || "kg",
             change: p.change ?? p.percent_change ?? 0,
@@ -78,7 +82,7 @@ export default function FarmerDashboardPage() {
           recentActivity: matches.slice(0, 5).map((m: any) => ({
             id: m.id || String(Math.random()),
             type: "match",
-            message: `Match: ${m.crop || "crop"} - ${m.quantity || 0} ${m.unit || "kg"}`,
+            message: `Match: ${cropName(m.crop, locale)} - ${m.quantity || 0} ${m.unit || "kg"}`,
             time: m.created_at || m.createdAt || "",
           })),
         });
@@ -164,7 +168,7 @@ export default function FarmerDashboardPage() {
             <ul className="divide-y divide-neutral-50">
               {data.marketPrices.map((item) => (
                 <li key={item.crop} className="flex items-center justify-between px-4 py-3">
-                  <span className="font-medium text-neutral-800 text-sm">{item.crop}</span>
+                  <span className="font-medium text-neutral-800 text-sm">{cropName(item.crop, locale)}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-neutral-600">Rs. {item.price}/{item.unit}</span>
                     <Badge

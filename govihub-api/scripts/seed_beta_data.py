@@ -24,6 +24,7 @@ from app.listings.models import (
     CropTaxonomy,
 )
 from app.marketplace.models import SupplyListing, SupplyCategory, SupplyStatus
+from app.matching.models import Match, MatchStatus
 
 
 # Coordinates
@@ -47,8 +48,27 @@ async def get_user(db, username):
 
 
 async def get_crop(db, name_en):
+    """Look up crop by exact name, then partial match, then keyword."""
+    # Try exact match first
     result = await db.execute(
         select(CropTaxonomy).where(func.lower(CropTaxonomy.name_en) == name_en.lower())
+    )
+    crop = result.scalar_one_or_none()
+    if crop:
+        return crop
+
+    # Try ILIKE partial match (e.g., "Samba Rice" matches "Paddy (Samba)")
+    result = await db.execute(
+        select(CropTaxonomy).where(CropTaxonomy.name_en.ilike(f"%{name_en}%")).limit(1)
+    )
+    crop = result.scalar_one_or_none()
+    if crop:
+        return crop
+
+    # Try keyword match (e.g., "Nadu Rice" → search for "Nadu")
+    keyword = name_en.split()[0] if " " in name_en else name_en
+    result = await db.execute(
+        select(CropTaxonomy).where(CropTaxonomy.name_en.ilike(f"%{keyword}%")).limit(1)
     )
     return result.scalar_one_or_none()
 
@@ -67,6 +87,7 @@ async def seed():
     harvest_count = 0
     demand_count = 0
     supply_count = 0
+    match_count = 0
 
     async with async_session_factory() as db:
         # Resolve users
@@ -343,6 +364,83 @@ async def seed():
 
         await db.commit()
 
+        # ---- MATCHES (idempotent check) ----
+        existing_matches = (await db.execute(
+            select(func.count()).select_from(Match)
+        )).scalar()
+
+        if existing_matches and existing_matches > 0:
+            print(f"  SKIP  Matches ({existing_matches} already exist)")
+        else:
+            # Look up harvests by farmer + crop to get IDs
+            def harvest_q(farmer_id, crop_name):
+                return select(HarvestListing).where(
+                    HarvestListing.farmer_id == farmer_id,
+                    HarvestListing.crop_id == cid(crop_name),
+                )
+
+            def demand_q(buyer_id, crop_name):
+                return select(DemandPosting).where(
+                    DemandPosting.buyer_id == buyer_id,
+                    DemandPosting.crop_id == cid(crop_name),
+                )
+
+            kamal_chili = (await db.execute(harvest_q(kamal.id, "Green Chili").limit(1))).scalar_one_or_none()
+            saman_tomato = (await db.execute(harvest_q(saman.id, "Tomato").limit(1))).scalar_one_or_none()
+            saman_nadu = (await db.execute(harvest_q(saman.id, "Nadu Rice").limit(1))).scalar_one_or_none()
+            kumari_beans = (await db.execute(harvest_q(kumari.id, "Long Bean").limit(1))).scalar_one_or_none()
+
+            nimal_tomato = (await db.execute(demand_q(nimal.id, "Tomato").limit(1))).scalar_one_or_none()
+            nimal_rice = (await db.execute(demand_q(nimal.id, "Samba Rice").limit(1))).scalar_one_or_none()
+            chaminda_mixed = (await db.execute(demand_q(chaminda.id, "Long Bean").limit(1))).scalar_one_or_none()
+            chaminda_onion = (await db.execute(demand_q(chaminda.id, "Big Onion").limit(1))).scalar_one_or_none()
+
+            match_specs = []
+
+            # 1. Kamal's Green Chili ↔ Chaminda's Mixed Veg → 0.85, proposed
+            if kamal_chili and chaminda_mixed:
+                match_specs.append(dict(
+                    harvest_id=kamal_chili.id, demand_id=chaminda_mixed.id,
+                    score=0.85, status=MatchStatus.proposed,
+                    score_breakdown={"crop": 0.7, "location": 0.9, "price": 0.95},
+                ))
+
+            # 2. Saman's Tomato ↔ Nimal's Tomato → 0.92, accepted_farmer
+            if saman_tomato and nimal_tomato:
+                match_specs.append(dict(
+                    harvest_id=saman_tomato.id, demand_id=nimal_tomato.id,
+                    score=0.92, status=MatchStatus.accepted_farmer,
+                    score_breakdown={"crop": 1.0, "location": 0.85, "price": 0.9},
+                    agreed_price_per_kg=285.0,
+                ))
+
+            # 3. Saman's Nadu Rice ↔ Nimal's Rice demand → 0.78, confirmed
+            if saman_nadu and nimal_rice:
+                match_specs.append(dict(
+                    harvest_id=saman_nadu.id, demand_id=nimal_rice.id,
+                    score=0.78, status=MatchStatus.confirmed,
+                    score_breakdown={"crop": 0.8, "location": 0.7, "price": 0.85},
+                    agreed_price_per_kg=210.0, agreed_quantity_kg=500.0,
+                ))
+
+            # 4. Kumari's Long Beans ↔ Chaminda's Mixed Veg → 0.65, proposed
+            if kumari_beans and chaminda_mixed:
+                match_specs.append(dict(
+                    harvest_id=kumari_beans.id, demand_id=chaminda_mixed.id,
+                    score=0.65, status=MatchStatus.proposed,
+                    score_breakdown={"crop": 0.9, "location": 0.5, "price": 0.55},
+                ))
+
+            for m in match_specs:
+                db.add(Match(**m))
+                match_count += 1
+
+            if match_count:
+                await db.commit()
+                print(f"  ADD   {match_count} matches")
+            else:
+                print("  WARN  Could not create matches (missing harvests or demands)")
+
     # Summary
     print("\n" + "-" * 48)
     print("  Beta Data Summary")
@@ -350,6 +448,7 @@ async def seed():
     print(f"  Harvest Listings  : {harvest_count}")
     print(f"  Demand Postings   : {demand_count}")
     print(f"  Supply Listings   : {supply_count}")
+    print(f"  Matches           : {match_count}")
     print("-" * 48 + "\n")
 
 

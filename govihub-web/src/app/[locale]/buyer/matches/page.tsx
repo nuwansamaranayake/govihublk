@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -9,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, cropName } from "@/lib/utils";
 
 type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
@@ -42,6 +43,8 @@ const ACTIONS: Record<MatchStatus, { label:string; variant:"primary"|"danger"|"s
 
 export default function BuyerMatchesPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +120,7 @@ export default function BuyerMatchesPage() {
                           )}
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
-                          {match.crop} · {match.quantity} {match.unit} · Rs. {match.price}/{match.unit}
+                          {cropName(match.crop, locale)} · {match.quantity} {match.unit} · Rs. {match.price}/{match.unit}
                         </p>
                         <p className="text-xs text-neutral-400 mt-1">📍 {match.location} · {match.createdAt}</p>
                       </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -8,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusBadge, type ListingStatus } from "@/components/ui/StatusBadge";
 import { Tabs } from "@/components/ui/Tabs";
+import { cropName } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Listing {
@@ -58,6 +60,8 @@ const ALL_STATUSES: ListingStatus[] = [
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminListingsPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [loading, setLoading] = useState(true);
   const [harvests, setHarvests] = useState<Listing[]>([]);
   const [demands, setDemands] = useState<Listing[]>([]);
@@ -206,7 +210,7 @@ export default function AdminListingsPage() {
                         <td className="px-4 py-3 font-medium text-neutral-800">
                           {item.owner_name}
                         </td>
-                        <td className="px-4 py-3 text-neutral-700">{item.crop}</td>
+                        <td className="px-4 py-3 text-neutral-700">{cropName(item.crop, locale)}</td>
                         <td className="px-4 py-3 text-neutral-700">
                           {item.quantity.toLocaleString()} {item.unit}
                         </td>
@@ -264,7 +268,7 @@ export default function AdminListingsPage() {
                 </div>
                 <div>
                   <p className="text-neutral-500">Crop</p>
-                  <p className="font-medium text-neutral-800">{selectedListing.crop}</p>
+                  <p className="font-medium text-neutral-800">{cropName(selectedListing.crop, locale)}</p>
                 </div>
                 <div>
                   <p className="text-neutral-500">Quantity</p>

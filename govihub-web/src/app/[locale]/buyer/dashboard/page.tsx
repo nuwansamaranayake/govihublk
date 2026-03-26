@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { cropName } from "@/lib/utils";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
@@ -38,6 +40,8 @@ interface DashboardData {
 
 export default function BuyerDashboardPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +80,7 @@ export default function BuyerDashboardPage() {
           recentMatches: matches.slice(0, 5).map((m: any) => ({
             id: m.id || String(Math.random()),
             farmerName: m.farmer_name || m.farmerName || "Farmer",
-            crop: m.crop || "",
+            crop: cropName(m.crop, locale),
             quantity: m.quantity || 0,
             unit: m.unit || "kg",
             location: m.location || "",
@@ -174,7 +178,7 @@ export default function BuyerDashboardPage() {
                       <span className="font-medium text-neutral-900 text-sm">{match.farmerName}</span>
                       <Badge color={STATUS_COLOR[match.status]||"gray"} size="sm" dot>{match.status}</Badge>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">{match.crop} · {match.quantity} {match.unit} · {match.location}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{cropName(match.crop, locale)} · {match.quantity} {match.unit} · {match.location}</p>
                   </div>
                   <div className={`text-lg font-bold shrink-0 ${scoreColor(match.score)}`}>{match.score}%</div>
                 </li>

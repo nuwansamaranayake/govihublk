@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { cropName } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type DisputeStatus = "open" | "investigating" | "resolved" | "dismissed";
@@ -43,6 +45,8 @@ const FILTER_OPTIONS: { value: string; label: string }[] = [
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminDisputesPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [loading, setLoading] = useState(true);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -202,7 +206,7 @@ export default function AdminDisputesPage() {
                         {dispute.farmer_name}
                       </td>
                       <td className="px-4 py-3 text-neutral-700">{dispute.buyer_name}</td>
-                      <td className="px-4 py-3 text-neutral-700">{dispute.crop}</td>
+                      <td className="px-4 py-3 text-neutral-700">{cropName(dispute.crop, locale)}</td>
                       <td className="px-4 py-3">
                         <Badge color={cfg.color} size="sm" dot>
                           {cfg.label}

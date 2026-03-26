@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
+import { cropName } from "@/lib/utils";
 
 interface Demand {
   id: string;
@@ -39,6 +41,8 @@ const STATUS_COLOR: Record<string,"green"|"gold"|"gray"|"red"|"blue"|"darkgreen"
 
 export default function BuyerDemandsPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -67,7 +71,7 @@ export default function BuyerDemandsPage() {
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (d: Demand) => {
     setEditId(d.id);
-    setForm({ crop:d.crop, quantity:String(d.quantity), unit:d.unit, minPrice:String(d.minPrice), maxPrice:String(d.maxPrice), location:d.location, radius:String(d.radius), startDate:d.startDate, endDate:d.endDate, recurring:d.recurring });
+    setForm({ crop:cropName(d.crop, locale), quantity:String(d.quantity), unit:d.unit, minPrice:String(d.minPrice), maxPrice:String(d.maxPrice), location:d.location, radius:String(d.radius), startDate:d.startDate, endDate:d.endDate, recurring:d.recurring });
     setShowModal(true);
   };
 
@@ -131,7 +135,7 @@ export default function BuyerDemandsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-neutral-900">{demand.crop}</h3>
+                          <h3 className="font-semibold text-neutral-900">{cropName(demand.crop, locale)}</h3>
                           <Badge color={STATUS_COLOR[demand.status]||"gray"} size="sm" dot>{demand.status}</Badge>
                           {demand.recurring && <Badge color="blue" size="sm">{t("common.recurring")}</Badge>}
                         </div>

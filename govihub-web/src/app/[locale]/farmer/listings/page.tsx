@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,7 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, cropName } from "@/lib/utils";
 
 interface Listing {
   id: string;
@@ -40,6 +41,8 @@ const STATUS_COLOR: Record<string, "green"|"gray"|"gold"|"blue"> = { planned:"bl
 
 export default function FarmerListingsPage() {
   const t = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || "en";
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -68,7 +71,7 @@ export default function FarmerListingsPage() {
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
-    setForm({ crop:l.crop, quantity:String(l.quantity), unit:l.unit, price:String(l.price), location:l.location, harvestDate:l.harvestDate, expiryDate:"", description:"" });
+    setForm({ crop:cropName(l.crop, locale), quantity:String(l.quantity), unit:l.unit, price:String(l.price), location:l.location, harvestDate:l.harvestDate, expiryDate:"", description:"" });
     setShowModal(true);
   };
 
@@ -138,7 +141,7 @@ export default function FarmerListingsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-neutral-900">{listing.crop}</h3>
+                          <h3 className="font-semibold text-neutral-900">{cropName(listing.crop, locale)}</h3>
                           <Badge color={STATUS_COLOR[listing.status]||"gray"} size="sm" dot>{formatStatus(listing.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">{listing.quantity} {listing.unit} · Rs. {listing.price}/{listing.unit}</p>
