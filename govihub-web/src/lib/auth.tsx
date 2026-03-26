@@ -92,8 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         : null;
 
     if (storedToken) {
-      // Hydrate the in-memory token so api.get() includes Authorization header
-      setAccessToken(storedToken);
+      // Hydrate the in-memory token — mark as beta so refresh logic skips cookie flow
+      setAccessToken(storedToken, true);
       // Fetch the user profile with this token
       api
         .get<MeResponse>("/users/me")
@@ -113,6 +113,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
+    // If we have a beta/dev token in sessionStorage, use it directly — don't call /auth/refresh
+    const storedToken =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("govihub_token") ||
+          sessionStorage.getItem("govihub_dev_token")
+        : null;
+
+    if (storedToken) {
+      try {
+        setAccessToken(storedToken, true);
+        const me = await api.get<MeResponse>("/users/me");
+        setUser(mapUser(me));
+        return true;
+      } catch {
+        setAccessToken(null);
+        setUser(null);
+        return false;
+      }
+    }
+
+    // Cookie-based refresh (Google OAuth flow)
     try {
       const tokenData = await api.post<TokenResponse>("/auth/refresh");
       setAccessToken(tokenData.access_token);

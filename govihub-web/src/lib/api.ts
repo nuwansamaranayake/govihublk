@@ -8,8 +8,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002/api/v
 // ── In-memory token store ──────────────────────────────────────────────────
 let accessToken: string | null = null;
 
-export function setAccessToken(token: string | null): void {
+// Track whether the token came from beta/dev login (sessionStorage)
+// vs. Google OAuth (cookie). Beta tokens must NOT be cleared by failed refresh.
+let isBetaToken = false;
+
+export function setAccessToken(token: string | null, beta = false): void {
   accessToken = token;
+  isBetaToken = token ? beta : false;
 }
 
 export function getAccessToken(): string | null {
@@ -42,6 +47,11 @@ export class ApiException extends Error {
 let refreshPromise: Promise<string | null> | null = null;
 
 async function doRefresh(): Promise<string | null> {
+  // Beta/dev tokens use sessionStorage, not cookies — skip cookie refresh entirely
+  if (isBetaToken) {
+    return accessToken;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
