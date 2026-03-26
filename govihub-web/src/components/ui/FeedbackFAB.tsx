@@ -44,7 +44,7 @@ export default function FeedbackFAB() {
     setLoading(true);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
-      const token = typeof window !== "undefined" ? sessionStorage.getItem("govihub_dev_token") : null;
+      const token = typeof window !== "undefined" ? sessionStorage.getItem("govihub_token") : null;
       const res = await fetch(`${API_URL}/feedback`, {
         method: "POST",
         headers: {
