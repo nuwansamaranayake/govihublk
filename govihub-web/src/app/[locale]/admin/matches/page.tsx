@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { formatStatus, cropName } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
@@ -47,6 +48,7 @@ export default function AdminMatchesPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -57,11 +59,12 @@ export default function AdminMatchesPage() {
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<Match[]>("/admin/matches")
       .then(setMatches)
       .catch(() => setMatches(MOCK))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const openResolve = (match: Match) => {
     setSelected(match);

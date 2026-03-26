@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAuth } from "@/lib/auth";
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ const MOCK_HISTORY: HistoryItem[] = [
 
 export default function FarmAdvisoryPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,11 +55,12 @@ export default function FarmAdvisoryPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<HistoryItem[]>("/advisory/history")
       .then((data) => setHistory(Array.isArray(data) ? data : []))
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
-  }, []);
+  }, [isReady]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior:"smooth" });

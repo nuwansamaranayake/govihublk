@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAuth } from "@/lib/auth";
 
 type Category = "all"|"fertilizer"|"seeds"|"pesticide"|"equipment"|"transport"|"irrigation";
 
@@ -43,6 +44,7 @@ const CATEGORY_ICON: Record<string, string> = {
 
 export default function BuyerMarketplacePage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export default function BuyerMarketplacePage() {
   const [category, setCategory] = useState<Category>("all");
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<any>("/marketplace/search")
       .then((res) => {
         const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
@@ -60,7 +63,7 @@ export default function BuyerMarketplacePage() {
         setProducts([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const filtered = products
     .filter(p => category==="all" || p.category===category)

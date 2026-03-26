@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { formatStatus } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 type MatchStatus = "proposed"|"farmer_accepted"|"buyer_accepted"|"in_transit"|"disputed"|"cancelled";
 
@@ -43,6 +44,7 @@ export default function BuyerMatchesPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export default function BuyerMatchesPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadMatches(); }, []);
+  useEffect(() => { if (isReady) loadMatches(); }, [isReady]);
 
   const handleAction = async (matchId: string, action: string) => {
     setActionLoading(`${matchId}-${action}`);

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import { useAuth } from "@/lib/auth";
 
 type InquiryStatus = "new" | "responded" | "closed";
 
@@ -92,10 +93,12 @@ function FarmerAvatar({ name }: { name: string }) {
 }
 
 export default function SupplierInquiriesPage() {
+  const { isReady } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isReady) return;
     let cancelled = false;
 
     async function fetchInquiries() {
@@ -118,7 +121,7 @@ export default function SupplierInquiriesPage() {
 
     fetchInquiries();
     return () => { cancelled = true; };
-  }, []);
+  }, [isReady]);
 
   if (loading) {
     return (

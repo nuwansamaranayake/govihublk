@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAuth } from "@/lib/auth";
 
 type Category = "fertilizer"|"seeds"|"pesticide"|"equipment"|"irrigation"|"other";
 
@@ -41,6 +42,7 @@ type FormData = typeof EMPTY_FORM;
 
 export default function SupplierListingsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -64,7 +66,7 @@ export default function SupplierListingsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isReady) load(); }, [isReady]);
 
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (l: Listing) => {

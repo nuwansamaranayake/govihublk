@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { useAuth } from "@/lib/auth";
 
 interface UserProfile {
   name: string;
@@ -32,6 +33,7 @@ const DISTRICTS = [
 
 export default function FarmerSettingsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [profile, setProfile] = useState<UserProfile|null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,13 +42,14 @@ export default function FarmerSettingsPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<UserProfile>("/users/me")
       .then(setProfile)
       .catch((err: any) => {
         setError(err?.message || "Failed to load profile");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

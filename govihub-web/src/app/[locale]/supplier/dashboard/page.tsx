@@ -7,6 +7,7 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { useAuth } from "@/lib/auth";
 
 type Category = "fertilizer"|"seeds"|"pesticide"|"equipment"|"irrigation"|"other";
 
@@ -38,6 +39,7 @@ const CATEGORY_ICON: Record<Category, string> = {
 
 export default function SupplierDashboardPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [data, setData] = useState<DashboardData|null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export default function SupplierDashboardPage() {
   const greeting = hour<12 ? t("greeting.morning") : hour<17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
+    if (!isReady) return;
     Promise.all([
       api.get<any>("/users/me").catch(() => null),
       api.get<any>("/marketplace/search").catch(() => null),
@@ -89,7 +92,7 @@ export default function SupplierDashboardPage() {
         setError(err?.message || "Failed to load dashboard");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">

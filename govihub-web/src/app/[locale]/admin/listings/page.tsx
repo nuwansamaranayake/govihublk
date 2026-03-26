@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusBadge, type ListingStatus } from "@/components/ui/StatusBadge";
 import { Tabs } from "@/components/ui/Tabs";
 import { cropName } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Listing {
@@ -62,6 +63,7 @@ export default function AdminListingsPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [loading, setLoading] = useState(true);
   const [harvests, setHarvests] = useState<Listing[]>([]);
   const [demands, setDemands] = useState<Listing[]>([]);
@@ -70,6 +72,7 @@ export default function AdminListingsPage() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     async function fetchData() {
       try {
         // Try /admin/listings first, fall back to individual listing endpoints
@@ -97,7 +100,7 @@ export default function AdminListingsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [isReady]);
 
   const filterByStatus = (items: Listing[]) =>
     statusFilter === "all" ? items : items.filter((i) => i.status === statusFilter);

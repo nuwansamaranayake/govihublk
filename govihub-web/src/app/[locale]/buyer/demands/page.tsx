@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { cropName } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 interface Demand {
   id: string;
@@ -48,6 +49,7 @@ export default function BuyerDemandsPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -71,7 +73,7 @@ export default function BuyerDemandsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isReady) load(); }, [isReady]);
 
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (d: Demand) => {

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { useAuth } from "@/lib/auth";
 
 type UserRole = "farmer"|"buyer"|"supplier"|"admin";
 type UserStatus = "active"|"inactive"|"suspended";
@@ -45,6 +46,7 @@ const STATUS_COLOR: Record<UserStatus, "green"|"red"|"gray"> = {
 
 export default function AdminUsersPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -55,11 +57,12 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<User[]>("/admin/users")
       .then((data) => setUsers(Array.isArray(data) ? data : []))
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const filtered = users.filter(u => {
     const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());

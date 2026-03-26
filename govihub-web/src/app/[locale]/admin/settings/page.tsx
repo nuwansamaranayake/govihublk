@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/lib/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface SystemInfo {
@@ -36,6 +37,7 @@ const MOCK_HEALTH: HealthStatus = {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [loading, setLoading] = useState(true);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -43,6 +45,7 @@ export default function AdminSettingsPage() {
   const [cacheMessage, setCacheMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     // TODO: /admin/system-info and /admin/health may not exist. Keep mock fallback until implemented.
     async function fetchData() {
       try {
@@ -60,7 +63,7 @@ export default function AdminSettingsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [isReady]);
 
   const handleClearCache = async () => {
     setClearingCache(true);

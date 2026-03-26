@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { formatStatus, cropName } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 interface Listing {
   id: string;
@@ -56,6 +57,7 @@ export default function FarmerListingsPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -79,7 +81,7 @@ export default function FarmerListingsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isReady) load(); }, [isReady]);
 
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (l: Listing) => {

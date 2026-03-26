@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAuth } from "@/lib/auth";
 
 interface DiagnosisResult {
   disease: string;
@@ -30,6 +31,7 @@ interface HistoryItem {
 
 export default function CropDiagnosisPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [selectedImage, setSelectedImage] = useState<File|null>(null);
   const [previewUrl, setPreviewUrl] = useState<string|null>(null);
   const [processing, setProcessing] = useState(false);
@@ -41,6 +43,7 @@ export default function CropDiagnosisPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<any>("/diagnosis/history")
       .then((res) => {
         const items = Array.isArray(res) ? res : res?.data ?? [];
@@ -51,7 +54,7 @@ export default function CropDiagnosisPage() {
         setHistory([]);
       })
       .finally(() => setHistoryLoading(false));
-  }, []);
+  }, [isReady]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

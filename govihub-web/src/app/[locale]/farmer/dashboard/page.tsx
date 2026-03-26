@@ -44,7 +44,7 @@ export default function FarmerDashboardPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export default function FarmerDashboardPage() {
   const greeting = hour < 12 ? t("greeting.morning") : hour < 17 ? t("greeting.afternoon") : t("greeting.evening");
 
   useEffect(() => {
+    if (!isReady) return;
     const userDistrict = user?.district || "Anuradhapura";
 
     Promise.all([
@@ -91,7 +92,7 @@ export default function FarmerDashboardPage() {
         setError(err?.message || "Failed to load dashboard");
       })
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [isReady, user]);
 
   const activityIcon = (type: string) =>
     type === "match" ? "🤝" : type === "offer" ? "💰" : "🔬";

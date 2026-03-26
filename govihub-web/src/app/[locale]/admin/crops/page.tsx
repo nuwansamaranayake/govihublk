@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { useAuth } from "@/lib/auth";
 
 type CropCategory = "vegetable"|"fruit"|"grain"|"spice"|"legume"|"leafy";
 
@@ -44,6 +45,7 @@ const CAT_COLOR: Record<CropCategory, "green"|"gold"|"blue"|"orange"|"purple"|"d
 
 export default function AdminCropsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -59,7 +61,7 @@ export default function AdminCropsPage() {
       .catch(() => setCrops(MOCK))
       .finally(() => setLoading(false));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (isReady) load(); }, [isReady]);
 
   const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
   const openEdit = (c: Crop) => {

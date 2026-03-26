@@ -27,7 +27,10 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  /** true while the initial token hydration is in progress */
   isLoading: boolean;
+  /** true once the token (if any) has been set in the API client — safe to make API calls */
+  isReady: boolean;
   login: (code: string, redirectUri: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
@@ -77,6 +80,7 @@ function mapUser(me: MeResponse): AuthUser {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const initialized = useRef(false);
 
   // Try to restore session on mount
@@ -92,22 +96,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         : null;
 
     if (storedToken) {
-      // Hydrate the in-memory token — mark as beta so refresh logic skips cookie flow
+      // Hydrate the in-memory token SYNCHRONOUSLY before any child renders
       setAccessToken(storedToken, true);
-      // Fetch the user profile with this token
+      // Mark ready immediately — token is in the API client now
+      setIsReady(true);
+      // Fetch user profile (non-blocking — pages can already call API)
       api
         .get<MeResponse>("/users/me")
         .then((me) => setUser(mapUser(me)))
         .catch(() => {
           // Token expired or invalid — clear it
           setAccessToken(null);
+          setIsReady(false);
           sessionStorage.removeItem("govihub_token");
           sessionStorage.removeItem("govihub_dev_token");
         })
         .finally(() => setIsLoading(false));
     } else {
       // Fall back to cookie-based refresh (Google OAuth flow)
-      refreshSession().finally(() => setIsLoading(false));
+      refreshSession().finally(() => {
+        setIsReady(true);
+        setIsLoading(false);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -189,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isAuthenticated: user !== null,
     isLoading,
+    isReady,
     login,
     logout,
     refreshSession,

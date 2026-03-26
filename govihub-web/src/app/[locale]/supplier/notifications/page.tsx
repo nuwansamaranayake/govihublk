@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/lib/auth";
 
 type NotifType = "inquiry"|"price"|"system"|"listing";
 
@@ -24,11 +25,13 @@ const NOTIF_ICON: Record<NotifType, string> = { inquiry:"❓", price:"📊", sys
 
 export default function SupplierNotificationsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     api.get<any>("/notifications")
       .then((res) => {
         const items = Array.isArray(res) ? res : res?.data ?? [];
@@ -39,7 +42,7 @@ export default function SupplierNotificationsPage() {
         setNotifications([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const markRead = async (id: string) => {
     await api.post(`/notifications/${id}/read`).catch(()=>{});

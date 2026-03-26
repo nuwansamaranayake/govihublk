@@ -7,6 +7,7 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { useAuth } from "@/lib/auth";
 
 interface StatsData {
   totalUsers: number;
@@ -60,11 +61,13 @@ const MOCK_CROP_BARS: ChartBar[] = [
 
 export default function AdminDashboardPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [stats, setStats] = useState<StatsData|null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isReady) return;
     Promise.all([
       api.get<StatsData>("/admin/dashboard"),
       api.get<ActivityItem[]>("/admin/activity").catch(() => [] as ActivityItem[]),
@@ -72,7 +75,7 @@ export default function AdminDashboardPage() {
       .then(([s, a]) => { setStats(s); setActivity(a); })
       .catch(() => { setStats(MOCK_STATS); setActivity(MOCK_ACTIVITY); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const healthColor = (status: string) =>
     status==="healthy" ? "green" : status==="degraded" ? "gold" : "red";

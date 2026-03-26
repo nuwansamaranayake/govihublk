@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/lib/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface AnalyticsData {
@@ -66,10 +67,12 @@ const STATUS_COLORS: Record<string, string> = {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminAnalyticsPage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     async function fetchData() {
       try {
         // TODO: /admin/analytics endpoint may not exist yet (404). Using mock data as fallback.
@@ -83,7 +86,7 @@ export default function AdminAnalyticsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [isReady]);
 
   if (loading || !data) {
     return (

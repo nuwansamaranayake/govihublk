@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cropName } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type DisputeStatus = "open" | "investigating" | "resolved" | "dismissed";
@@ -47,12 +48,14 @@ export default function AdminDisputesPage() {
   const t = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || "en";
+  const { isReady } = useAuth();
   const [loading, setLoading] = useState(true);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isReady) return;
     async function fetchData() {
       try {
         const res = await api.get<Dispute[]>("/admin/disputes");
@@ -90,7 +93,7 @@ export default function AdminDisputesPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [isReady]);
 
   const handleAction = async (disputeId: string, action: "investigate" | "resolve" | "dismiss") => {
     setActionLoading(disputeId);

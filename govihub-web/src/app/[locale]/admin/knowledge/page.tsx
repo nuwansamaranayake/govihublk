@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAuth } from "@/lib/auth";
 
 type KnowledgeType = "crop_guide"|"pest_guide"|"market_info"|"weather"|"advisory"|"other";
 
@@ -59,6 +60,7 @@ const LANG_BADGE: Record<string, "green"|"gold"|"blue"> = { en:"green", si:"gold
 
 export default function AdminKnowledgePage() {
   const t = useTranslations();
+  const { isReady } = useAuth();
   const [chunks, setChunks] = useState<KnowledgeChunk[]>([]);
   const [stats, setStats] = useState<KnowledgeStats|null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,7 @@ export default function AdminKnowledgePage() {
   const [ingesting, setIngesting] = useState(false);
 
   useEffect(() => {
+    if (!isReady) return;
     // TODO: /admin/knowledge endpoint may not exist yet. Using mock data as fallback.
     Promise.all([
       api.get<KnowledgeChunk[]>("/admin/knowledge"),
@@ -76,7 +79,7 @@ export default function AdminKnowledgePage() {
       .then(([c,s]) => { setChunks(c); setStats(s); })
       .catch(() => { setChunks(MOCK_CHUNKS); setStats(MOCK_STATS); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isReady]);
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
