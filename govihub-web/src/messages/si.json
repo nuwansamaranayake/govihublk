@@ -108,7 +108,7 @@
     "district": "දිස්ත්‍රික්කය",
     "preferredLanguage": "කැමැති භාෂාව",
     "registeringAs": "ලියාපදිංචි වන්නේ",
-    "alreadyHaveAccount": "දැනටමත් ගිණුමක් තිබේ ද?",
+    "alreadyHaveAccount": "දැනටමත් ගිණුමක් තිබේද?",
     "dontHaveAccount": "ගිණුමක් නැද්ද?",
     "termsAgreement": "දිගටම ගිය විට ඔබ අපගේ සේවා කොන්දේසි සහ රහස්‍යතා ප්‍රතිපත්තිය සමඟ එකඟ වේ",
     "sessionExpired": "ඔබගේ සැසිය කල් ඉකුත් විය. නැවත ලොග් ඉන් කරන්න.",
@@ -125,7 +125,6 @@
     "phonePlaceholder": "07X XXX XXXX",
     "createAccount": "ගිණුමක් සාදන්න",
     "noAccount": "ගිණුමක් නැද්ද?",
-    "alreadyHaveAccount": "දැනටමත් ගිණුමක් තිබේද?",
     "invalidCredentials": "වැරදි පරිශීලක නාමයක් හෝ මුරපදයක්",
     "requiredFields": "සියලුම අවශ්‍ය තොරතුරු ඇතුළත් කරන්න",
     "usernameHint": "අකුරු 3-20, අකුරු, අංක, යටි ඉරි",
@@ -208,7 +207,12 @@
     "createListing": "දැන්වීම සාදන්න",
     "expiryDate": "කල් ඉකුත් වීමේ දිනය",
     "price": "මිල (රු. එකකට)",
-    "photos": "ඡායාරූප (අත්‍යවශ්‍ය නොවේ)"
+    "photos": "ඡායාරූප (අත්‍යවශ්‍ය නොවේ)",
+    "variety": "ප්‍රභේදය",
+    "qualityGrade": "තත්ත්ව ශ්‍රේණිය",
+    "minPrice": "අවම මිල",
+    "isOrganic": "කාබනික",
+    "deliveryAvailable": "බෙදාහැරීම ලබාගත හැක"
   },
   "buyer": {
     "dashboard": "ගැනුම්කරු ඩැෂ්බෝඩ්",
@@ -236,7 +240,9 @@
     "quantity": "ප්‍රමාණය",
     "unit": "ඒකකය",
     "location": "ස්ථානය",
-    "recurringDemand": "නැවත නැවත ඉල්ලීම"
+    "recurringDemand": "නැවත නැවත ඉල්ලීම",
+    "neededBy": "අවශ්‍ය දිනය",
+    "isRecurring": "පුනරාවර්තන ඉල්ලුම"
   },
   "supplier": {
     "dashboard": "සැපයුම්කරු ඩැෂ්බෝඩ්",

@@ -125,7 +125,6 @@
     "phonePlaceholder": "07X XXX XXXX",
     "createAccount": "Create Account",
     "noAccount": "Don't have an account?",
-    "alreadyHaveAccount": "Already have an account?",
     "invalidCredentials": "Invalid username or password",
     "requiredFields": "Please fill in all required fields",
     "usernameHint": "3-20 characters, letters, numbers, underscores",
@@ -208,7 +207,12 @@
     "createListing": "Create Listing",
     "expiryDate": "Expiry Date",
     "price": "Price (Rs. per unit)",
-    "photos": "Photos (optional)"
+    "photos": "Photos (optional)",
+    "variety": "Variety",
+    "qualityGrade": "Quality Grade",
+    "minPrice": "Minimum Price",
+    "isOrganic": "Organic",
+    "deliveryAvailable": "Delivery Available"
   },
   "buyer": {
     "dashboard": "Buyer Dashboard",
@@ -236,7 +240,9 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "location": "Location",
-    "recurringDemand": "Recurring demand"
+    "recurringDemand": "Recurring demand",
+    "neededBy": "Needed By",
+    "isRecurring": "Recurring Demand"
   },
   "supplier": {
     "dashboard": "Supplier Dashboard",

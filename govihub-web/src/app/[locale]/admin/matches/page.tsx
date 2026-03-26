@@ -135,11 +135,11 @@ export default function AdminMatchesPage() {
                           Score: {Math.round((match.score || 0) * 100)}%
                         </p>
                         <p className="text-xs text-neutral-600 mt-0.5">
-                          {match.price ? `Rs. ${match.price}/kg` : "Price TBD"}
-                          {match.quantity ? ` · ${match.quantity} ${match.unit}` : ""}
+                          {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : "Price TBD"}
+                          {match.agreed_quantity_kg ? ` · ${match.agreed_quantity_kg} kg` : ""}
                         </p>
                         <p className="text-xs text-neutral-400 mt-0.5">
-                          {match.createdAt ? new Date(match.createdAt).toLocaleDateString() : ""}
+                          {match.created_at ? new Date(match.created_at).toLocaleDateString() : ""}
                         </p>
                         {match.disputeReason && (
                           <div className="mt-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
