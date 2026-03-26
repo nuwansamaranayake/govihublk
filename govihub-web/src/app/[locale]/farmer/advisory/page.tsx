@@ -94,15 +94,15 @@ export default function FarmAdvisoryPage() {
   };
 
   const tabs = [
-    { key:"chat", label:"Ask" },
-    { key:"history", label:"History", badge: history.length },
+    { key:"chat", label:t("advisory.ask") },
+    { key:"history", label:t("advisory.history"), badge: history.length },
   ];
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <div className="bg-green-700 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("farmer.askAdvisor")}</h1>
-        <p className="text-green-200 text-sm mt-1">AI-powered farming advisor</p>
+        <p className="text-green-200 text-sm mt-1">{t("advisory.subtitle")}</p>
       </div>
 
       <Tabs tabs={tabs} defaultTab="chat" className="flex-1 flex flex-col">
@@ -112,7 +112,7 @@ export default function FarmAdvisoryPage() {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-4">
               {messages.length === 0 && (
                 <div className="py-4">
-                  <p className="text-sm font-medium text-neutral-600 mb-3">Suggested questions:</p>
+                  <p className="text-sm font-medium text-neutral-600 mb-3">{t("advisory.suggestedQuestions")}:</p>
                   <div className="space-y-2">
                     {SUGGESTED_QUESTIONS.map((q) => (
                       <button
@@ -181,12 +181,12 @@ export default function FarmAdvisoryPage() {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if(e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }}}
-                  placeholder="Ask a farming question..."
+                  placeholder={t("advisory.askPlaceholder")}
                   className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   disabled={loading}
                 />
                 <Button variant="primary" onClick={() => sendMessage(input)} disabled={!input.trim()} loading={loading}>
-                  Send
+                  {t("common.send")}
                 </Button>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function FarmAdvisoryPage() {
                 </div>
               ))
             ) : history.length === 0 ? (
-              <EmptyState icon="📜" title="No advisory history" description="Your past Q&A sessions will appear here." />
+              <EmptyState icon="📜" title={t("advisory.noHistory")} description={t("advisory.noHistoryDesc")} />
             ) : (
               history.map(item => (
                 <Card key={item.id} padding="md">

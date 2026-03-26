@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 
 type FeedbackCategory = "bug" | "idea" | "general";
 
-const CATEGORIES: { key: FeedbackCategory; label: string; icon: string }[] = [
-  { key: "bug", label: "Bug", icon: "\uD83D\uDC1B" },
-  { key: "idea", label: "Idea", icon: "\uD83D\uDCA1" },
-  { key: "general", label: "General", icon: "\uD83D\uDCAC" },
+const CATEGORY_KEYS: { key: FeedbackCategory; labelKey: string; icon: string }[] = [
+  { key: "bug", labelKey: "feedback.bug", icon: "\uD83D\uDC1B" },
+  { key: "idea", labelKey: "feedback.idea", icon: "\uD83D\uDCA1" },
+  { key: "general", labelKey: "feedback.general", icon: "\uD83D\uDCAC" },
 ];
 
 export default function FeedbackFAB() {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState(0);
@@ -37,7 +39,7 @@ export default function FeedbackFAB() {
 
   const handleSubmit = async () => {
     if (!message.trim()) {
-      setError("Please enter your feedback");
+      setError(t("feedback.pleaseEnter"));
       return;
     }
     setError(null);
@@ -64,7 +66,7 @@ export default function FeedbackFAB() {
       }
       setSent(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to send feedback");
+      setError(e instanceof Error ? e.message : t("feedback.failedToSend"));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function FeedbackFAB() {
       <button
         onClick={() => { setOpen(true); setError(null); }}
         className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
-        aria-label="Send Feedback"
+        aria-label={t("feedback.sendFeedback")}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -98,23 +100,23 @@ export default function FeedbackFAB() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg font-semibold text-green-700">Thank you!</p>
-                <p className="text-sm text-neutral-500 mt-1">Your feedback has been sent.</p>
+                <p className="text-lg font-semibold text-green-700">{t("feedback.thankYou")}</p>
+                <p className="text-sm text-neutral-500 mt-1">{t("feedback.feedbackSent")}</p>
               </div>
             ) : (
               /* Form */
               <div className="p-5">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-1 flex items-center gap-2">
                   <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={24} height={24} className="rounded-md" />
-                  Send Feedback
+                  {t("feedback.sendFeedback")}
                 </h3>
                 <p className="text-sm text-neutral-500 mb-4">
-                  What&apos;s working? What&apos;s broken? What would you change?
+                  {t("feedback.subtitle")}
                 </p>
 
                 {/* Category Selector */}
                 <div className="flex rounded-xl border border-neutral-200 overflow-hidden mb-4">
-                  {CATEGORIES.map((cat) => (
+                  {CATEGORY_KEYS.map((cat) => (
                     <button
                       key={cat.key}
                       type="button"
@@ -126,7 +128,7 @@ export default function FeedbackFAB() {
                       }`}
                     >
                       <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
+                      <span>{t(cat.labelKey)}</span>
                     </button>
                   ))}
                 </div>
@@ -135,13 +137,13 @@ export default function FeedbackFAB() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
-                  placeholder="Tell us what you think..."
+                  placeholder={t("feedback.placeholder")}
                   className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition resize-none text-sm"
                 />
 
                 {/* Star Rating */}
                 <div className="flex items-center gap-1 mt-3">
-                  <span className="text-sm text-neutral-500 mr-2">Rating:</span>
+                  <span className="text-sm text-neutral-500 mr-2">{t("feedback.rating")}:</span>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -174,7 +176,7 @@ export default function FeedbackFAB() {
                     onClick={() => { setOpen(false); setError(null); }}
                     className="flex-1 py-2.5 rounded-xl border border-neutral-300 text-neutral-700 text-sm font-medium hover:bg-neutral-50 transition"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                   <button
                     type="button"
@@ -188,10 +190,10 @@ export default function FeedbackFAB() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Sending...
+                        {t("feedback.sending")}
                       </>
                     ) : (
-                      "Send"
+                      t("common.send")
                     )}
                   </button>
                 </div>

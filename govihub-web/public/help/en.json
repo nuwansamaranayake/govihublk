@@ -1,0 +1,405 @@
+{
+  "farmer.dashboard": {
+    "title": "Your Farm Dashboard",
+    "description": "See your farm at a glance. Track active listings, recent sales, market prices, and local weather in one place.",
+    "steps": [
+      { "title": "Check your stats", "content": "Look at the top cards to see your total listings, pending orders, and earnings this month." },
+      { "title": "View market prices", "content": "Scroll down to the Market Prices section to see current prices for your crops in nearby markets." },
+      { "title": "Check the weather", "content": "The weather widget shows the 3-day forecast for your area. Plan your harvesting and spraying around it." },
+      { "title": "See recent activity", "content": "The Activity Feed at the bottom shows your latest matches, messages, and listing updates." }
+    ],
+    "tips": [
+      "Tap any stat card to jump to its detail page.",
+      "Pull down on the page to refresh all data with the latest prices and weather."
+    ],
+    "faq": [
+      { "question": "Why are market prices not showing?", "answer": "Prices update every morning. If you see no data, check your internet connection and pull down to refresh." },
+      { "question": "Can I change my location for weather?", "answer": "Yes. Go to More > Account Settings and update your farm location to get accurate weather." }
+    ]
+  },
+  "farmer.listings": {
+    "title": "Manage Your Listings",
+    "description": "View, edit, and track all your harvest listings. Filter by status to quickly find active, sold, or expired listings.",
+    "steps": [
+      { "title": "View your listings", "content": "All your harvest listings appear here sorted by newest first. Each card shows crop name, quantity, price, and status." },
+      { "title": "Filter by status", "content": "Tap the filter tabs at the top (Active, Sold, Expired, Draft) to narrow down your listings." },
+      { "title": "Edit a listing", "content": "Tap any listing card to open it. Then tap the Edit button to change price, quantity, or availability dates." },
+      { "title": "Create a new listing", "content": "Tap the + button at the bottom right to create a new harvest listing." }
+    ],
+    "tips": [
+      "Keep your listings updated. Buyers trust farmers who maintain accurate quantities and prices.",
+      "Mark listings as sold promptly so you stop getting new match requests."
+    ],
+    "faq": [
+      { "question": "Can I reactivate an expired listing?", "answer": "Yes. Open the expired listing, tap Edit, set new availability dates, and tap Save. It will become active again." },
+      { "question": "How many listings can I have at once?", "answer": "You can have up to 20 active listings at a time." }
+    ]
+  },
+  "farmer.listings.create": {
+    "title": "Create a Harvest Listing",
+    "description": "List your harvest for sale. Tell buyers what crop you have, how much, your asking price, and when it will be ready.",
+    "steps": [
+      { "title": "Select your crop", "content": "Tap the Crop field and pick from the list, or type to search. Choose the exact variety if available." },
+      { "title": "Enter quantity", "content": "Type how much you have to sell in kilograms. Be accurate so buyers know what to expect." },
+      { "title": "Set your price", "content": "Enter your asking price per kilogram in LKR. Check the suggested market price shown below the field for guidance." },
+      { "title": "Set availability dates", "content": "Pick the date range when your harvest will be ready for pickup. Tap Available From and Available Until." },
+      { "title": "Add photos and submit", "content": "Tap Add Photos to upload pictures of your crop. Then tap Create Listing to publish it." }
+    ],
+    "tips": [
+      "Add clear photos of your crop. Listings with photos get 3x more buyer interest.",
+      "Price competitively. The suggested market price helps you set a fair rate.",
+      "Write a short description mentioning farming method (organic, traditional) if relevant."
+    ],
+    "faq": [
+      { "question": "Can I save a listing as draft?", "answer": "Yes. Tap Save as Draft instead of Create Listing. You can finish and publish it later from the Listings page." },
+      { "question": "What if my crop is not in the list?", "answer": "Type the crop name manually in the search field. If it does not appear, select Other and type the name." }
+    ]
+  },
+  "farmer.matches": {
+    "title": "Your Buyer Matches",
+    "description": "GoviHub matches your listings with buyers looking for your crops. View match scores, accept offers, or decline them.",
+    "steps": [
+      { "title": "View your matches", "content": "Each match card shows the buyer name, crop they want, quantity, their offered price, and a match score." },
+      { "title": "Understand the match score", "content": "The score (0-100) shows how well the demand fits your listing. Higher scores mean better fit on price, quantity, and location." },
+      { "title": "Accept a match", "content": "Tap a match card to see details. If you agree with the terms, tap Accept Match to confirm the deal." },
+      { "title": "Decline a match", "content": "If the offer does not work for you, tap Decline. You can add an optional reason to help the buyer adjust." }
+    ],
+    "tips": [
+      "Respond to matches quickly. Buyers often choose the first farmer who accepts.",
+      "A score above 80 usually means the buyer is very close to your area and price range."
+    ],
+    "faq": [
+      { "question": "Can I negotiate the price?", "answer": "Not directly in the app yet. Accept or decline based on the offered price. You can message the buyer after accepting to discuss details." },
+      { "question": "What happens after I accept?", "answer": "The buyer gets notified. You will see the order in your dashboard with pickup or delivery details." }
+    ]
+  },
+  "farmer.diagnosis": {
+    "title": "AI Crop Diagnosis",
+    "description": "Upload a photo of a sick or damaged crop and get an instant AI diagnosis with treatment suggestions.",
+    "steps": [
+      { "title": "Take a clear photo", "content": "Use your phone camera to take a close-up photo of the affected leaves, fruit, or stem. Make sure there is good lighting." },
+      { "title": "Upload the photo", "content": "Tap Upload Photo and select the image from your gallery, or tap Camera to take a new one." },
+      { "title": "Wait for results", "content": "The AI analyzes your photo in a few seconds. You will see the likely disease name and confidence level." },
+      { "title": "Read the treatment plan", "content": "Scroll down to see recommended treatments, including organic and chemical options with dosage instructions." }
+    ],
+    "tips": [
+      "Take photos in natural daylight for the most accurate results.",
+      "Include both healthy and affected parts in the photo so the AI can compare.",
+      "Try multiple photos from different angles if the first result has low confidence."
+    ],
+    "faq": [
+      { "question": "How accurate is the diagnosis?", "answer": "The AI is trained on common Sri Lankan crop diseases and is about 85% accurate. Always consult a local agriculture officer for serious outbreaks." },
+      { "question": "Does it work offline?", "answer": "No. You need an internet connection to upload the photo and get results." }
+    ]
+  },
+  "farmer.advisory": {
+    "title": "AI Farming Advisor",
+    "description": "Ask any farming question and get answers powered by AI. Get advice on planting, fertilizer, pest control, and more.",
+    "steps": [
+      { "title": "Type your question", "content": "Tap the text field at the bottom and type your farming question in English or Sinhala." },
+      { "title": "Send your question", "content": "Tap the Send button. The AI will process your question and reply in a few seconds." },
+      { "title": "Read the answer", "content": "The AI gives a detailed answer with practical steps you can follow. It may include product names and dosages." },
+      { "title": "Ask follow-up questions", "content": "You can ask more questions in the same chat. The AI remembers what you discussed before." }
+    ],
+    "tips": [
+      "Be specific. Instead of saying 'my paddy is sick', say 'my paddy leaves have brown spots and are curling'.",
+      "Mention your district. The AI gives better advice when it knows your local conditions."
+    ],
+    "faq": [
+      { "question": "What topics can I ask about?", "answer": "You can ask about crop diseases, fertilizer schedules, pest control, planting times, irrigation, soil health, and harvest handling." },
+      { "question": "Is the advice free?", "answer": "Yes. The AI advisor is free for all registered farmers." }
+    ]
+  },
+  "farmer.marketplace": {
+    "title": "Supply Marketplace",
+    "description": "Browse and find agricultural supply shops near you. Find fertilizer, seeds, tools, and equipment from verified suppliers.",
+    "steps": [
+      { "title": "Browse categories", "content": "Tap a category like Fertilizer, Seeds, Equipment, or Transport to see available products." },
+      { "title": "Search for products", "content": "Use the search bar at the top to find a specific product by name or brand." },
+      { "title": "View product details", "content": "Tap a product card to see full details including price, supplier info, and delivery options." },
+      { "title": "Send an inquiry", "content": "Tap Inquire Now on a product page to send a message to the supplier asking about availability or pricing." }
+    ],
+    "tips": [
+      "Check supplier ratings and reviews before sending an inquiry.",
+      "Use the location filter to find suppliers close to your farm for cheaper delivery."
+    ],
+    "faq": [
+      { "question": "Can I buy directly through the app?", "answer": "Currently you send inquiries and arrange payment directly with the supplier. In-app payments are coming soon." },
+      { "question": "How do I know if a supplier is trustworthy?", "answer": "Look for the Verified badge on their profile. Also check their rating and number of completed orders." }
+    ]
+  },
+  "farmer.more": {
+    "title": "Settings & More",
+    "description": "Manage your account, change language, set notification preferences, and log out.",
+    "steps": [
+      { "title": "Edit your profile", "content": "Tap Account Settings to update your name, phone number, farm location, and profile photo." },
+      { "title": "Change language", "content": "Tap Language and select Sinhala, Tamil, or English. The app will reload in your chosen language." },
+      { "title": "Set notifications", "content": "Tap Notifications to choose which alerts you receive — matches, price updates, weather warnings, and more." },
+      { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out of your account." }
+    ],
+    "tips": [
+      "Keep your phone number updated so buyers can reach you.",
+      "Enable price alert notifications to know when market prices change for your crops."
+    ],
+    "faq": [
+      { "question": "Can I delete my account?", "answer": "Yes. Go to Account Settings, scroll to the bottom, and tap Delete Account. This action cannot be undone." },
+      { "question": "How do I switch between farmer and buyer roles?", "answer": "Tap Switch Role at the top of the More page to access your buyer or supplier account if you have one." }
+    ]
+  },
+  "buyer.dashboard": {
+    "title": "Your Buyer Dashboard",
+    "description": "Track your crop demands, view matched farmers, and monitor your purchase stats all in one place.",
+    "steps": [
+      { "title": "Check demand status", "content": "The top cards show your active demands, pending matches, and completed purchases this month." },
+      { "title": "View matched farmers", "content": "The Matches section shows farmers who have crops matching your posted demands." },
+      { "title": "Track purchases", "content": "Scroll down to see your recent purchase history with quantities, prices, and delivery status." },
+      { "title": "See market trends", "content": "The price chart shows how crop prices have changed over the past week to help you time your purchases." }
+    ],
+    "tips": [
+      "Check your dashboard daily during harvest season for the freshest matches.",
+      "Tap any stat card to see its full breakdown."
+    ],
+    "faq": [
+      { "question": "Why am I not getting matches?", "answer": "Make sure your demand has a reasonable price and quantity. Farmers match based on location, price, and availability dates." },
+      { "question": "Can I see farmers outside my district?", "answer": "Yes. Go to your demand and increase the search radius or remove the location filter." }
+    ]
+  },
+  "buyer.demands": {
+    "title": "Manage Your Demands",
+    "description": "View, edit, and track all your crop demand postings. See which demands have matches and which need attention.",
+    "steps": [
+      { "title": "View your demands", "content": "All your demand postings appear here. Each card shows crop type, quantity needed, your offered price, and status." },
+      { "title": "Filter demands", "content": "Tap the filter tabs (Active, Fulfilled, Expired) to find specific demands quickly." },
+      { "title": "Edit a demand", "content": "Tap a demand card, then tap Edit to change quantity, price, or delivery dates." },
+      { "title": "Create a new demand", "content": "Tap the + button to post a new crop demand." }
+    ],
+    "tips": [
+      "Update your demands regularly. Farmers prefer buyers with current, realistic requirements.",
+      "Close fulfilled demands promptly so you stop receiving new matches."
+    ],
+    "faq": [
+      { "question": "How many demands can I post?", "answer": "You can have up to 15 active demands at a time." },
+      { "question": "Can I duplicate an old demand?", "answer": "Yes. Open any past demand and tap Repost. It creates a copy with new dates that you can edit before publishing." }
+    ]
+  },
+  "buyer.demands.create": {
+    "title": "Create a Crop Demand",
+    "description": "Post what crops you need to buy. Tell farmers the type, quantity, your price, and when you need it.",
+    "steps": [
+      { "title": "Select the crop", "content": "Tap the Crop field and choose from the list, or type to search for a specific crop variety." },
+      { "title": "Enter quantity needed", "content": "Type how many kilograms you need. You can set a minimum and maximum range." },
+      { "title": "Set your offered price", "content": "Enter the price per kilogram you are willing to pay in LKR. Check the market rate shown below for reference." },
+      { "title": "Set delivery dates", "content": "Pick the date range when you need the crop delivered. Tap Needed From and Needed By." },
+      { "title": "Submit your demand", "content": "Review all details and tap Post Demand. You will start receiving farmer matches soon." }
+    ],
+    "tips": [
+      "Offering a fair market price attracts more farmer matches.",
+      "Set a wider date range to get more matches. Narrow date ranges limit your options.",
+      "Specify your preferred delivery method so farmers know what to expect."
+    ],
+    "faq": [
+      { "question": "How soon will I get matches?", "answer": "Matches usually appear within 24 hours if farmers in your area have the crop. During peak harvest, matches can come within minutes." },
+      { "question": "Can I set a location preference?", "answer": "Yes. By default your demand targets your district. You can expand or narrow the search area in the Location field." }
+    ]
+  },
+  "buyer.matches": {
+    "title": "Your Farmer Matches",
+    "description": "See farmers who have crops matching your demands. Review their listings, compare prices, and accept the best offers.",
+    "steps": [
+      { "title": "View available matches", "content": "Each match card shows the farmer name, crop variety, available quantity, asking price, and match score." },
+      { "title": "Compare matches", "content": "Look at the match score and price to find the best deal. Higher scores mean better fit." },
+      { "title": "Accept a match", "content": "Tap a match card to see full details. If it looks good, tap Accept Match to start the purchase." },
+      { "title": "Decline a match", "content": "Tap Decline if the match does not suit your needs. The farmer will be notified." }
+    ],
+    "tips": [
+      "Accept matches quickly during peak season. Good farmers get snapped up fast.",
+      "Check the farmer profile and past ratings before accepting."
+    ],
+    "faq": [
+      { "question": "Can I accept multiple matches for one demand?", "answer": "Yes, if you need crops from several farmers to fill your total quantity. Each accepted match is tracked separately." },
+      { "question": "What does the match score mean?", "answer": "It is a number from 0 to 100 based on how closely the farmer crop matches your demand in price, quantity, location, and timing." }
+    ]
+  },
+  "buyer.marketplace": {
+    "title": "Supplier Marketplace",
+    "description": "Browse and buy agricultural supplies. Find fertilizer, seeds, tools, and equipment from verified suppliers.",
+    "steps": [
+      { "title": "Browse categories", "content": "Tap a category like Fertilizer, Seeds, or Equipment to see available products from suppliers." },
+      { "title": "Search for items", "content": "Use the search bar to find specific products by name, brand, or type." },
+      { "title": "View product details", "content": "Tap a product to see price, description, supplier info, and delivery options." },
+      { "title": "Send an inquiry", "content": "Tap Inquire Now to message the supplier about availability, bulk pricing, or delivery." }
+    ],
+    "tips": [
+      "Compare prices from multiple suppliers before making a decision.",
+      "Look for bulk discount badges on products if you are buying large quantities."
+    ],
+    "faq": [
+      { "question": "Are supplier prices fixed?", "answer": "Listed prices are starting prices. Many suppliers offer discounts for bulk orders. Send an inquiry to negotiate." },
+      { "question": "Can suppliers deliver to my location?", "answer": "Delivery options vary by supplier. Check the Delivery section on each product page for details." }
+    ]
+  },
+  "buyer.more": {
+    "title": "Settings & More",
+    "description": "Manage your account, change language, set notification preferences, and log out.",
+    "steps": [
+      { "title": "Edit your profile", "content": "Tap Account Settings to update your business name, phone number, location, and profile photo." },
+      { "title": "Change language", "content": "Tap Language and select Sinhala, Tamil, or English. The app will reload in your chosen language." },
+      { "title": "Set notifications", "content": "Tap Notifications to choose which alerts you get — new matches, price changes, and order updates." },
+      { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out of your account." }
+    ],
+    "tips": [
+      "Keep your business location updated for better local farmer matches.",
+      "Enable match notifications so you never miss a new farmer offering your crops."
+    ],
+    "faq": [
+      { "question": "Can I have both a buyer and farmer account?", "answer": "Yes. Tap Switch Role at the top of the More page to access your other role." },
+      { "question": "How do I change my email?", "answer": "Go to Account Settings, tap Email, and enter your new email. You will receive a verification link." }
+    ]
+  },
+  "supplier.dashboard": {
+    "title": "Your Supplier Dashboard",
+    "description": "Monitor your product listings, incoming inquiries, and sales performance at a glance.",
+    "steps": [
+      { "title": "Check your stats", "content": "The top cards show your active listings, new inquiries this week, and total sales this month." },
+      { "title": "View recent inquiries", "content": "The Inquiries section shows the latest messages from farmers and buyers interested in your products." },
+      { "title": "Track your listings", "content": "See which products are getting the most views and inquiries so you know what is in demand." },
+      { "title": "Review sales summary", "content": "Scroll down to see your monthly sales chart and top-selling products." }
+    ],
+    "tips": [
+      "Respond to inquiries within 24 hours to keep your response rate high.",
+      "Tap any stat card to go to its detail page."
+    ],
+    "faq": [
+      { "question": "How is the response rate calculated?", "answer": "It tracks how many inquiries you reply to within 24 hours. A rate above 90% earns you a Fast Responder badge." },
+      { "question": "Can I export my sales data?", "answer": "Not yet. This feature is coming soon. For now you can view monthly summaries on the dashboard." }
+    ]
+  },
+  "supplier.listings": {
+    "title": "Manage Your Listings",
+    "description": "View, edit, and manage all your supply listings including fertilizer, seeds, equipment, and transport services.",
+    "steps": [
+      { "title": "View your listings", "content": "All your product listings appear here. Each card shows the product name, price, stock status, and category." },
+      { "title": "Filter by category", "content": "Tap the category tabs (Fertilizer, Seeds, Equipment, Transport, All) to filter your listings." },
+      { "title": "Edit a listing", "content": "Tap any listing card, then tap Edit to update the price, stock quantity, or description." },
+      { "title": "Create a new listing", "content": "Tap the + button at the bottom right to add a new product to your shop." }
+    ],
+    "tips": [
+      "Mark items as Out of Stock instead of deleting them. You can restock and reactivate later.",
+      "Add clear product photos. Listings with photos get 5x more inquiries."
+    ],
+    "faq": [
+      { "question": "Is there a limit on how many products I can list?", "answer": "You can have up to 50 active product listings at a time." },
+      { "question": "Can I list transport services?", "answer": "Yes. Choose the Transport category when creating a listing. Specify your vehicle type, capacity, and service area." }
+    ]
+  },
+  "supplier.listings.create": {
+    "title": "Create a Supply Listing",
+    "description": "Add a new product or service to your shop. Include details, pricing, and photos so farmers can find what they need.",
+    "steps": [
+      { "title": "Choose a category", "content": "Select the product category: Fertilizer, Seeds, Equipment, or Transport." },
+      { "title": "Enter product details", "content": "Fill in the product name, brand, description, and unit of measurement (kg, litre, piece, etc.)." },
+      { "title": "Set the price", "content": "Enter your price per unit in LKR. You can also add a bulk discount price if you offer one." },
+      { "title": "Add photos", "content": "Tap Add Photos to upload product images. Show the product clearly from multiple angles." },
+      { "title": "Publish your listing", "content": "Review everything and tap Publish Listing. Your product will be visible to farmers and buyers immediately." }
+    ],
+    "tips": [
+      "Include the brand name and size in your product title for easy searching.",
+      "Write a clear description mentioning usage instructions and suitable crops.",
+      "Set accurate stock quantities so farmers know if the product is available."
+    ],
+    "faq": [
+      { "question": "Can I offer delivery for my products?", "answer": "Yes. Toggle on Delivery Available and enter your delivery area and fee. Farmers will see this on your listing." },
+      { "question": "How do I update the price later?", "answer": "Go to your Listings page, tap the product, tap Edit, change the price, and tap Save." }
+    ]
+  },
+  "supplier.inquiries": {
+    "title": "Customer Inquiries",
+    "description": "View and respond to messages from farmers and buyers who are interested in your products.",
+    "steps": [
+      { "title": "View new inquiries", "content": "New inquiries appear at the top with a blue dot. Each shows the customer name, product they asked about, and message." },
+      { "title": "Read the full inquiry", "content": "Tap an inquiry to see the full message, including the quantity they need and their location." },
+      { "title": "Reply to the customer", "content": "Type your response in the message field and tap Send. Include availability, pricing, and delivery details." },
+      { "title": "Mark as handled", "content": "After you respond, the inquiry moves to the Responded tab. Mark it as Completed once the deal is done." }
+    ],
+    "tips": [
+      "Reply quickly. Customers often contact multiple suppliers and go with the first response.",
+      "Include your phone number in the reply so the customer can call for urgent orders."
+    ],
+    "faq": [
+      { "question": "Can I receive inquiry notifications on my phone?", "answer": "Yes. Go to More > Notifications and enable Inquiry Alerts. You will get a push notification for each new inquiry." },
+      { "question": "What if I am out of stock on the requested item?", "answer": "Reply honestly and suggest an alternative product if you have one. Customers appreciate transparency." }
+    ]
+  },
+  "supplier.more": {
+    "title": "Settings & More",
+    "description": "Manage your supplier account, shop details, language, notifications, and more.",
+    "steps": [
+      { "title": "Edit shop profile", "content": "Tap Account Settings to update your shop name, address, phone number, and business hours." },
+      { "title": "Change language", "content": "Tap Language to switch between Sinhala, Tamil, and English." },
+      { "title": "Set notifications", "content": "Tap Notifications to control alerts for inquiries, orders, and system updates." },
+      { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out." }
+    ],
+    "tips": [
+      "Complete your shop profile fully. Shops with photos, hours, and location get more trust from farmers.",
+      "Enable inquiry notifications so you never miss a potential sale."
+    ],
+    "faq": [
+      { "question": "Can I add my shop location on the map?", "answer": "Yes. Go to Account Settings > Location and tap Set on Map. Drag the pin to your shop location and save." },
+      { "question": "How do I get the Verified Supplier badge?", "answer": "Complete your profile, upload a business registration document, and maintain a response rate above 80% for 30 days." }
+    ]
+  },
+  "auth.login": {
+    "title": "Log In to GoviHub",
+    "description": "Sign in to your GoviHub account to access your dashboard, listings, and matches.",
+    "steps": [
+      { "title": "Open the login page", "content": "Tap Log In on the home screen or go to the login page from the menu." },
+      { "title": "Enter your credentials", "content": "Type your registered phone number or email and your password." },
+      { "title": "Tap Log In", "content": "Tap the Log In button. If your credentials are correct, you will be taken to your dashboard." }
+    ],
+    "tips": [
+      "Use Remember Me to stay logged in on your personal device.",
+      "If you forgot your password, tap Forgot Password to reset it via SMS or email."
+    ],
+    "faq": [
+      { "question": "I forgot my password. What do I do?", "answer": "Tap Forgot Password on the login page. Enter your phone number or email and follow the instructions to create a new password." },
+      { "question": "Can I log in with Google?", "answer": "Yes. Tap Continue with Google to sign in using your Google account." }
+    ]
+  },
+  "auth.register": {
+    "title": "Create Your Account",
+    "description": "Register for a free GoviHub account to start buying, selling, or supplying agricultural products.",
+    "steps": [
+      { "title": "Open registration", "content": "Tap Create Account on the home screen or the Register link on the login page." },
+      { "title": "Choose your role", "content": "Select Farmer, Buyer, or Supplier. This sets up your dashboard for your needs. You can add more roles later." },
+      { "title": "Fill in your details", "content": "Enter your name, phone number, email, district, and create a password." },
+      { "title": "Verify your phone", "content": "You will receive an SMS with a verification code. Enter the code to confirm your phone number." },
+      { "title": "Complete registration", "content": "Tap Create Account. You will be taken to your new dashboard." }
+    ],
+    "tips": [
+      "Use a phone number you check regularly. Important notifications go there.",
+      "Choose a strong password with at least 8 characters including a number."
+    ],
+    "faq": [
+      { "question": "Is registration free?", "answer": "Yes. Creating a GoviHub account is completely free for all users." },
+      { "question": "Can I change my role later?", "answer": "Yes. You can add additional roles (farmer, buyer, supplier) from the More > Switch Role page at any time." }
+    ]
+  },
+  "common.feedback": {
+    "title": "Submit Feedback",
+    "description": "Help us improve GoviHub. Report bugs, suggest features, or share your experience with us.",
+    "steps": [
+      { "title": "Open feedback form", "content": "Tap the Feedback button in the More page, or tap the Help icon and select Give Feedback." },
+      { "title": "Choose feedback type", "content": "Select Bug Report if something is broken, Feature Request if you want something new, or General Feedback for other comments." },
+      { "title": "Write your feedback", "content": "Describe the issue or suggestion clearly. Include what you were doing when the problem happened." },
+      { "title": "Submit", "content": "Tap Submit Feedback. Your message goes directly to the GoviHub team." }
+    ],
+    "tips": [
+      "For bug reports, include the steps to reproduce the issue. This helps us fix it faster.",
+      "Check the feedback history to see updates on issues you reported previously."
+    ],
+    "faq": [
+      { "question": "Will I get a response to my feedback?", "answer": "We review all feedback. Bug reports receive a status update. Feature requests are considered for future releases." },
+      { "question": "Can I attach screenshots?", "answer": "Yes. Tap Attach Image in the feedback form to include screenshots showing the issue." }
+    ]
+  }
+}

@@ -86,15 +86,15 @@ export default function CropDiagnosisPage() {
     s==="low" ? "green" : s==="medium" ? "gold" : "red";
 
   const tabs = [
-    { key:"diagnose", label:"Diagnose" },
-    { key:"history", label:"History", badge: history.length },
+    { key:"diagnose", label:t("diagnosis.diagnose") },
+    { key:"history", label:t("diagnosis.history"), badge: history.length },
   ];
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-green-700 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("farmer.diagnoseCrop")}</h1>
-        <p className="text-green-200 text-sm mt-1">AI-powered crop disease detection</p>
+        <p className="text-green-200 text-sm mt-1">{t("diagnosis.subtitle")}</p>
       </div>
 
       <Tabs tabs={tabs} defaultTab="diagnose">
@@ -102,7 +102,7 @@ export default function CropDiagnosisPage() {
           <div className="px-4 py-4 space-y-4">
             {/* Image Upload */}
             <Card padding="md">
-              <h2 className="font-semibold text-neutral-800 mb-3">Upload Crop Photo</h2>
+              <h2 className="font-semibold text-neutral-800 mb-3">{t("diagnosis.uploadCropPhoto")}</h2>
               {previewUrl ? (
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -115,8 +115,8 @@ export default function CropDiagnosisPage() {
               ) : (
                 <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-8 cursor-pointer hover:border-green-400 transition-colors">
                   <span className="text-4xl mb-3" aria-hidden="true">📷</span>
-                  <p className="text-sm font-medium text-neutral-700">Take a photo or upload</p>
-                  <p className="text-xs text-neutral-400 mt-1">JPG, PNG up to 10MB</p>
+                  <p className="text-sm font-medium text-neutral-700">{t("diagnosis.takePhotoOrUpload")}</p>
+                  <p className="text-xs text-neutral-400 mt-1">{t("diagnosis.fileFormats")}</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -135,7 +135,7 @@ export default function CropDiagnosisPage() {
                   onClick={handleDiagnose}
                   className="mt-3"
                 >
-                  {processing ? "Analyzing..." : "Diagnose Crop"}
+                  {processing ? t("diagnosis.analyzing") : t("diagnosis.diagnoseCrop")}
                 </Button>
               )}
             </Card>
@@ -145,8 +145,8 @@ export default function CropDiagnosisPage() {
               <Card padding="md">
                 <div className="flex flex-col items-center py-4">
                   <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-3" />
-                  <p className="font-medium text-neutral-700">Analyzing your crop...</p>
-                  <p className="text-sm text-neutral-400 mt-1">This may take a few seconds</p>
+                  <p className="font-medium text-neutral-700">{t("diagnosis.analyzingCrop")}</p>
+                  <p className="text-sm text-neutral-400 mt-1">{t("diagnosis.mayTakeFewSeconds")}</p>
                 </div>
               </Card>
             )}
@@ -157,15 +157,15 @@ export default function CropDiagnosisPage() {
                 <Card padding="md">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
-                      <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Detected Disease</p>
+                      <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">{t("diagnosis.detectedDisease")}</p>
                       <h2 className="font-bold text-neutral-900">{result.disease}</h2>
                     </div>
                     <Badge color={severityBadge(result.severity)} size="sm" dot>
-                      {result.severity} severity
+                      {result.severity} {t("diagnosis.severity")}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-sm text-neutral-500">Confidence:</span>
+                    <span className="text-sm text-neutral-500">{t("diagnosis.confidence")}:</span>
                     <span className={`text-lg font-bold ${confidenceColor(result.confidence)}`}>
                       {result.confidence}%
                     </span>
@@ -177,7 +177,7 @@ export default function CropDiagnosisPage() {
                     </div>
                   </div>
                   <div className="mb-3">
-                    <p className="text-sm font-medium text-neutral-700 mb-1">Advice (English)</p>
+                    <p className="text-sm font-medium text-neutral-700 mb-1">{t("diagnosis.adviceEnglish")}</p>
                     <p className="text-sm text-neutral-600">{result.advice}</p>
                   </div>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
@@ -186,7 +186,7 @@ export default function CropDiagnosisPage() {
                   </div>
                 </Card>
 
-                <Card padding="md" header={<h3 className="font-semibold text-neutral-800 text-sm">Recommended Treatments</h3>}>
+                <Card padding="md" header={<h3 className="font-semibold text-neutral-800 text-sm">{t("diagnosis.recommendedTreatments")}</h3>}>
                   <ul className="space-y-2 mt-2">
                     {result.treatments.map((t, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-neutral-700">
@@ -198,7 +198,7 @@ export default function CropDiagnosisPage() {
 
                 {/* Feedback */}
                 <Card padding="md">
-                  <p className="text-sm font-medium text-neutral-700 mb-3">Was this diagnosis helpful?</p>
+                  <p className="text-sm font-medium text-neutral-700 mb-3">{t("diagnosis.wasHelpful")}</p>
                   <div className="flex gap-3">
                     {(["helpful","not_helpful"] as const).map(fb => (
                       <button
@@ -208,17 +208,17 @@ export default function CropDiagnosisPage() {
                           feedback===fb ? "bg-green-500 text-white border-green-500" : "border-neutral-300 text-neutral-600 hover:border-green-400"
                         }`}
                       >
-                        {fb==="helpful" ? "👍 Helpful" : "👎 Not helpful"}
+                        {fb==="helpful" ? `👍 ${t("diagnosis.helpful")}` : `👎 ${t("diagnosis.notHelpful")}`}
                       </button>
                     ))}
                   </div>
-                  {feedback && <p className="text-xs text-neutral-400 text-center mt-2">Thank you for your feedback!</p>}
+                  {feedback && <p className="text-xs text-neutral-400 text-center mt-2">{t("diagnosis.thankYouFeedback")}</p>}
                 </Card>
               </div>
             )}
 
             {!selectedImage && !result && (
-              <EmptyState icon="🔬" title="Upload a crop photo" description="Take or upload a photo of your crop to detect diseases using AI." />
+              <EmptyState icon="🔬" title={t("diagnosis.uploadAPhoto")} description={t("diagnosis.uploadDescription")} />
             )}
           </div>
         ) : (
@@ -231,7 +231,7 @@ export default function CropDiagnosisPage() {
                 </div>
               ))
             ) : history.length === 0 ? (
-              <EmptyState icon="📂" title="No diagnosis history" description="Your past diagnoses will appear here." />
+              <EmptyState icon="📂" title={t("diagnosis.noHistory")} description={t("diagnosis.noHistoryDesc")} />
             ) : (
               history.map(item => (
                 <Card key={item.id} padding="md">

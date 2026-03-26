@@ -31,12 +31,12 @@ interface Match {
 const STATUS_COLOR: Record<MatchStatus, "gold"|"green"|"gray"|"red"|"blue"|"orange"> = {
   proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"red", cancelled:"gray",
 };
-const ACTIONS: Record<MatchStatus, { label:string; variant:"primary"|"danger"|"secondary" }[]> = {
-  proposed: [{label:"Accept",variant:"primary"},{label:"Decline",variant:"danger"}],
-  farmer_accepted: [{label:"Confirm",variant:"primary"}],
-  buyer_accepted: [{label:"Complete",variant:"secondary"}],
+const ACTION_KEYS: Record<MatchStatus, { key:string; apiAction:string; variant:"primary"|"danger"|"secondary" }[]> = {
+  proposed: [{key:"accept",apiAction:"accept",variant:"primary"},{key:"decline",apiAction:"decline",variant:"danger"}],
+  farmer_accepted: [{key:"confirm",apiAction:"confirm",variant:"primary"}],
+  buyer_accepted: [{key:"complete",apiAction:"complete",variant:"secondary"}],
   in_transit: [],
-  disputed: [{label:"Respond",variant:"primary"}],
+  disputed: [{key:"respond",apiAction:"respond",variant:"primary"}],
   cancelled: [],
 };
 
@@ -80,9 +80,9 @@ export default function BuyerMatchesPage() {
 
   const allStatuses: MatchStatus[] = ["proposed","farmer_accepted","buyer_accepted","in_transit","disputed","cancelled"];
   const tabs = [
-    { key:"all", label:"All", badge: matches.length },
+    { key:"all", label:t("matches.all"), badge: matches.length },
     ...allStatuses.map(s => ({
-      key: s, label: formatStatus(s),
+      key: s, label: t(`matches.status_${s}`),
       badge: matches.filter(m=>m.status===s).length,
     })),
   ];
@@ -91,7 +91,7 @@ export default function BuyerMatchesPage() {
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-amber-600 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("buyer.viewMatches")}</h1>
-        <p className="text-amber-100 text-sm mt-1">{matches.length} total matches</p>
+        <p className="text-amber-100 text-sm mt-1">{matches.length} {t("matches.totalMatches")}</p>
       </div>
 
       <Tabs tabs={tabs} defaultTab="all">
@@ -106,7 +106,7 @@ export default function BuyerMatchesPage() {
                   </div>
                 ))
               ) : filtered.length===0 ? (
-                <EmptyState icon="🤝" title="No matches here" description="Matches appear when farmers match your demands." />
+                <EmptyState icon="🤝" title={t("matches.noMatchesHere")} description={t("matches.matchesAppearBuyer")} />
               ) : (
                 filtered.map(match => (
                   <Card key={match.id} padding="md">
@@ -117,22 +117,22 @@ export default function BuyerMatchesPage() {
                           <Badge color={STATUS_COLOR[match.status]} size="sm" dot>{formatStatus(match.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
-                          Score: {Math.round(match.score * 100)}% · {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : 'Price TBD'}
+                          {t("matches.score")}: {Math.round(match.score * 100)}% · {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : t("matches.priceTBD")}
                         </p>
                         <p className="text-xs text-neutral-400 mt-1">{match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg · ` : ''}{new Date(match.created_at).toLocaleDateString()}</p>
                       </div>
                       <div className="text-center shrink-0 bg-neutral-50 rounded-xl px-3 py-2">
                         <div className={`text-2xl font-bold ${scoreColor(Math.round(match.score * 100))}`}>{Math.round(match.score * 100)}</div>
-                        <p className="text-[10px] text-neutral-400">Match %</p>
+                        <p className="text-[10px] text-neutral-400">{t("matches.matchPercent")}</p>
                       </div>
                     </div>
-                    {ACTIONS[match.status].length > 0 && (
+                    {ACTION_KEYS[match.status].length > 0 && (
                       <div className="flex gap-2 pt-3 border-t border-neutral-100">
-                        {ACTIONS[match.status].map(({label,variant}) => (
-                          <Button key={label} variant={variant} size="sm"
-                            loading={actionLoading===`${match.id}-${label}`}
-                            onClick={() => handleAction(match.id, label)}>
-                            {label}
+                        {ACTION_KEYS[match.status].map(({key, apiAction, variant}) => (
+                          <Button key={key} variant={variant} size="sm"
+                            loading={actionLoading===`${match.id}-${apiAction}`}
+                            onClick={() => handleAction(match.id, apiAction)}>
+                            {t(`matches.${key}`)}
                           </Button>
                         ))}
                       </div>

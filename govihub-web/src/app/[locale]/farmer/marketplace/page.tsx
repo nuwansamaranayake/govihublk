@@ -26,13 +26,13 @@ interface Supplier {
 }
 
 
-const CATEGORIES: { key: Category; label: string; icon: string }[] = [
-  { key:"all", label:"All", icon:"🏪" },
-  { key:"fertilizer", label:"Fertilizer", icon:"🌿" },
-  { key:"seeds", label:"Seeds", icon:"🌱" },
-  { key:"pesticide", label:"Pesticide", icon:"🧪" },
-  { key:"equipment", label:"Equipment", icon:"🚜" },
-  { key:"irrigation", label:"Irrigation", icon:"💧" },
+const CATEGORY_KEYS: { key: Category; labelKey: string; icon: string }[] = [
+  { key:"all", labelKey:"marketplace.catAll", icon:"🏪" },
+  { key:"fertilizer", labelKey:"marketplace.catFertilizer", icon:"🌿" },
+  { key:"seeds", labelKey:"marketplace.catSeeds", icon:"🌱" },
+  { key:"pesticide", labelKey:"marketplace.catPesticide", icon:"🧪" },
+  { key:"equipment", labelKey:"marketplace.catEquipment", icon:"🚜" },
+  { key:"irrigation", labelKey:"marketplace.catIrrigation", icon:"💧" },
 ];
 
 export default function FarmerMarketplacePage() {
@@ -69,9 +69,9 @@ export default function FarmerMarketplacePage() {
     .filter((s) => category === "all" || s.category === category)
     .sort((a, b) => a.distance - b.distance);
 
-  const tabs = CATEGORIES.map((c) => ({
+  const tabs = CATEGORY_KEYS.map((c) => ({
     key: c.key,
-    label: c.label,
+    label: t(c.labelKey),
     badge:
       c.key === "all"
         ? searchFiltered.length
@@ -82,13 +82,13 @@ export default function FarmerMarketplacePage() {
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-green-700 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("nav.marketplace")}</h1>
-        <p className="text-green-200 text-sm mt-1">Find suppliers near you</p>
+        <p className="text-green-200 text-sm mt-1">{t("marketplace.findSuppliers")}</p>
       </div>
 
       {/* Search */}
       <div className="px-4 py-3 bg-white border-b border-neutral-200">
         <Input
-          placeholder="Search suppliers..."
+          placeholder={t("marketplace.searchSuppliers")}
           value={search}
           onChange={e => setSearch(e.target.value)}
           leftIcon={<span>🔍</span>}
@@ -105,7 +105,7 @@ export default function FarmerMarketplacePage() {
                 </div>
               ))
             ) : filtered.length === 0 ? (
-              <EmptyState icon="🏪" title="No suppliers found" description="Try a different category or search term." />
+              <EmptyState icon="🏪" title={t("marketplace.noSuppliersFound")} description={t("marketplace.tryDifferent")} />
             ) : (
               filtered.map(supplier => (
                 <Card key={supplier.id} padding="md">
@@ -114,7 +114,7 @@ export default function FarmerMarketplacePage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-neutral-900 text-sm">{supplier.name}</h3>
                         {supplier.verified && (
-                          <Badge color="green" size="sm">✓ Verified</Badge>
+                          <Badge color="green" size="sm">✓ {t("marketplace.verified")}</Badge>
                         )}
                         <Badge color="gray" size="sm">{supplier.category}</Badge>
                       </div>

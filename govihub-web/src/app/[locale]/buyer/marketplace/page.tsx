@@ -28,14 +28,14 @@ interface SupplierProduct {
 }
 
 
-const CATEGORIES: { key: Category; label: string; icon: string }[] = [
-  { key:"all", label:"All", icon:"🏪" },
-  { key:"fertilizer", label:"Fertilizer", icon:"🌿" },
-  { key:"seeds", label:"Seeds", icon:"🌱" },
-  { key:"pesticide", label:"Pesticide", icon:"🧪" },
-  { key:"equipment", label:"Equipment", icon:"🚜" },
-  { key:"transport", label:"Transport", icon:"🚛" },
-  { key:"irrigation", label:"Irrigation", icon:"💧" },
+const CATEGORY_KEYS: { key: Category; labelKey: string; icon: string }[] = [
+  { key:"all", labelKey:"marketplace.catAll", icon:"🏪" },
+  { key:"fertilizer", labelKey:"marketplace.catFertilizer", icon:"🌿" },
+  { key:"seeds", labelKey:"marketplace.catSeeds", icon:"🌱" },
+  { key:"pesticide", labelKey:"marketplace.catPesticide", icon:"🧪" },
+  { key:"equipment", labelKey:"marketplace.catEquipment", icon:"🚜" },
+  { key:"transport", labelKey:"marketplace.catTransport", icon:"🚛" },
+  { key:"irrigation", labelKey:"marketplace.catIrrigation", icon:"💧" },
 ];
 
 const CATEGORY_ICON: Record<string, string> = {
@@ -70,9 +70,9 @@ export default function BuyerMarketplacePage() {
     .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.supplier.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b) => b.rating - a.rating);
 
-  const tabs = CATEGORIES.map(c => ({
+  const tabs = CATEGORY_KEYS.map(c => ({
     key: c.key,
-    label: c.label,
+    label: t(c.labelKey),
     badge: c.key==="all" ? products.length : products.filter(p=>p.category===c.key).length,
   }));
 
@@ -80,13 +80,13 @@ export default function BuyerMarketplacePage() {
     <div className="min-h-screen bg-neutral-50 pb-24">
       <div className="bg-amber-700 px-4 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">{t("nav.marketplace")}</h1>
-        <p className="text-amber-200 text-sm mt-1">Browse supplier products and services</p>
+        <p className="text-amber-200 text-sm mt-1">{t("marketplace.browseProducts")}</p>
       </div>
 
       {/* Search */}
       <div className="px-4 py-3 bg-white border-b border-neutral-200">
         <Input
-          placeholder="Search products, suppliers..."
+          placeholder={t("marketplace.searchProducts")}
           value={search}
           onChange={e => setSearch(e.target.value)}
           leftIcon={<span>🔍</span>}
@@ -103,7 +103,7 @@ export default function BuyerMarketplacePage() {
                 </div>
               ))
             ) : filtered.length === 0 ? (
-              <EmptyState icon="🏪" title="No products found" description="Try a different category or search term." />
+              <EmptyState icon="🏪" title={t("marketplace.noProductsFound")} description={t("marketplace.tryDifferent")} />
             ) : (
               filtered.map(product => (
                 <Card key={product.id} padding="md">
@@ -113,7 +113,7 @@ export default function BuyerMarketplacePage() {
                         <span className="text-base" aria-hidden="true">{CATEGORY_ICON[product.category]}</span>
                         <h3 className="font-semibold text-neutral-900 text-sm">{product.name}</h3>
                         {product.verified && (
-                          <Badge color="green" size="sm">✓ Verified</Badge>
+                          <Badge color="green" size="sm">✓ {t("marketplace.verified")}</Badge>
                         )}
                       </div>
                       <p className="text-xs text-neutral-500 mt-1 line-clamp-2">{product.description}</p>

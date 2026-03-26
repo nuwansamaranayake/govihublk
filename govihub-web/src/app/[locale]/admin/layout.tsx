@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import Avatar from "@/components/ui/Avatar";
+import { HelpPanel } from "@/components/ui/HelpPanel";
 
 interface SideNavItem {
   href: string;
@@ -28,12 +29,26 @@ function NavIcon({ d }: { d: string }) {
   );
 }
 
+const adminHelpKeyMap: Record<string, string> = {
+  '/admin/dashboard': 'admin.dashboard',
+  '/admin/users': 'admin.users',
+  '/admin/listings': 'admin.listings',
+  '/admin/matches': 'admin.matches',
+  '/admin/disputes': 'admin.disputes',
+  '/admin/feedback': 'admin.feedback',
+  '/admin/analytics': 'admin.analytics',
+  '/admin/settings': 'admin.settings',
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const pathWithoutLocale = pathname.replace(/^\/(en|si|ta)/, '');
+  const helpKey = adminHelpKeyMap[pathWithoutLocale] || '';
 
   const base = `/${locale}/admin`;
 
@@ -177,11 +192,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </svg>
           </button>
           <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="ml-3 rounded-lg" />
-          <span className="ml-2 font-bold text-primary-600">GoviHub Admin</span>
+          <span className="ml-2 font-bold text-primary-600 flex-1">GoviHub Admin</span>
+          {helpKey && (
+            <button
+              onClick={() => setShowHelp(true)}
+              className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold hover:bg-green-200 transition-colors"
+              aria-label="Help"
+            >
+              ?
+            </button>
+          )}
         </div>
 
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
+
+      {/* Help panel */}
+      {showHelp && helpKey && (
+        <HelpPanel
+          pageKey={helpKey}
+          locale={locale as "en" | "si"}
+          onClose={() => setShowHelp(false)}
+        />
+      )}
     </div>
   );
 }

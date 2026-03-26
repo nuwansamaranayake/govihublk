@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import { HelpPanel } from "./HelpPanel";
 
 interface TopBarProps {
   title?: string;
@@ -12,6 +13,7 @@ interface TopBarProps {
   rightActions?: React.ReactNode;
   transparent?: boolean;
   className?: string;
+  helpKey?: string;
 }
 
 export function TopBar({
@@ -22,8 +24,12 @@ export function TopBar({
   rightActions,
   transparent = false,
   className = "",
+  helpKey,
 }: TopBarProps) {
   const router = useRouter();
+  const params = useParams();
+  const locale = ((params?.locale as string) || "en") as "en" | "si";
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleBack = () => {
     if (onBack) {
@@ -80,8 +86,26 @@ export function TopBar({
 
       {/* Right slot */}
       <div className="flex items-center gap-1 min-w-[40px] justify-end">
+        {helpKey && (
+          <button
+            onClick={() => setShowHelp(true)}
+            className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold hover:bg-green-200 transition-colors"
+            aria-label="Help"
+          >
+            ?
+          </button>
+        )}
         {rightActions}
       </div>
+
+      {/* Help panel */}
+      {showHelp && helpKey && (
+        <HelpPanel
+          pageKey={helpKey}
+          locale={locale}
+          onClose={() => setShowHelp(false)}
+        />
+      )}
     </header>
   );
 }

@@ -1,0 +1,572 @@
+{
+  "farmer.dashboard": {
+    "title": "Farmer Dashboard",
+    "description": "Your central hub for managing your farming activities, viewing market prices, and tracking your listings.",
+    "steps": [
+      {
+        "title": "View Market Prices",
+        "content": "The top section shows current market prices for your crops. Tap any crop to see price trends and forecasts."
+      },
+      {
+        "title": "Check Your Listings",
+        "content": "See your active produce listings and their current status. Green means active, yellow means pending review."
+      },
+      {
+        "title": "Review Matches",
+        "content": "New buyer matches appear as notifications. Tap to see buyer details and respond to their interest."
+      }
+    ],
+    "tips": [
+      "Keep your listings updated with accurate quantities to get better buyer matches.",
+      "Check market prices daily to set competitive prices for your produce."
+    ],
+    "faq": [
+      {
+        "question": "How do I update my crop prices?",
+        "answer": "Go to Listings, tap the listing you want to update, then tap Edit Price. Your new price will be visible to buyers immediately."
+      },
+      {
+        "question": "Why am I not getting matches?",
+        "answer": "Make sure your listings are active, your location is set correctly, and your prices are competitive with market rates."
+      }
+    ]
+  },
+  "farmer.listings": {
+    "title": "My Listings",
+    "description": "Create and manage your produce listings. Buyers can discover your products through the marketplace.",
+    "steps": [
+      {
+        "title": "Create a New Listing",
+        "content": "Tap the + button to add a new produce listing. Fill in the crop type, quantity, price, and harvest date."
+      },
+      {
+        "title": "Add Photos",
+        "content": "Upload clear photos of your produce. Listings with photos get 3x more buyer interest."
+      },
+      {
+        "title": "Set Your Price",
+        "content": "Enter your asking price per kilogram. You can see the current market rate for reference."
+      },
+      {
+        "title": "Publish",
+        "content": "Review your listing details and tap Publish. Your listing will be visible to buyers in your area."
+      }
+    ],
+    "tips": [
+      "Add at least 2 photos to your listing for better visibility.",
+      "Set harvest dates accurately so buyers can plan their purchases.",
+      "Use the market price reference to set competitive prices."
+    ],
+    "faq": [
+      {
+        "question": "Can I edit a listing after publishing?",
+        "answer": "Yes, tap the listing and select Edit. You can update price, quantity, and photos at any time."
+      },
+      {
+        "question": "How long do listings stay active?",
+        "answer": "Listings remain active until you mark them as sold or until the harvest date passes."
+      }
+    ]
+  },
+  "farmer.matches": {
+    "title": "Buyer Matches",
+    "description": "View and manage buyer matches for your produce listings. GoviHub automatically connects you with interested buyers.",
+    "steps": [
+      {
+        "title": "Review Match Details",
+        "content": "Each match shows the buyer's name, quantity needed, and offered price. Tap to see full details."
+      },
+      {
+        "title": "Accept or Negotiate",
+        "content": "You can accept a match directly or send a counter-offer with your preferred terms."
+      },
+      {
+        "title": "Confirm Delivery",
+        "content": "Once agreed, confirm the delivery date and location with the buyer."
+      }
+    ],
+    "tips": [
+      "Respond to matches quickly - buyers often contact multiple farmers.",
+      "Check the buyer's rating before accepting a match."
+    ],
+    "faq": [
+      {
+        "question": "What happens after I accept a match?",
+        "answer": "The buyer will be notified and you'll both receive contact details to arrange delivery."
+      },
+      {
+        "question": "Can I decline a match?",
+        "answer": "Yes, tap the match and select Decline. You can optionally provide a reason."
+      }
+    ]
+  },
+  "farmer.diagnosis": {
+    "title": "Crop Diagnosis",
+    "description": "Use AI-powered diagnosis to identify crop diseases and pests. Take a photo and get instant recommendations.",
+    "steps": [
+      {
+        "title": "Take a Photo",
+        "content": "Tap the camera button and photograph the affected part of your crop. Ensure good lighting and focus."
+      },
+      {
+        "title": "Select Crop Type",
+        "content": "Choose the type of crop from the dropdown to improve diagnosis accuracy."
+      },
+      {
+        "title": "Get Results",
+        "content": "The AI will analyze your photo and provide a diagnosis with treatment recommendations."
+      }
+    ],
+    "tips": [
+      "Take close-up photos of affected leaves or stems for better diagnosis accuracy.",
+      "Include both healthy and affected parts in the photo for comparison.",
+      "Use the diagnosis history to track recurring issues."
+    ],
+    "faq": [
+      {
+        "question": "How accurate is the AI diagnosis?",
+        "answer": "The AI provides a confidence score with each diagnosis. For critical issues, we recommend consulting a local agricultural officer."
+      },
+      {
+        "question": "Can I save diagnosis results?",
+        "answer": "Yes, all diagnoses are automatically saved in your history for future reference."
+      }
+    ]
+  },
+  "farmer.advisory": {
+    "title": "Farm Advisory",
+    "description": "Get personalized farming advice based on your location, crops, and weather conditions.",
+    "steps": [
+      {
+        "title": "Set Your Farm Profile",
+        "content": "Enter your farm details including location, soil type, and current crops for personalized advice."
+      },
+      {
+        "title": "Browse Advisories",
+        "content": "View weather alerts, pest warnings, and seasonal farming tips relevant to your area."
+      },
+      {
+        "title": "Ask Questions",
+        "content": "Use the chat feature to ask specific farming questions and get expert guidance."
+      }
+    ],
+    "tips": [
+      "Enable notifications to receive timely weather and pest alerts.",
+      "Check the advisory section before each planting season for best practices."
+    ],
+    "faq": [
+      {
+        "question": "Are the advisories specific to my area?",
+        "answer": "Yes, advisories are tailored to your registered district and the crops you grow."
+      }
+    ]
+  },
+  "farmer.marketplace": {
+    "title": "Marketplace",
+    "description": "Browse supplies, equipment, and services available from verified suppliers in your area.",
+    "steps": [
+      {
+        "title": "Search Products",
+        "content": "Use the search bar or browse categories to find fertilizers, seeds, tools, and equipment."
+      },
+      {
+        "title": "Compare Prices",
+        "content": "View prices from multiple suppliers and check ratings before purchasing."
+      },
+      {
+        "title": "Place an Order",
+        "content": "Select the quantity needed and confirm your order. The supplier will arrange delivery."
+      }
+    ],
+    "tips": [
+      "Compare prices from multiple suppliers to get the best deal.",
+      "Check supplier ratings and reviews before ordering."
+    ],
+    "faq": [
+      {
+        "question": "How do I pay for marketplace orders?",
+        "answer": "Payment is arranged directly with the supplier. GoviHub facilitates the connection but does not process payments."
+      }
+    ]
+  },
+  "farmer.more": {
+    "title": "More Options",
+    "description": "Access your profile, settings, language preferences, and support options.",
+    "steps": [
+      {
+        "title": "Edit Profile",
+        "content": "Update your name, phone number, farm location, and the crops you grow."
+      },
+      {
+        "title": "Change Language",
+        "content": "Switch between English and Sinhala using the language toggle."
+      },
+      {
+        "title": "Get Support",
+        "content": "Contact our support team or browse help articles for assistance."
+      }
+    ],
+    "tips": [
+      "Keep your profile updated to receive the most relevant matches and advisories."
+    ],
+    "faq": [
+      {
+        "question": "How do I change my phone number?",
+        "answer": "Go to Edit Profile, update your phone number, and verify it with the OTP sent to the new number."
+      }
+    ]
+  },
+  "buyer.dashboard": {
+    "title": "Buyer Dashboard",
+    "description": "Overview of your buying activity, active demands, and matched farmer listings.",
+    "steps": [
+      {
+        "title": "View Active Demands",
+        "content": "See your current purchase demands and how many farmer matches each has received."
+      },
+      {
+        "title": "Check New Matches",
+        "content": "Review newly matched farmers who have produce meeting your requirements."
+      },
+      {
+        "title": "Track Orders",
+        "content": "Monitor the status of your confirmed purchases and upcoming deliveries."
+      }
+    ],
+    "tips": [
+      "Create specific demands with clear quantity and quality requirements for better matches.",
+      "Respond to farmer matches promptly to secure the best produce."
+    ],
+    "faq": [
+      {
+        "question": "How are matches generated?",
+        "answer": "GoviHub uses AI to match your demand requirements with farmer listings based on crop type, quantity, location, and price."
+      }
+    ]
+  },
+  "buyer.demands": {
+    "title": "My Demands",
+    "description": "Create and manage your produce purchase demands. Farmers will be matched to your requirements.",
+    "steps": [
+      {
+        "title": "Create a Demand",
+        "content": "Tap + to specify what produce you need, the quantity, your budget, and preferred delivery dates."
+      },
+      {
+        "title": "Set Quality Requirements",
+        "content": "Specify any quality grades, certifications, or special requirements."
+      },
+      {
+        "title": "Review Matches",
+        "content": "As farmers match your demand, review their offers and select the best fit."
+      }
+    ],
+    "tips": [
+      "Be flexible with delivery dates to get more matches.",
+      "Set a realistic price range based on current market prices."
+    ],
+    "faq": [
+      {
+        "question": "Can I have multiple active demands?",
+        "answer": "Yes, you can create as many demands as you need for different crops or requirements."
+      }
+    ]
+  },
+  "buyer.matches": {
+    "title": "Farmer Matches",
+    "description": "View farmers matched to your demands and manage your connections.",
+    "steps": [
+      {
+        "title": "Review Farmer Profiles",
+        "content": "Check each farmer's rating, location, and available produce before connecting."
+      },
+      {
+        "title": "Send an Offer",
+        "content": "Send your offer with the quantity and price you're willing to pay."
+      },
+      {
+        "title": "Confirm Deal",
+        "content": "Once both parties agree, confirm the deal and arrange logistics."
+      }
+    ],
+    "tips": [
+      "Farmers closer to your location mean lower transport costs.",
+      "Building relationships with reliable farmers leads to consistent supply."
+    ],
+    "faq": [
+      {
+        "question": "How do I rate a farmer?",
+        "answer": "After a completed transaction, you'll receive a prompt to rate your experience."
+      }
+    ]
+  },
+  "buyer.marketplace": {
+    "title": "Marketplace",
+    "description": "Browse all available produce listings from farmers across the platform.",
+    "steps": [
+      {
+        "title": "Browse Listings",
+        "content": "View all available produce sorted by freshness, price, or proximity to your location."
+      },
+      {
+        "title": "Filter Results",
+        "content": "Use filters to narrow down by crop type, price range, quantity, and location."
+      },
+      {
+        "title": "Contact Farmer",
+        "content": "Tap a listing to view details and send an inquiry to the farmer."
+      }
+    ],
+    "tips": [
+      "Use location filters to find farmers near your delivery points.",
+      "Check listing photos to assess produce quality before contacting."
+    ],
+    "faq": [
+      {
+        "question": "What is the difference between Demands and Marketplace?",
+        "answer": "Demands let farmers come to you based on your requirements. Marketplace lets you browse and find specific farmer listings directly."
+      }
+    ]
+  },
+  "buyer.more": {
+    "title": "More Options",
+    "description": "Manage your profile, business details, and application settings.",
+    "steps": [
+      {
+        "title": "Business Profile",
+        "content": "Update your business name, registration details, and delivery addresses."
+      },
+      {
+        "title": "Notification Settings",
+        "content": "Configure which alerts you want to receive - new matches, price changes, etc."
+      }
+    ],
+    "tips": [
+      "Complete your business profile to build trust with farmers."
+    ],
+    "faq": []
+  },
+  "supplier.dashboard": {
+    "title": "Supplier Dashboard",
+    "description": "Manage your agricultural supply business - track listings, orders, and customer inquiries.",
+    "steps": [
+      {
+        "title": "View Active Listings",
+        "content": "See all your current product listings and their performance metrics."
+      },
+      {
+        "title": "Check Inquiries",
+        "content": "Review new inquiries from farmers interested in your products."
+      },
+      {
+        "title": "Monitor Sales",
+        "content": "Track your sales performance and popular products."
+      }
+    ],
+    "tips": [
+      "Keep stock quantities updated to avoid order cancellations.",
+      "Respond to inquiries within 24 hours for best conversion."
+    ],
+    "faq": [
+      {
+        "question": "How do I boost my listing visibility?",
+        "answer": "Ensure your listings have clear photos, accurate descriptions, and competitive prices."
+      }
+    ]
+  },
+  "supplier.listings": {
+    "title": "Product Listings",
+    "description": "Create and manage your supply product listings - fertilizers, seeds, tools, and equipment.",
+    "steps": [
+      {
+        "title": "Add a Product",
+        "content": "Tap + to create a new listing. Include product name, category, price, and availability."
+      },
+      {
+        "title": "Upload Images",
+        "content": "Add high-quality product photos. Include packaging details and brand information."
+      },
+      {
+        "title": "Set Pricing",
+        "content": "Enter your price and any bulk discount tiers you offer."
+      }
+    ],
+    "tips": [
+      "Offer bulk pricing tiers to attract larger orders from commercial farmers.",
+      "Keep product descriptions detailed and accurate."
+    ],
+    "faq": [
+      {
+        "question": "Can I import products in bulk?",
+        "answer": "Currently, products need to be added individually. Bulk import is coming in a future update."
+      }
+    ]
+  },
+  "supplier.inquiries": {
+    "title": "Customer Inquiries",
+    "description": "View and respond to inquiries from farmers about your products.",
+    "steps": [
+      {
+        "title": "Review Inquiries",
+        "content": "Each inquiry shows the farmer's name, product of interest, and quantity needed."
+      },
+      {
+        "title": "Respond",
+        "content": "Reply with availability, pricing, and delivery options."
+      },
+      {
+        "title": "Close the Sale",
+        "content": "Once the farmer confirms, mark the inquiry as converted."
+      }
+    ],
+    "tips": [
+      "Quick response times lead to higher conversion rates.",
+      "Offer delivery options to increase your competitive advantage."
+    ],
+    "faq": []
+  },
+  "supplier.more": {
+    "title": "More Options",
+    "description": "Manage your supplier profile, business details, and settings.",
+    "steps": [
+      {
+        "title": "Business Profile",
+        "content": "Update your company details, contact information, and delivery areas."
+      }
+    ],
+    "tips": [
+      "Add your delivery coverage areas to help farmers find you."
+    ],
+    "faq": []
+  },
+  "admin.dashboard": {
+    "title": "Admin Dashboard",
+    "description": "System-wide overview of GoviHub platform metrics, user activity, and health indicators.",
+    "steps": [
+      {
+        "title": "Monitor KPIs",
+        "content": "View key platform metrics including active users, total listings, and match success rates."
+      },
+      {
+        "title": "Review Alerts",
+        "content": "Check system alerts for issues requiring attention - flagged content, disputes, etc."
+      }
+    ],
+    "tips": [
+      "Review the dashboard daily to catch issues early."
+    ],
+    "faq": []
+  },
+  "admin.users": {
+    "title": "User Management",
+    "description": "View, search, and manage all platform users - farmers, buyers, and suppliers.",
+    "steps": [
+      {
+        "title": "Search Users",
+        "content": "Use the search bar to find users by name, email, or phone number."
+      },
+      {
+        "title": "View User Profile",
+        "content": "Tap a user to see their full profile, activity history, and account status."
+      },
+      {
+        "title": "Manage Account",
+        "content": "Suspend, verify, or update user roles as needed."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.listings": {
+    "title": "Listings Management",
+    "description": "Review and moderate all produce and supply listings on the platform.",
+    "steps": [
+      {
+        "title": "Filter Listings",
+        "content": "Use filters to view listings by status, type, or flagged content."
+      },
+      {
+        "title": "Review Flagged",
+        "content": "Check flagged listings for policy violations and take appropriate action."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.matches": {
+    "title": "Match Management",
+    "description": "Monitor and manage the AI matching system performance and outcomes.",
+    "steps": [
+      {
+        "title": "View Match Stats",
+        "content": "See match success rates, average response times, and conversion metrics."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.disputes": {
+    "title": "Dispute Resolution",
+    "description": "Review and resolve disputes between buyers and sellers on the platform.",
+    "steps": [
+      {
+        "title": "Review Dispute",
+        "content": "Read both parties' claims and supporting evidence."
+      },
+      {
+        "title": "Make Decision",
+        "content": "Issue a resolution based on platform policies and evidence provided."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.feedback": {
+    "title": "User Feedback",
+    "description": "View and analyze user feedback submissions to improve the platform.",
+    "steps": [
+      {
+        "title": "Browse Feedback",
+        "content": "View all user feedback sorted by date, type, or sentiment."
+      },
+      {
+        "title": "Respond",
+        "content": "Reply to feedback to let users know their input is valued."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.analytics": {
+    "title": "Platform Analytics",
+    "description": "Deep-dive analytics on platform usage, growth, and performance metrics.",
+    "steps": [
+      {
+        "title": "Select Date Range",
+        "content": "Choose the time period for your analysis using the date picker."
+      },
+      {
+        "title": "Explore Metrics",
+        "content": "Navigate between different metric categories: Users, Listings, Matches, Revenue."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  },
+  "admin.settings": {
+    "title": "Platform Settings",
+    "description": "Configure platform-wide settings, feature flags, and system parameters.",
+    "steps": [
+      {
+        "title": "General Settings",
+        "content": "Update platform name, description, and contact information."
+      },
+      {
+        "title": "Feature Flags",
+        "content": "Enable or disable platform features for gradual rollout."
+      }
+    ],
+    "tips": [],
+    "faq": []
+  }
+}

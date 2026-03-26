@@ -13,6 +13,7 @@ export { EmptyState } from "./EmptyState";
 export { Tabs } from "./Tabs";
 export { BottomNav } from "./BottomNav";
 export { TopBar } from "./TopBar";
+export { HelpPanel } from "./HelpPanel";
 export { SearchBar } from "./SearchBar";
 export { ListItem } from "./ListItem";
 export { StatusBadge } from "./StatusBadge";

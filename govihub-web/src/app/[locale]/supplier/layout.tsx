@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import BottomNav, { BottomNavItem } from "@/components/ui/BottomNav";
 import TopBar from "@/components/ui/TopBar";
@@ -83,12 +83,22 @@ function MoreIcon() {
   );
 }
 
+const supplierHelpKeyMap: Record<string, string> = {
+  '/supplier/dashboard': 'supplier.dashboard',
+  '/supplier/listings': 'supplier.listings',
+  '/supplier/inquiries': 'supplier.inquiries',
+  '/supplier/more': 'supplier.more',
+};
+
 export default function SupplierLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
   const params = useParams();
+  const pathname = usePathname();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/supplier`;
+  const pathWithoutLocale = pathname.replace(/^\/(en|si|ta)/, '');
+  const helpKey = supplierHelpKeyMap[pathWithoutLocale] || '';
 
   const navItems: BottomNavItem[] = [
     { href: base + "/dashboard", label: t("home"), icon: (a) => <HomeIcon active={a} /> },
@@ -100,6 +110,7 @@ export default function SupplierLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex flex-col min-h-dvh bg-neutral-50">
       <TopBar
+        helpKey={helpKey}
         leftAction={
           <span className="flex items-center gap-2">
             <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="rounded-lg" />

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import BottomNav, { BottomNavItem } from "@/components/ui/BottomNav";
 import TopBar from "@/components/ui/TopBar";
@@ -114,12 +114,25 @@ function MoreIcon({ active }: { active: boolean }) {
   );
 }
 
+const farmerHelpKeyMap: Record<string, string> = {
+  '/farmer/dashboard': 'farmer.dashboard',
+  '/farmer/listings': 'farmer.listings',
+  '/farmer/matches': 'farmer.matches',
+  '/farmer/diagnosis': 'farmer.diagnosis',
+  '/farmer/advisory': 'farmer.advisory',
+  '/farmer/marketplace': 'farmer.marketplace',
+  '/farmer/more': 'farmer.more',
+};
+
 export default function FarmerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
   const params = useParams();
+  const pathname = usePathname();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/farmer`;
+  const pathWithoutLocale = pathname.replace(/^\/(en|si|ta)/, '');
+  const helpKey = farmerHelpKeyMap[pathWithoutLocale] || '';
 
   const navItems: BottomNavItem[] = [
     { href: base + "/dashboard", label: t("home"), icon: (a) => <HomeIcon active={a} /> },
@@ -132,6 +145,7 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex flex-col min-h-dvh bg-neutral-50">
       <TopBar
+        helpKey={helpKey}
         leftAction={
           <span className="flex items-center gap-2">
             <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="rounded-lg" />

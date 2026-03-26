@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import BottomNav, { BottomNavItem } from "@/components/ui/BottomNav";
 import TopBar from "@/components/ui/TopBar";
@@ -106,12 +106,23 @@ function MoreIcon() {
   );
 }
 
+const buyerHelpKeyMap: Record<string, string> = {
+  '/buyer/dashboard': 'buyer.dashboard',
+  '/buyer/demands': 'buyer.demands',
+  '/buyer/matches': 'buyer.matches',
+  '/buyer/marketplace': 'buyer.marketplace',
+  '/buyer/more': 'buyer.more',
+};
+
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
   const params = useParams();
+  const pathname = usePathname();
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/buyer`;
+  const pathWithoutLocale = pathname.replace(/^\/(en|si|ta)/, '');
+  const helpKey = buyerHelpKeyMap[pathWithoutLocale] || '';
 
   const navItems: BottomNavItem[] = [
     { href: base + "/dashboard", label: t("home"), icon: (a) => <HomeIcon active={a} /> },
@@ -124,6 +135,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex flex-col min-h-dvh bg-neutral-50">
       <TopBar
+        helpKey={helpKey}
         leftAction={
           <span className="flex items-center gap-2">
             <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={32} height={32} className="rounded-lg" />
