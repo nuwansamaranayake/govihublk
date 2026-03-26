@@ -21,10 +21,8 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     logger.info("govihub_starting", version="1.0.0", env=settings.APP_ENV)
 
-    # Load CNN model at startup (falls back to placeholder if .pt file is absent)
-    from app.diagnosis.cnn import cnn_model
-    cnn_model.load_model()
-    logger.info("cnn_model_ready", placeholder_mode=cnn_model._placeholder_mode)
+    # Diagnosis now uses Gemini 2.0 Flash via OpenRouter — no CNN model to load.
+    logger.info("diagnosis_engine", model="gemini-2.0-flash-001", note="via OpenRouter")
 
     # Load embedding model for the advisory RAG module.
     # Runs in a thread pool to avoid blocking the event loop during I/O.

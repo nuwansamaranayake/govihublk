@@ -33,6 +33,15 @@ class DiagnosisResponse(BaseModel):
     status: str
     created_at: datetime
 
+    # Gemini Vision fields
+    crop_detected: Optional[str] = None
+    description: Optional[str] = None
+    treatment: Optional[str] = None
+    prevention: Optional[str] = None
+    severity: Optional[str] = None
+    advice_sinhala: Optional[str] = None
+    consult_expert: bool = False
+
     model_config = {"from_attributes": True}
 
 

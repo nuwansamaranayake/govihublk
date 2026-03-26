@@ -24,12 +24,9 @@ _farmer_only = require_role("farmer")
 
 def _to_response(record) -> DiagnosisResponse:
     """Map a CropDiagnosis ORM instance to the full response schema."""
-    top_predictions = None
+    result = record.diagnosis_result or {}
+
     crop_name: Optional[str] = None
-
-    if record.diagnosis_result:
-        top_predictions = record.diagnosis_result.get("top_predictions")
-
     if record.crop:
         crop_name = record.crop.name_en
 
@@ -37,13 +34,21 @@ def _to_response(record) -> DiagnosisResponse:
         id=record.id,
         disease_name=record.disease_name,
         confidence=record.confidence,
-        top_predictions=top_predictions,
+        top_predictions=result.get("top_predictions") if "top_predictions" in result else None,
         treatment_advice=record.treatment_advice,
         language=record.language,
         crop_name=crop_name,
         image_url=record.image_url,
         status=record.status.value,
         created_at=record.created_at,
+        # Gemini Vision fields
+        crop_detected=result.get("crop_detected"),
+        description=result.get("description"),
+        treatment=result.get("treatment"),
+        prevention=result.get("prevention"),
+        severity=result.get("severity"),
+        advice_sinhala=result.get("advice_sinhala"),
+        consult_expert=result.get("consult_expert", False),
     )
 
 
@@ -64,13 +69,15 @@ def _to_brief(record) -> DiagnosisBrief:
     status_code=201,
     summary="Upload crop image for disease diagnosis",
     description=(
-        "Accepts a JPEG or PNG image (≤10 MB) and an optional crop_id. "
-        "Runs CNN inference, generates Sinhala treatment advice, and returns the full diagnosis result."
+        "Accepts a JPEG or PNG image (<=10 MB) and an optional crop_id or crop_type. "
+        "Sends the image to Gemini 2.0 Flash for diagnosis, generates Sinhala treatment advice, "
+        "and returns the full diagnosis result."
     ),
 )
 async def upload_diagnosis(
     image: UploadFile = File(..., description="Crop image (JPEG or PNG, max 10 MB)"),
     crop_id: Optional[UUID] = Form(None, description="Optional crop taxonomy UUID"),
+    crop_type: Optional[str] = Form(None, description="Optional free-text crop name (e.g. 'rice', 'tomato')"),
     current_user=Depends(_farmer_only),
     db: AsyncSession = Depends(get_db),
 ):
@@ -80,6 +87,7 @@ async def upload_diagnosis(
         farmer_id=current_user.id,
         image_file=image,
         crop_id=crop_id,
+        crop_type=crop_type,
     )
     return _to_response(record)
 

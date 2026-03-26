@@ -19,8 +19,7 @@ orjson>=3.9.0
 geoalchemy2>=0.14.0
 pgvector>=0.2.0
 sentence-transformers>=2.3.0
-torch>=2.1.0
-torchvision>=0.16.0
+# torch/torchvision removed — diagnosis now uses Gemini 2.0 Flash via OpenRouter
 scikit-learn>=1.4.0
 numpy>=1.26.0
 firebase-admin>=6.3.0

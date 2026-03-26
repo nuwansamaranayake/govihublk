@@ -1,15 +1,15 @@
-"""GoviHub Diagnosis Tests — Image validation, CNN prediction, confidence routing."""
+"""GoviHub Diagnosis Tests — Gemini Vision diagnosis, confidence routing."""
 
 from __future__ import annotations
 
 import io
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.auth.service import create_access_token
-from app.diagnosis.cnn import CLASS_NAMES, CropDiseaseCNN, cnn_model
+from app.diagnosis.service import DiagnosisService
 
 
 def _auth(token: str) -> dict:
@@ -45,62 +45,41 @@ def _minimal_png_bytes() -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# CNN model unit tests
+# Gemini Vision service unit tests
 # ---------------------------------------------------------------------------
 
-def test_class_names_count():
-    """CNN model should have exactly 38 class labels."""
-    assert len(CLASS_NAMES) == 38
+def test_confidence_classification_high():
+    """Confidence >= 0.70 should classify as 'high'."""
+    svc = DiagnosisService()
+    assert svc._classify_confidence(0.85) == "high"
+    assert svc._classify_confidence(0.70) == "high"
 
 
-def test_class_names_include_rice_diseases():
-    """CLASS_NAMES must include the Sri Lanka-relevant rice diseases."""
-    rice_diseases = [c for c in CLASS_NAMES if c.startswith("Rice___")]
-    assert len(rice_diseases) >= 4
+def test_confidence_classification_medium():
+    """Confidence between 0.40 and 0.70 should classify as 'medium'."""
+    svc = DiagnosisService()
+    assert svc._classify_confidence(0.55) == "medium"
+    assert svc._classify_confidence(0.40) == "medium"
 
 
-def test_class_names_include_tomato_diseases():
-    """CLASS_NAMES must include common tomato diseases."""
-    tomato = [c for c in CLASS_NAMES if c.startswith("Tomato___")]
-    assert len(tomato) >= 5
+def test_confidence_classification_uncertain():
+    """Confidence < 0.40 should classify as 'uncertain'."""
+    svc = DiagnosisService()
+    assert svc._classify_confidence(0.39) == "uncertain"
+    assert svc._classify_confidence(0.0) == "uncertain"
 
 
-def test_placeholder_predict_returns_top3():
-    """Placeholder prediction returns exactly 3 results."""
-    results = CropDiseaseCNN._placeholder_predict()
-    assert len(results) == 3
-
-
-def test_placeholder_predict_confidence_keys():
-    """Each placeholder result has label and confidence keys."""
-    results = CropDiseaseCNN._placeholder_predict()
-    for r in results:
-        assert "label" in r
-        assert "confidence" in r
-
-
-def test_placeholder_confidences_sum_to_less_than_one():
-    """Top-3 placeholder confidences need not sum to 1 (top-k not full softmax)."""
-    results = CropDiseaseCNN._placeholder_predict()
-    total = sum(r["confidence"] for r in results)
-    assert 0.0 < total <= 1.0
-
-
-def test_placeholder_predict_in_placeholder_mode():
-    """In placeholder mode, predict() delegates to _placeholder_predict."""
-    model = CropDiseaseCNN()
-    model._placeholder_mode = True
-
-    results = model.predict(b"fake image bytes")
-    assert len(results) == 3
-    assert results[0]["label"] == "Rice___Leaf_Blast"
-
-
-def test_confidence_ordering():
-    """Predictions should be in descending confidence order."""
-    results = CropDiseaseCNN._placeholder_predict()
-    confs = [r["confidence"] for r in results]
-    assert confs == sorted(confs, reverse=True)
+@pytest.mark.asyncio
+async def test_gemini_mock_response_when_no_api_key():
+    """When OPENROUTER_API_KEY is empty, _call_gemini_vision returns mock."""
+    svc = DiagnosisService()
+    with patch("app.diagnosis.service.settings") as mock_settings:
+        mock_settings.OPENROUTER_API_KEY = ""
+        result = await svc._call_gemini_vision(b"fake image bytes")
+    assert result["disease_detected"] is not None
+    assert "mock" in result["disease_detected"].lower()
+    assert result["confidence_score"] == 0.55
+    assert result["consult_expert"] is True
 
 
 # ---------------------------------------------------------------------------
