@@ -11,5 +11,6 @@ COPY --from=builder /install /usr/local
 COPY . .
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
+RUN mkdir -p /app/uploads/diagnosis && chown -R appuser:appuser /app/uploads
 USER appuser
 CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--access-logfile", "-"]
