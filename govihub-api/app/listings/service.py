@@ -83,7 +83,7 @@ class ListingService:
             )
             await self.db.flush()
 
-        await self.db.refresh(listing, attribute_names=["crop"])
+        await self.db.refresh(listing, ["crop"])
         logger.info("harvest_listing_created", listing_id=str(listing.id), farmer_id=str(farmer_id))
         return listing
 
@@ -274,7 +274,7 @@ class ListingService:
             )
 
         await self.db.flush()
-        await self.db.refresh(listing)
+        await self.db.refresh(listing, ["crop"])
         logger.info("harvest_listing_updated", listing_id=str(listing_id))
         return listing
 
@@ -354,7 +354,8 @@ class ListingService:
             )
             await self.db.flush()
 
-        await self.db.refresh(posting, attribute_names=["crop"])
+<<<<<<< HEAD
+        await self.db.refresh(posting, ["crop"])
         logger.info("demand_posting_created", posting_id=str(posting.id), buyer_id=str(buyer_id))
         return posting
 
@@ -524,7 +525,7 @@ class ListingService:
             )
 
         await self.db.flush()
-        await self.db.refresh(posting)
+        await self.db.refresh(posting, ["crop"])
         logger.info("demand_posting_updated", posting_id=str(posting_id))
         return posting
 
