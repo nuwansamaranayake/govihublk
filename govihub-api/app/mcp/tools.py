@@ -449,7 +449,20 @@ async def _handle_search_farmers(params: dict) -> dict:
     limit = min(int(params.get("limit", 20)), 100)
 
     async with async_session_factory() as session:
-        stmt = text("""
+        # Build query dynamically — asyncpg cannot infer type for NULL params
+        sf_conditions = ["u.role = 'farmer'", "u.is_active = TRUE"]
+        sf_params: dict[str, Any] = {"limit": limit}
+        if district:
+            sf_conditions.append("u.district ILIKE :district")
+            sf_params["district"] = f"%{district}%"
+        if province:
+            sf_conditions.append("u.province ILIKE :province")
+            sf_params["province"] = f"%{province}%"
+        if irrigation_type:
+            sf_conditions.append("fp.irrigation_type ILIKE :irrigation_type")
+            sf_params["irrigation_type"] = f"%{irrigation_type}%"
+
+        stmt = text(f"""
             SELECT
                 u.id,
                 u.name,
@@ -463,21 +476,12 @@ async def _handle_search_farmers(params: dict) -> dict:
                 fp.cooperative
             FROM users u
             LEFT JOIN farmer_profiles fp ON fp.user_id = u.id
-            WHERE u.role = 'farmer'
-              AND u.is_active = TRUE
-              AND (:district IS NULL OR u.district ILIKE :district)
-              AND (:province IS NULL OR u.province ILIKE :province)
-              AND (:irrigation_type IS NULL OR fp.irrigation_type ILIKE :irrigation_type)
+            WHERE {" AND ".join(sf_conditions)}
             ORDER BY u.created_at DESC
             LIMIT :limit
         """)
 
-        result = await session.execute(stmt, {
-            "district": f"%{district}%" if district else None,
-            "province": f"%{province}%" if province else None,
-            "irrigation_type": f"%{irrigation_type}%" if irrigation_type else None,
-            "limit": limit,
-        })
+        result = await session.execute(stmt, sf_params)
         rows = result.mappings().all()
 
         farmers = []
@@ -528,7 +532,26 @@ async def _handle_search_listings(params: dict) -> dict:
 
     async with async_session_factory() as session:
         if listing_type in ("harvest", "both"):
-            stmt = text("""
+            h_conds: list[str] = []
+            h_params: dict[str, Any] = {"limit": limit}
+            if crop:
+                h_conds.append("(ct.name_en ILIKE :crop OR ct.code ILIKE :crop)")
+                h_params["crop"] = f"%{crop}%"
+            if status:
+                h_conds.append("hl.status::text = :status")
+                h_params["status"] = status
+            if district:
+                h_conds.append("u.district ILIKE :district")
+                h_params["district"] = f"%{district}%"
+            if min_qty is not None:
+                h_conds.append("hl.quantity_kg >= :min_qty")
+                h_params["min_qty"] = min_qty
+            if max_price is not None:
+                h_conds.append("hl.price_per_kg <= :max_price")
+                h_params["max_price"] = max_price
+            h_where = ("WHERE " + " AND ".join(h_conds)) if h_conds else ""
+
+            stmt = text(f"""
                 SELECT
                     hl.id,
                     'harvest' AS type,
@@ -546,22 +569,11 @@ async def _handle_search_listings(params: dict) -> dict:
                 FROM harvest_listings hl
                 JOIN crop_taxonomy ct ON ct.id = hl.crop_id
                 JOIN users u ON u.id = hl.farmer_id
-                WHERE (:crop IS NULL OR ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
-                  AND (:status IS NULL OR hl.status::text = :status)
-                  AND (:district IS NULL OR u.district ILIKE :district)
-                  AND (:min_qty IS NULL OR hl.quantity_kg >= :min_qty)
-                  AND (:max_price IS NULL OR hl.price_per_kg <= :max_price)
+                {h_where}
                 ORDER BY hl.created_at DESC
                 LIMIT :limit
             """)
-            r = await session.execute(stmt, {
-                "crop": f"%{crop}%" if crop else None,
-                "status": status,
-                "district": f"%{district}%" if district else None,
-                "min_qty": min_qty,
-                "max_price": max_price,
-                "limit": limit,
-            })
+            r = await session.execute(stmt, h_params)
             harvest_rows = r.mappings().all()
             results["harvest_listings"] = [
                 {
@@ -583,7 +595,26 @@ async def _handle_search_listings(params: dict) -> dict:
             ]
 
         if listing_type in ("demand", "both"):
-            stmt = text("""
+            d_conds: list[str] = []
+            d_params: dict[str, Any] = {"limit": limit}
+            if crop:
+                d_conds.append("(ct.name_en ILIKE :crop OR ct.code ILIKE :crop)")
+                d_params["crop"] = f"%{crop}%"
+            if status:
+                d_conds.append("dp.status::text = :status")
+                d_params["status"] = status
+            if district:
+                d_conds.append("u.district ILIKE :district")
+                d_params["district"] = f"%{district}%"
+            if min_qty is not None:
+                d_conds.append("dp.quantity_kg >= :min_qty")
+                d_params["min_qty"] = min_qty
+            if max_price is not None:
+                d_conds.append("dp.max_price_per_kg <= :max_price")
+                d_params["max_price"] = max_price
+            d_where = ("WHERE " + " AND ".join(d_conds)) if d_conds else ""
+
+            stmt = text(f"""
                 SELECT
                     dp.id,
                     'demand' AS type,
@@ -600,22 +631,11 @@ async def _handle_search_listings(params: dict) -> dict:
                 FROM demand_postings dp
                 JOIN crop_taxonomy ct ON ct.id = dp.crop_id
                 JOIN users u ON u.id = dp.buyer_id
-                WHERE (:crop IS NULL OR ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
-                  AND (:status IS NULL OR dp.status::text = :status)
-                  AND (:district IS NULL OR u.district ILIKE :district)
-                  AND (:min_qty IS NULL OR dp.quantity_kg >= :min_qty)
-                  AND (:max_price IS NULL OR dp.max_price_per_kg <= :max_price)
+                {d_where}
                 ORDER BY dp.created_at DESC
                 LIMIT :limit
             """)
-            r = await session.execute(stmt, {
-                "crop": f"%{crop}%" if crop else None,
-                "status": status,
-                "district": f"%{district}%" if district else None,
-                "min_qty": min_qty,
-                "max_price": max_price,
-                "limit": limit,
-            })
+            r = await session.execute(stmt, d_params)
             demand_rows = r.mappings().all()
             results["demand_postings"] = [
                 {
@@ -653,30 +673,21 @@ async def _handle_get_match_analytics(params: dict) -> dict:
     crop = params.get("crop")
 
     async with async_session_factory() as session:
-        # Status breakdown
-        status_stmt = text("""
-            SELECT m.status, COUNT(*) AS count, AVG(m.score) AS avg_score
-            FROM matches m
-            JOIN harvest_listings hl ON hl.id = m.harvest_id
-            JOIN crop_taxonomy ct ON ct.id = hl.crop_id
-            WHERE m.created_at >= NOW() - INTERVAL ':days days'
-              AND (:crop IS NULL OR ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
-            GROUP BY m.status
-            ORDER BY count DESC
-        """)
+        # Build crop filter dynamically — asyncpg cannot infer type for NULL params
+        ma_crop_cond = "AND (ct.name_en ILIKE :crop OR ct.code ILIKE :crop)" if crop else ""
+        ma_crop_params: dict[str, Any] = {"crop": f"%{crop}%"} if crop else {}
 
-        # Use a safe interpolation approach for the interval
         status_stmt = text(f"""
             SELECT m.status, COUNT(*) AS count, AVG(m.score) AS avg_score
             FROM matches m
             JOIN harvest_listings hl ON hl.id = m.harvest_id
             JOIN crop_taxonomy ct ON ct.id = hl.crop_id
             WHERE m.created_at >= NOW() - INTERVAL '{days} days'
-              AND (:crop IS NULL OR ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
+              {ma_crop_cond}
             GROUP BY m.status
             ORDER BY count DESC
         """)
-        r = await session.execute(status_stmt, {"crop": f"%{crop}%" if crop else None})
+        r = await session.execute(status_stmt, ma_crop_params)
         status_rows = r.mappings().all()
 
         # Top matched crops
@@ -733,6 +744,11 @@ async def _handle_get_price_trends(params: dict) -> dict:
     district = params.get("district")
 
     async with async_session_factory() as session:
+        pt_district_cond = "AND u.district ILIKE :district" if district else ""
+        pt_params: dict[str, Any] = {"crop": f"%{crop}%"}
+        if district:
+            pt_params["district"] = f"%{district}%"
+
         stmt = text(f"""
             SELECT
                 DATE_TRUNC('week', hl.created_at) AS week,
@@ -746,14 +762,11 @@ async def _handle_get_price_trends(params: dict) -> dict:
             WHERE (ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
               AND hl.price_per_kg IS NOT NULL
               AND hl.created_at >= NOW() - INTERVAL '{days} days'
-              AND (:district IS NULL OR u.district ILIKE :district)
+              {pt_district_cond}
             GROUP BY DATE_TRUNC('week', hl.created_at)
             ORDER BY week ASC
         """)
-        r = await session.execute(stmt, {
-            "crop": f"%{crop}%",
-            "district": f"%{district}%" if district else None,
-        })
+        r = await session.execute(stmt, pt_params)
         rows = r.mappings().all()
 
         # Current average
@@ -790,6 +803,11 @@ async def _handle_get_diagnosis_insights(params: dict) -> dict:
     limit = int(params.get("limit", 10))
 
     async with async_session_factory() as session:
+        di_crop_cond = "AND (ct.name_en ILIKE :crop OR ct.code ILIKE :crop)" if crop else ""
+        di_params: dict[str, Any] = {"limit": limit}
+        if crop:
+            di_params["crop"] = f"%{crop}%"
+
         # Top diseases
         disease_stmt = text(f"""
             SELECT
@@ -802,15 +820,12 @@ async def _handle_get_diagnosis_insights(params: dict) -> dict:
             WHERE cd.created_at >= NOW() - INTERVAL '{days} days'
               AND cd.status = 'completed'
               AND cd.disease_name IS NOT NULL
-              AND (:crop IS NULL OR ct.name_en ILIKE :crop OR ct.code ILIKE :crop)
+              {di_crop_cond}
             GROUP BY cd.disease_name, ct.name_en
             ORDER BY count DESC
             LIMIT :limit
         """)
-        r = await session.execute(disease_stmt, {
-            "crop": f"%{crop}%" if crop else None,
-            "limit": limit,
-        })
+        r = await session.execute(disease_stmt, di_params)
         disease_rows = r.mappings().all()
 
         # Feedback distribution
@@ -874,7 +889,15 @@ async def _handle_get_weather_summary(params: dict) -> dict:
     try:
         async with async_session_factory() as session:
             # Try to query weather-type alerts if the alerts table exists
-            stmt = text("""
+            ws_district_cond = "AND a.district ILIKE :district" if district else ""
+            ws_province_cond = "AND a.province ILIKE :province" if province else ""
+            ws_params: dict[str, Any] = {}
+            if district:
+                ws_params["district"] = f"%{district}%"
+            if province:
+                ws_params["province"] = f"%{province}%"
+
+            stmt = text(f"""
                 SELECT
                     a.title,
                     a.message,
@@ -883,16 +906,13 @@ async def _handle_get_weather_summary(params: dict) -> dict:
                     a.metadata
                 FROM alerts a
                 WHERE a.alert_type = 'weather'
-                  AND (:district IS NULL OR a.district ILIKE :district)
-                  AND (:province IS NULL OR a.province ILIKE :province)
+                  {ws_district_cond}
+                  {ws_province_cond}
                   AND a.created_at >= NOW() - INTERVAL '7 days'
                 ORDER BY a.created_at DESC
                 LIMIT 5
             """)
-            r = await session.execute(stmt, {
-                "district": f"%{district}%" if district else None,
-                "province": f"%{province}%" if province else None,
-            })
+            r = await session.execute(stmt, ws_params)
             rows = r.mappings().all()
             advisories = [
                 {
@@ -1025,7 +1045,15 @@ async def _handle_search_knowledge_base(params: dict) -> dict:
     limit = min(int(params.get("limit", 10)), 50)
 
     async with async_session_factory() as session:
-        stmt = text("""
+        kb_cat_cond = "AND kc.category ILIKE :category" if category else ""
+        kb_lang_cond = "AND kc.language = :language" if language else ""
+        kb_params: dict[str, Any] = {"query": query, "limit": limit}
+        if category:
+            kb_params["category"] = f"%{category}%"
+        if language:
+            kb_params["language"] = language
+
+        stmt = text(f"""
             SELECT
                 kc.id,
                 kc.source,
@@ -1040,17 +1068,12 @@ async def _handle_search_knowledge_base(params: dict) -> dict:
                 ) AS rank
             FROM knowledge_chunks kc
             WHERE to_tsvector('english', kc.content) @@ plainto_tsquery('english', :query)
-              AND (:category IS NULL OR kc.category ILIKE :category)
-              AND (:language IS NULL OR kc.language = :language)
+              {kb_cat_cond}
+              {kb_lang_cond}
             ORDER BY rank DESC
             LIMIT :limit
         """)
-        r = await session.execute(stmt, {
-            "query": query,
-            "category": f"%{category}%" if category else None,
-            "language": language,
-            "limit": limit,
-        })
+        r = await session.execute(stmt, kb_params)
         rows = r.mappings().all()
 
         return {
@@ -1163,8 +1186,16 @@ async def _handle_get_supply_chain_overview(params: dict) -> dict:
         r = await session.execute(cat_stmt)
         cat_rows = r.mappings().all()
 
+        sc_cat_cond = "AND sl.category::text = :category" if category else ""
+        sc_dist_cond = "AND u.district ILIKE :district" if district else ""
+        sc_params: dict[str, Any] = {"limit": limit}
+        if category:
+            sc_params["category"] = category
+        if district:
+            sc_params["district"] = f"%{district}%"
+
         # Top suppliers filtered
-        supplier_stmt = text("""
+        supplier_stmt = text(f"""
             SELECT
                 u.id,
                 u.name,
@@ -1176,17 +1207,13 @@ async def _handle_get_supply_chain_overview(params: dict) -> dict:
             JOIN users u ON u.id = sl.supplier_id
             LEFT JOIN supplier_profiles sp ON sp.user_id = u.id
             WHERE sl.status = 'active'
-              AND (:category IS NULL OR sl.category::text = :category)
-              AND (:district IS NULL OR u.district ILIKE :district)
+              {sc_cat_cond}
+              {sc_dist_cond}
             GROUP BY u.id, u.name, u.district, sp.business_name, sp.categories
             ORDER BY active_listings DESC
             LIMIT :limit
         """)
-        r2 = await session.execute(supplier_stmt, {
-            "category": category,
-            "district": f"%{district}%" if district else None,
-            "limit": limit,
-        })
+        r2 = await session.execute(supplier_stmt, sc_params)
         supplier_rows = r2.mappings().all()
 
         return {
@@ -1225,15 +1252,20 @@ async def _handle_govihub_get_registrations(params: dict) -> dict:
     role = params.get("role")
 
     async with async_session_factory() as session:
+        reg_role_cond = "AND role = :role" if role else ""
+        reg_params: dict[str, Any] = {}
+        if role:
+            reg_params["role"] = role
+
         # Individual registrations
         reg_stmt = text(f"""
             SELECT id, name, username, role, district, language, created_at
             FROM users
             WHERE created_at >= NOW() - INTERVAL '{days} days'
-              AND (:role IS NULL OR role = :role)
+              {reg_role_cond}
             ORDER BY created_at DESC
         """)
-        r = await session.execute(reg_stmt, {"role": role})
+        r = await session.execute(reg_stmt, reg_params)
         rows = r.mappings().all()
 
         # Summary by role
@@ -1389,6 +1421,14 @@ async def _handle_govihub_get_feedback(params: dict) -> dict:
     language = params.get("language")
 
     async with async_session_factory() as session:
+        fb_cat_cond = "AND bf.category = :category" if category else ""
+        fb_lang_cond = "AND bf.language = :language" if language else ""
+        fb_params: dict[str, Any] = {}
+        if category:
+            fb_params["category"] = category
+        if language:
+            fb_params["language"] = language
+
         feedback_stmt = text(f"""
             SELECT
                 bf.id,
@@ -1403,14 +1443,11 @@ async def _handle_govihub_get_feedback(params: dict) -> dict:
             FROM beta_feedback bf
             LEFT JOIN users u ON bf.user_id = u.id
             WHERE bf.created_at >= NOW() - INTERVAL '{days} days'
-              AND (:category IS NULL OR bf.category = :category)
-              AND (:language IS NULL OR bf.language = :language)
+              {fb_cat_cond}
+              {fb_lang_cond}
             ORDER BY bf.created_at DESC
         """)
-        r = await session.execute(feedback_stmt, {
-            "category": category,
-            "language": language,
-        })
+        r = await session.execute(feedback_stmt, fb_params)
         rows = r.mappings().all()
 
         # Summary stats
@@ -1537,6 +1574,14 @@ async def _handle_govihub_get_listings_summary(params: dict) -> dict:
     days = int(params.get("days", 30))
 
     async with async_session_factory() as session:
+        ls_status_cond = "AND hl.status::text = :status" if status else ""
+        ls_district_cond = "AND u.district ILIKE :district" if district else ""
+        ls_params: dict[str, Any] = {}
+        if status:
+            ls_params["status"] = status
+        if district:
+            ls_params["district"] = f"%{district}%"
+
         # Harvest listings grouped by crop
         harvest_stmt = text(f"""
             SELECT
@@ -1550,16 +1595,16 @@ async def _handle_govihub_get_listings_summary(params: dict) -> dict:
             JOIN crop_taxonomy ct ON ct.id = hl.crop_id
             JOIN users u ON u.id = hl.farmer_id
             WHERE hl.created_at >= NOW() - INTERVAL '{days} days'
-              AND (:status IS NULL OR hl.status::text = :status)
-              AND (:district IS NULL OR u.district ILIKE :district)
+              {ls_status_cond}
+              {ls_district_cond}
             GROUP BY ct.name_en, ct.code, hl.status
             ORDER BY total_quantity_kg DESC
         """)
-        r = await session.execute(harvest_stmt, {
-            "status": status,
-            "district": f"%{district}%" if district else None,
-        })
+        r = await session.execute(harvest_stmt, ls_params)
         harvest_rows = r.mappings().all()
+
+        ds_status_cond = "AND dp.status::text = :status" if status else ""
+        ds_district_cond = "AND u.district ILIKE :district" if district else ""
 
         # Demand postings grouped by crop
         demand_stmt = text(f"""
@@ -1574,15 +1619,12 @@ async def _handle_govihub_get_listings_summary(params: dict) -> dict:
             JOIN crop_taxonomy ct ON ct.id = dp.crop_id
             JOIN users u ON u.id = dp.buyer_id
             WHERE dp.created_at >= NOW() - INTERVAL '{days} days'
-              AND (:status IS NULL OR dp.status::text = :status)
-              AND (:district IS NULL OR u.district ILIKE :district)
+              {ds_status_cond}
+              {ds_district_cond}
             GROUP BY ct.name_en, ct.code, dp.status
             ORDER BY total_quantity_kg DESC
         """)
-        r2 = await session.execute(demand_stmt, {
-            "status": status,
-            "district": f"%{district}%" if district else None,
-        })
+        r2 = await session.execute(demand_stmt, ls_params)
         demand_rows = r2.mappings().all()
 
         return {
