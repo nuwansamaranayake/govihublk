@@ -119,7 +119,7 @@ class DiagnosisService:
             crop_id=crop_id,
             image_url=image_url,
             status=DiagnosisStatus.processing,
-            model_version="gemini-2.0-flash-001",
+            model_version=settings.OPENROUTER_MODEL,
             language="si",
         )
         db.add(record)
@@ -147,7 +147,7 @@ class DiagnosisService:
                 disease=record.disease_name,
                 confidence=record.confidence,
                 crop_detected=diagnosis.get("crop_detected"),
-                model="gemini-2.0-flash-001",
+                model=settings.OPENROUTER_MODEL,
             )
 
         except Exception as exc:  # noqa: BLE001
@@ -196,7 +196,7 @@ class DiagnosisService:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-001",
+                    "model": settings.OPENROUTER_MODEL,
                     "messages": [
                         {"role": "system", "content": DIAGNOSIS_SYSTEM_PROMPT},
                         {

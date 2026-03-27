@@ -68,3 +68,7 @@ coverage.xml
 
 # mypy
 .mypy_cache/
+
+# Beta environment files (contain secrets)
+.env.beta
+.env.beta.frontend
