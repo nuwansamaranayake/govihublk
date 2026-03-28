@@ -8,6 +8,8 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import settings
 from app.database import engine
@@ -87,27 +89,45 @@ def create_app() -> FastAPI:
     # Exception handlers
     app.add_exception_handler(GoviHubException, govihub_exception_handler)
 
-    # Request ID + Logging middleware
-    @app.middleware("http")
-    async def request_logging_middleware(request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-        request.state.request_id = request_id
-        start_time = time.perf_counter()
+    # Request ID + Logging middleware — pure ASGI to avoid Content-Length
+    # mismatch with ORJSONResponse when using call_next() buffering.
+    class RequestLoggingMiddleware:
+        def __init__(self, asgi_app: ASGIApp) -> None:
+            self.app = asgi_app
 
-        response = await call_next(request)
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            if scope["type"] != "http":
+                await self.app(scope, receive, send)
+                return
 
-        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        response.headers["X-Request-ID"] = request_id
+            raw_headers = dict(scope.get("headers", []))
+            request_id = raw_headers.get(
+                b"x-request-id", str(uuid.uuid4()).encode()
+            ).decode()
+            start_time = time.perf_counter()
+            scope.setdefault("state", {})["request_id"] = request_id
+            status_code = 500
 
-        logger.info(
-            "http_request",
-            method=request.method,
-            path=request.url.path,
-            status=response.status_code,
-            duration_ms=duration_ms,
-            request_id=request_id,
-        )
-        return response
+            async def send_wrapper(message: dict) -> None:
+                nonlocal status_code
+                if message["type"] == "http.response.start":
+                    status_code = message["status"]
+                    MutableHeaders(scope=message).append("X-Request-ID", request_id)
+                elif message["type"] == "http.response.body" and not message.get("more_body"):
+                    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                    logger.info(
+                        "http_request",
+                        method=scope.get("method", ""),
+                        path=scope.get("path", ""),
+                        status=status_code,
+                        duration_ms=duration_ms,
+                        request_id=request_id,
+                    )
+                await send(message)
+
+            await self.app(scope, receive, send_wrapper)
+
+    app.add_middleware(RequestLoggingMiddleware)
 
     # Health check
     @app.get("/api/v1/health", tags=["Health"])
