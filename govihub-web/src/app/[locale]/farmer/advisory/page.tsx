@@ -22,7 +22,7 @@ interface HistoryItem {
   id: string;
   question: string;
   answer: string;
-  date: string;
+  created_at: string;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -40,8 +40,8 @@ const SUGGESTED_SINHALA = [
 ];
 
 const MOCK_HISTORY: HistoryItem[] = [
-  { id:"1", question:"How to prevent tomato blight?", answer:"Apply copper fungicide and remove infected leaves.", date:"2026-03-20" },
-  { id:"2", question:"Best fertilizer for cabbage?", answer:"Use balanced NPK 10-10-10 with added boron.", date:"2026-03-15" },
+  { id:"1", question:"How to prevent tomato blight?", answer:"Apply copper fungicide and remove infected leaves.", created_at:"2026-03-20T00:00:00Z" },
+  { id:"2", question:"Best fertilizer for cabbage?", answer:"Use balanced NPK 10-10-10 with added boron.", created_at:"2026-03-15T00:00:00Z" },
 ];
 
 export default function FarmAdvisoryPage() {
@@ -56,8 +56,8 @@ export default function FarmAdvisoryPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    api.get<HistoryItem[]>("/advisory/history")
-      .then((data) => setHistory(Array.isArray(data) ? data : []))
+    api.get<{ items: HistoryItem[] }>("/advisory/history")
+      .then((data) => setHistory(data?.items ?? []))
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
   }, [isReady]);
@@ -73,12 +73,12 @@ export default function FarmAdvisoryPage() {
     setInput("");
     setLoading(true);
     try {
-      const res = await api.post<{ answer:string; sources?:string[] }>("/advisory/ask", { question, language: "en" });
+      const res = await api.post<{ answer:string; sources?:{source_name:string; relevance_score:number}[] }>("/advisory/ask", { question, language: "en" });
       const assistantMsg: Message = {
         id: String(Date.now()+1),
         role:"assistant",
         content: res.answer,
-        sources: res.sources,
+        sources: res.sources?.map(s => s.source_name),
         timestamp: new Date().toLocaleTimeString(),
       };
       setMessages(prev => [...prev, assistantMsg]);
@@ -206,7 +206,7 @@ export default function FarmAdvisoryPage() {
                 <Card key={item.id} padding="md">
                   <p className="font-medium text-neutral-900 text-sm">{item.question}</p>
                   <p className="text-sm text-neutral-600 mt-1 line-clamp-2">{item.answer}</p>
-                  <p className="text-xs text-neutral-400 mt-2">{item.date}</p>
+                  <p className="text-xs text-neutral-400 mt-2">{new Date(item.created_at).toLocaleDateString()}</p>
                 </Card>
               ))
             )}
