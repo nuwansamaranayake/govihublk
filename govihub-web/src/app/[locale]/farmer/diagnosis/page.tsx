@@ -109,14 +109,14 @@ export default function CropDiagnosisPage() {
 
   const confidenceBadge = (c: number | null | undefined) => {
     const pct = confidencePct(c);
-    if (pct == null) return { color: "neutral" as const, label: "—" };
+    if (pct == null) return { color: "gray" as const, label: "—" };
     if (pct >= 70) return { color: "green" as const, label: t("diagnosis.highConfidence") };
     if (pct >= 40) return { color: "gold" as const, label: t("diagnosis.mediumConfidence") };
     return { color: "red" as const, label: t("diagnosis.lowConfidence") };
   };
 
-  const severityBadge = (s: string | null | undefined): { color: "green" | "gold" | "red" | "neutral"; label: string } => {
-    if (!s) return { color: "neutral", label: "—" };
+  const severityBadge = (s: string | null | undefined): { color: "green" | "gold" | "red" | "gray"; label: string } => {
+    if (!s) return { color: "gray", label: "—" };
     if (s === "mild") return { color: "green", label: t("diagnosis.mild") };
     if (s === "moderate") return { color: "gold", label: t("diagnosis.moderate") };
     return { color: "red", label: t("diagnosis.severe") };
