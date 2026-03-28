@@ -101,8 +101,11 @@ async def seed_knowledge():
                 skipped += 1
                 continue
 
-            # Embedding generation placeholder — will use sentence-transformers in production
-            chunk = KnowledgeChunk(**chunk_data, embedding=None)
+            from app.advisory.embeddings import embedding_service
+            if not embedding_service._model:
+                embedding_service.load_model()
+            vec = embedding_service.embed(chunk_data["content"])
+            chunk = KnowledgeChunk(**chunk_data, embedding=vec if not embedding_service.is_placeholder else None)
             session.add(chunk)
             inserted += 1
             logger.info("chunk_inserted", title=chunk_data["title"][:50])

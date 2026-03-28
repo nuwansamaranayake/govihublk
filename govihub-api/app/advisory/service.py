@@ -221,19 +221,22 @@ class AdvisoryService:
         limit: int = 5,
     ) -> list[dict]:
         """Run pgvector ANN search and return top-N chunks with similarity scores."""
-        emb_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        # Embed the vector literal directly in the SQL — asyncpg cannot prepare
+        # statements with bound parameters cast to custom types ($N::vector).
+        # The embedding is generated internally (list of floats), so this is safe.
+        emb_literal = "'" + "[" + ",".join(str(x) for x in query_embedding) + "]" + "'::vector"
 
         sql = text(
-            """
+            f"""
             SELECT
                 id,
                 source,
                 title,
                 content,
-                1 - (embedding <=> :emb::vector) AS similarity
+                1 - (embedding <=> {emb_literal}) AS similarity
             FROM knowledge_chunks
             WHERE language = :lang
-            ORDER BY embedding <=> :emb::vector
+            ORDER BY embedding <=> {emb_literal}
             LIMIT :lim
             """
         )
@@ -241,7 +244,7 @@ class AdvisoryService:
         try:
             result = await self.db.execute(
                 sql,
-                {"emb": emb_str, "lang": language, "lim": limit},
+                {"lang": language, "lim": limit},
             )
             rows = result.mappings().all()
             return [dict(row) for row in rows]
