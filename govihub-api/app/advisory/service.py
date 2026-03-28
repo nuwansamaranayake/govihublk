@@ -247,6 +247,9 @@ class AdvisoryService:
             return [dict(row) for row in rows]
         except Exception as exc:  # noqa: BLE001
             logger.error("advisory_chunk_search_failed", error=str(exc), language=language)
+            # Roll back the aborted transaction so the session stays usable
+            # for the subsequent INSERT (flush) in ask_question.
+            await self.db.rollback()
             return []
 
     @staticmethod

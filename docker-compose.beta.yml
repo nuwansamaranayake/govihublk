@@ -48,7 +48,9 @@ services:
       - govihub-beta-net
 
   postgres-beta:
-    image: postgis/postgis:16-3.4
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     environment:
       POSTGRES_DB: govihub_beta
       POSTGRES_USER: govihub
