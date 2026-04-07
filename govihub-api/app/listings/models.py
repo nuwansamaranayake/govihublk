@@ -87,6 +87,7 @@ class HarvestListing(Base):
     is_organic: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     delivery_available: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     delivery_radius_km: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
 
     # Relationships
     farmer: Mapped["app.users.models.User"] = relationship(foreign_keys=[farmer_id])
@@ -127,6 +128,7 @@ class DemandPosting(Base):
     )
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     recurrence_pattern: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
 
     # Relationships
     buyer: Mapped["app.users.models.User"] = relationship(foreign_keys=[buyer_id])

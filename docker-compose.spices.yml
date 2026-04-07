@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  govihub-api-spices:
+    build:
+      context: ./govihub-api
+      dockerfile: Dockerfile
+    command: gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
+    env_file: .env.spices
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres-spices:
+        condition: service_healthy
+      redis-spices:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - govihub-spices-net
+
+  govihub-web-spices:
+    build:
+      context: ./govihub-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://spices.govihublk.com/api/v1
+        NEXT_PUBLIC_APP_URL: https://spices.govihublk.com
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: dev-placeholder.apps.googleusercontent.com
+    env_file: .env.spices.frontend
+    ports:
+      - "3003:3000"
+    restart: unless-stopped
+    networks:
+      - govihub-spices-net
+
+  postgres-spices:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    environment:
+      POSTGRES_DB: govihub_spices
+      POSTGRES_USER: govihub
+      POSTGRES_PASSWORD: ${DB_PASS:-govihub_spices_2026_secure}
+    volumes:
+      - spices_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U govihub -d govihub_spices"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - govihub-spices-net
+
+  redis-spices:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - govihub-spices-net
+
+volumes:
+  spices_pgdata:
+    driver: local
+
+networks:
+  govihub-spices-net:
+    driver: bridge

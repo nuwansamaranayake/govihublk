@@ -38,6 +38,7 @@ class User(Base):
     ds_division: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
     province: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

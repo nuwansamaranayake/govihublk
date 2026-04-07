@@ -49,6 +49,7 @@ class Match(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     fulfilled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
 
     # Relationships
     harvest: Mapped["app.listings.models.HarvestListing"] = relationship(foreign_keys=[harvest_id])

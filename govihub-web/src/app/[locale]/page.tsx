@@ -1,10 +1,15 @@
 import { useTranslations } from "next-intl";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
+import { getSectorConfig } from "@/config/sectors";
 
 export default function HomePage({ params }: { params: { locale: string } }) {
   const t = useTranslations("home");
   const locale = params.locale || "en";
+  const host = headers().get("host") || "";
+  const sectorConfig = getSectorConfig(host);
+  const isSpices = sectorConfig.sector === "spices";
 
   const features = [
     {
@@ -103,19 +108,23 @@ export default function HomePage({ params }: { params: { locale: string } }) {
           {/* Bilingual tagline */}
           <div className="mb-8 space-y-1">
             <p className="text-[#E8A838] text-sm sm:text-base font-medium tracking-widest uppercase">
-              Sri Lanka&apos;s AI Farming Marketplace
+              {sectorConfig.landingHero.title_en}
             </p>
             <p className="text-green-200/80 text-sm sm:text-base font-medium">
-              ශ්‍රී ලංකාවේ AI ගොවිතැන් වෙළඳපොළ
+              {sectorConfig.landingHero.title_si}
             </p>
           </div>
 
           {/* Headline */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
-            {t("heroTitle")}
+            {isSpices
+              ? (locale === "si" ? sectorConfig.landingHero.title_si : sectorConfig.landingHero.title_en)
+              : t("heroTitle")}
           </h1>
           <p className="text-base sm:text-lg text-green-100/80 max-w-xl leading-relaxed mb-10">
-            {t("heroSubtitle")}
+            {isSpices
+              ? (locale === "si" ? sectorConfig.landingHero.subtitle_si : sectorConfig.landingHero.subtitle_en)
+              : t("heroSubtitle")}
           </p>
 
           {/* CTA Button */}
@@ -216,7 +225,7 @@ export default function HomePage({ params }: { params: { locale: string } }) {
             <div className="flex items-center gap-3">
               <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={36} height={36} className="rounded-lg" />
               <div>
-                <p className="font-bold text-white">GoviHub</p>
+                <p className="font-bold text-white">{sectorConfig.name}</p>
                 <p className="text-xs text-green-300">by AiGNITE</p>
               </div>
             </div>
@@ -230,7 +239,7 @@ export default function HomePage({ params }: { params: { locale: string } }) {
 
             {/* Copyright */}
             <p className="text-xs text-green-300/70">
-              &copy; 2026 GoviHub by AiGNITE
+              &copy; 2026 {sectorConfig.name} by AiGNITE
             </p>
           </div>
         </div>

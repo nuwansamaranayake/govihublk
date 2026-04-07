@@ -152,6 +152,7 @@ def create_app() -> FastAPI:
     from app.notifications.router import router as notifications_router
     from app.admin.router import router as admin_router
     from app.mcp.router import router as mcp_router
+    from app.sector.router import router as sector_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
@@ -166,6 +167,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
     app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
     app.include_router(mcp_router, prefix="/mcp", tags=["MCP"])
+    app.include_router(sector_router, prefix="/api/v1", tags=["Sector"])
 
     # Beta auth — username/password login for beta testing
     if settings.APP_ENV in ("beta", "development"):
