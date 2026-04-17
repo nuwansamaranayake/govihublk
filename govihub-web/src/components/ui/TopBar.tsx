@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { HelpPanel } from "./HelpPanel";
 
 interface TopBarProps {
@@ -29,6 +30,7 @@ export function TopBar({
   const router = useRouter();
   const params = useParams();
   const locale = ((params?.locale as string) || "en") as "en" | "si";
+  const t = useTranslations("brand");
   const [showHelp, setShowHelp] = useState(false);
 
   const handleBack = () => {
@@ -54,7 +56,17 @@ export function TopBar({
       {/* Left slot */}
       <div className="flex items-center gap-2 min-w-[40px]">
         {!showBack && !leftAction && (
-          <Image src="/images/logo-icon-sm.png" alt="GoviHub" width={28} height={28} className="rounded-md" />
+          <div className="flex items-center gap-2">
+            <Image src="/icons/icon-192x192.png" alt="GoviHub Spices" width={28} height={28} className="rounded-md" />
+            {!title && (
+              <div className="leading-tight">
+                <div className="text-sm font-semibold text-[#1e4a1f]">GoviHub</div>
+                <div className="text-[10px] font-semibold tracking-wide uppercase text-[#c28a1f]">
+                  {t("sectorSpices")}
+                </div>
+              </div>
+            )}
+          </div>
         )}
         {showBack && (
           <button

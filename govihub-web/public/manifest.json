@@ -1,15 +1,18 @@
 {
-  "name": "GoviHub — Sri Lanka's AI Farming Marketplace",
-  "short_name": "GoviHub",
-  "description": "AI-driven smart farming marketplace connecting Sri Lankan farmers with buyers",
+  "name": "GoviHub Spices",
+  "short_name": "GoviHub Spices",
+  "description": "Sri Lanka's AI farming marketplace for spices. Black pepper, cinnamon, cardamom, turmeric, ginger, cloves, nutmeg.",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#2D6A2E",
-  "background_color": "#FFFFFF",
   "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#2D6A2E",
   "icons": [
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/icon-maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+  ],
+  "lang": "en",
+  "categories": ["business", "productivity", "agriculture"]
 }

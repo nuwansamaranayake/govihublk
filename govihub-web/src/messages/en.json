@@ -1,4 +1,7 @@
 {
+  "brand": {
+    "sectorSpices": "Spices"
+  },
   "common": {
     "appName": "GoviHub",
     "tagline": "Smart Farming Marketplace",

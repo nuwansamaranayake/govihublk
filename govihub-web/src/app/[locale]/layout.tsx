@@ -6,16 +6,28 @@ import FeedbackFAB from "@/components/ui/FeedbackFAB";
 import "../globals.css";
 
 export const metadata = {
-  title: "GoviHub - Smart Farming Marketplace",
+  title: "GoviHub Spices — Sri Lanka's AI Farming Marketplace",
   description:
-    "AI-driven smart farming marketplace connecting farmers, buyers, and suppliers in Sri Lanka",
+    "Direct connections between spice farmers, buyers, and suppliers in Sri Lanka. Sinhala-first. AI-powered crop diagnosis, weather alerts, advisory.",
   manifest: "/manifest.json",
+  themeColor: "#2D6A2E",
+  appleWebApp: {
+    capable: true,
+    title: "GoviHub Spices",
+    statusBarStyle: "default" as const,
+  },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
+    shortcut: "/favicon.ico",
   },
   openGraph: {
-    title: "GoviHub — Sri Lanka's AI Farming Marketplace",
+    title: "GoviHub Spices — Sri Lanka's AI Farming Marketplace",
+    description:
+      "Direct connections between spice farmers, buyers, and suppliers in Sri Lanka.",
     images: ["/images/og-image.jpg"],
   },
 };

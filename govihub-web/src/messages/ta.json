@@ -1,4 +1,7 @@
 {
+  "brand": {
+    "sectorSpices": "மசாலா"
+  },
   "common": {
     "appName": "GoviHub",
     "tagline": "[TA] Smart Farming Marketplace",
