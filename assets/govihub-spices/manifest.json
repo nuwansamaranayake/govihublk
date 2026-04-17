@@ -1,0 +1,28 @@
+{
+    "name": "GoviHub Spices — Sri Lanka's AI Spice Marketplace",
+    "short_name": "GH Spices",
+    "description": "AI-powered spice marketplace connecting Sri Lankan farmers with buyers — pepper, turmeric, ginger, cloves, nutmeg, cardamom, cinnamon",
+    "start_url": "/",
+    "display": "standalone",
+    "theme_color": "#2D6A2E",
+    "background_color": "#FFFFFF",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-maskable-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

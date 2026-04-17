@@ -1,0 +1,23 @@
+services:
+  govihub-umbrella:
+    build:
+      context: ./govihub-umbrella
+      dockerfile: Dockerfile
+    image: govihub-umbrella:v1
+    container_name: govihub-umbrella
+    ports:
+      - "3005:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.govihub-umbrella.rule=Host(`govihublk.com`) || Host(`www.govihublk.com`)"
+      - "traefik.http.routers.govihub-umbrella.entrypoints=websecure"
+      - "traefik.http.routers.govihub-umbrella.tls=true"
+      - "traefik.http.routers.govihub-umbrella.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.govihub-umbrella.priority=10"
+      - "traefik.http.services.govihub-umbrella.loadbalancer.server.port=80"
+      # www → apex redirect
+      - "traefik.http.middlewares.govihub-www-redirect.redirectregex.regex=^https?://www\\.govihublk\\.com/(.*)"
+      - "traefik.http.middlewares.govihub-www-redirect.redirectregex.replacement=https://govihublk.com/$${1}"
+      - "traefik.http.middlewares.govihub-www-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.govihub-umbrella.middlewares=govihub-www-redirect"

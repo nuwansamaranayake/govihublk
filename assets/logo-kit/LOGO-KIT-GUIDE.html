@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoviHub Logo Kit — Brand Asset Guide</title>
+<style>
+  :root {
+    --green: #22783C;
+    --gold: #DAA520;
+    --dark: #1A202C;
+    --gray-50: #F7FAFC;
+    --gray-100: #EDF2F7;
+    --gray-200: #E2E8F0;
+    --gray-600: #718096;
+    --gray-800: #2D3748;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--gray-800); background: var(--gray-50); line-height: 1.6; }
+
+  .hero {
+    background: linear-gradient(135deg, var(--green) 0%, #1a5c2e 50%, var(--dark) 100%);
+    color: white; padding: 60px 40px; text-align: center;
+  }
+  .hero h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; }
+  .hero .tagline { font-size: 1.1rem; opacity: 0.85; }
+  .hero .subtitle { font-size: 0.9rem; opacity: 0.6; margin-top: 4px; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 1.5rem; font-weight: 700; color: var(--green);
+    border-bottom: 3px solid var(--gold); padding-bottom: 8px; margin-bottom: 24px;
+  }
+  .section-desc { color: var(--gray-600); margin-bottom: 20px; font-size: 0.95rem; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .grid-icons { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+
+  .card {
+    background: white; border-radius: 12px; padding: 16px;
+    border: 1px solid var(--gray-200); transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+  .card .preview {
+    background: var(--gray-100); border-radius: 8px; padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 80px; margin-bottom: 12px; overflow: hidden;
+  }
+  .card .preview.dark { background: var(--dark); }
+  .card .preview.checker {
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
+      linear-gradient(-45deg, #ccc 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #ccc 75%),
+      linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  }
+  .card .preview img { max-width: 100%; max-height: 120px; object-fit: contain; }
+  .card .info { font-size: 0.82rem; }
+  .card .info .name { font-weight: 600; color: var(--gray-800); margin-bottom: 2px; }
+  .card .info .meta { color: var(--gray-600); font-size: 0.75rem; }
+
+  .icon-card { text-align: center; padding: 10px; }
+  .icon-card .preview { min-height: 50px; padding: 8px; margin-bottom: 6px; }
+  .icon-card .preview img { max-height: 48px; }
+  .icon-card .meta { font-size: 0.7rem; color: var(--gray-600); }
+
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--gray-200); }
+  th { background: var(--green); color: white; padding: 12px 16px; text-align: left; font-size: 0.85rem; }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--gray-100); font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--gray-50); }
+
+  .color-swatch {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 12px 20px; border-radius: 10px; background: white;
+    border: 1px solid var(--gray-200); min-width: 220px;
+  }
+  .color-swatch .dot { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; }
+  .color-swatch .label { font-weight: 600; font-size: 0.9rem; }
+  .color-swatch .hex { font-size: 0.8rem; color: var(--gray-600); font-family: monospace; }
+
+  .colors-row { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .usage-note {
+    background: #FFFFF0; border-left: 4px solid var(--gold);
+    padding: 14px 18px; border-radius: 0 8px 8px 0;
+    font-size: 0.88rem; margin-top: 16px;
+  }
+
+  .folder-tree {
+    font-family: 'Consolas', 'Courier New', monospace; font-size: 0.82rem;
+    background: var(--dark); color: #A0AEC0; padding: 20px 24px;
+    border-radius: 12px; line-height: 1.8; overflow-x: auto;
+  }
+  .folder-tree .folder { color: var(--gold); }
+  .folder-tree .file { color: #68D391; }
+
+  footer {
+    text-align: center; padding: 30px; color: var(--gray-600);
+    font-size: 0.8rem; border-top: 1px solid var(--gray-200);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>GoviHub Logo Kit</h1>
+  <div class="tagline">Sri Lanka's AI Farming Marketplace — Brand Asset Guide</div>
+  <div class="subtitle">Generated 2026-03-24 · All sizes optimized for their target platform</div>
+</div>
+
+<div class="container">
+
+<!-- BRAND COLORS -->
+<div class="section">
+  <h2 class="section-title">Brand Colors</h2>
+  <div class="colors-row">
+    <div class="color-swatch">
+      <div class="dot" style="background: #22783C;"></div>
+      <div><div class="label">Brand Green</div><div class="hex">#22783C · RGB(34, 120, 60)</div></div>
+    </div>
+    <div class="color-swatch">
+      <div class="dot" style="background: #DAA520;"></div>
+      <div><div class="label">Brand Gold</div><div class="hex">#DAA520 · RGB(218, 165, 32)</div></div>
+    </div>
+    <div class="color-swatch">
+      <div class="dot" style="background: #1A202C;"></div>
+      <div><div class="label">Dark Background</div><div class="hex">#1A202C · RGB(26, 32, 44)</div></div>
+    </div>
+    <div class="color-swatch">
+      <div class="dot" style="background: #FFFFFF; border: 1px solid #E2E8F0;"></div>
+      <div><div class="label">White</div><div class="hex">#FFFFFF · RGB(255, 255, 255)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOLDER STRUCTURE -->
+<div class="section">
+  <h2 class="section-title">Folder Structure</h2>
+  <div class="folder-tree">
+    <span class="folder">logo-kit/</span><br>
+    ├── <span class="folder">app-icons/</span><br>
+    │   ├── <span class="folder">desktop/</span>    — 16px to 1024px square icons<br>
+    │   ├── <span class="folder">ios/</span>        — All required iOS icon sizes (20–1024px)<br>
+    │   ├── <span class="folder">android/</span>    — mdpi through xxxhdpi + Play Store + adaptive<br>
+    │   └── <span class="folder">favicon/</span>    — .ico, PNGs (16–64px), apple-touch-icon<br>
+    ├── <span class="folder">social-media/</span><br>
+    │   ├── <span class="folder">facebook/</span>   — Profile, cover, OG image<br>
+    │   ├── <span class="folder">twitter-x/</span>  — Profile, header<br>
+    │   ├── <span class="folder">linkedin/</span>   — Profile, cover, shared image<br>
+    │   ├── <span class="folder">instagram/</span>  — Profile, post (1080²), story (1080×1920)<br>
+    │   └── <span class="folder">youtube/</span>    — Profile, banner (2560×1440)<br>
+    ├── <span class="folder">promotional/</span><br>
+    │   ├── <span class="folder">letterhead/</span> — 600w & 1200w for print<br>
+    │   ├── <span class="folder">email-signature/</span> — 200w & 300w<br>
+    │   ├── <span class="folder">watermark/</span>  — 25% opacity full logo & icon<br>
+    │   ├── <span class="folder">business-card/</span> — Logo & icon at card size<br>
+    │   └── <span class="folder">banner/</span>     — Leaderboard, wide, medium rectangle<br>
+    ├── <span class="folder">variants/</span><br>
+    │   ├── <span class="folder">transparent/</span> — Full logo & icon, multiple sizes<br>
+    │   ├── <span class="folder">white-bg/</span>   — On white background<br>
+    │   ├── <span class="folder">dark-bg/</span>    — On dark (#1A202C) background<br>
+    │   └── <span class="folder">icon-only/</span>  — Icon mark without text, 64–1024px<br>
+    └── <span class="file">LOGO-KIT-GUIDE.html</span>  — This file
+  </div>
+</div>
+
+<!-- APP ICONS -->
+<div class="section">
+  <h2 class="section-title">App Icons</h2>
+  <p class="section-desc">Square icon variants for desktop, mobile, and web platforms. All use the icon mark (no text) for clarity at small sizes.</p>
+
+  <h3 style="margin: 16px 0 8px; font-size: 1.05rem;">Desktop</h3>
+  <div class="grid grid-icons">
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-16x16.png"></div><div class="meta">16×16</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-32x32.png"></div><div class="meta">32×32</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-48x48.png"></div><div class="meta">48×48</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-64x64.png"></div><div class="meta">64×64</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-128x128.png"></div><div class="meta">128×128</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/desktop/icon-256x256.png"></div><div class="meta">256×256</div></div>
+  </div>
+
+  <h3 style="margin: 24px 0 8px; font-size: 1.05rem;">Favicon & Web</h3>
+  <div class="grid grid-icons">
+    <div class="icon-card card"><div class="preview"><img src="app-icons/favicon/favicon-16x16.png"></div><div class="meta">favicon 16</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/favicon/favicon-32x32.png"></div><div class="meta">favicon 32</div></div>
+    <div class="icon-card card"><div class="preview"><img src="app-icons/favicon/apple-touch-icon-180x180.png"></div><div class="meta">Apple Touch 180</div></div>
+  </div>
+  <div class="usage-note">
+    <strong>Web usage:</strong> Place <code>favicon.ico</code> in your site root. Add <code>&lt;link rel="apple-touch-icon" href="apple-touch-icon-180x180.png"&gt;</code> for iOS.
+  </div>
+</div>
+
+<!-- SOCIAL MEDIA -->
+<div class="section">
+  <h2 class="section-title">Social Media</h2>
+  <p class="section-desc">Pre-sized for each platform's current requirements. Profile pictures use the icon mark; covers/headers use the full logo with tagline.</p>
+
+  <table>
+    <tr><th>Platform</th><th>Asset</th><th>Size</th><th>Format</th><th>File</th></tr>
+    <tr><td>Facebook</td><td>Profile</td><td>170×170</td><td>PNG</td><td>social-media/facebook/profile-170x170.png</td></tr>
+    <tr><td>Facebook</td><td>Cover</td><td>820×312</td><td>JPG</td><td>social-media/facebook/cover-820x312.jpg</td></tr>
+    <tr><td>Facebook</td><td>OG Image</td><td>1200×630</td><td>JPG</td><td>social-media/facebook/og-image-1200x630.jpg</td></tr>
+    <tr><td>Twitter/X</td><td>Profile</td><td>400×400</td><td>PNG</td><td>social-media/twitter-x/profile-400x400.png</td></tr>
+    <tr><td>Twitter/X</td><td>Header</td><td>1500×500</td><td>JPG</td><td>social-media/twitter-x/header-1500x500.jpg</td></tr>
+    <tr><td>LinkedIn</td><td>Profile</td><td>400×400</td><td>PNG</td><td>social-media/linkedin/profile-400x400.png</td></tr>
+    <tr><td>LinkedIn</td><td>Cover</td><td>1584×396</td><td>JPG</td><td>social-media/linkedin/cover-1584x396.jpg</td></tr>
+    <tr><td>LinkedIn</td><td>Shared Image</td><td>1200×627</td><td>JPG</td><td>social-media/linkedin/shared-image-1200x627.jpg</td></tr>
+    <tr><td>Instagram</td><td>Profile</td><td>320×320</td><td>PNG</td><td>social-media/instagram/profile-320x320.png</td></tr>
+    <tr><td>Instagram</td><td>Post</td><td>1080×1080</td><td>PNG</td><td>social-media/instagram/post-1080x1080.png</td></tr>
+    <tr><td>Instagram</td><td>Story</td><td>1080×1920</td><td>PNG</td><td>social-media/instagram/story-1080x1920.png</td></tr>
+    <tr><td>YouTube</td><td>Profile</td><td>800×800</td><td>PNG</td><td>social-media/youtube/profile-800x800.png</td></tr>
+    <tr><td>YouTube</td><td>Banner</td><td>2560×1440</td><td>JPG</td><td>social-media/youtube/banner-2560x1440.jpg</td></tr>
+  </table>
+</div>
+
+<!-- SOCIAL MEDIA PREVIEWS -->
+<div class="section">
+  <h2 class="section-title">Social Media Previews</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="preview"><img src="social-media/facebook/cover-820x312.jpg" style="max-height:160px;"></div>
+      <div class="info"><div class="name">Facebook Cover</div><div class="meta">820×312 · JPG</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="social-media/twitter-x/header-1500x500.jpg" style="max-height:160px;"></div>
+      <div class="info"><div class="name">Twitter/X Header</div><div class="meta">1500×500 · JPG</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="social-media/linkedin/cover-1584x396.jpg" style="max-height:160px;"></div>
+      <div class="info"><div class="name">LinkedIn Cover</div><div class="meta">1584×396 · JPG</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="social-media/instagram/post-1080x1080.png" style="max-height:200px;"></div>
+      <div class="info"><div class="name">Instagram Post</div><div class="meta">1080×1080 · PNG</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROMOTIONAL -->
+<div class="section">
+  <h2 class="section-title">Promotional Materials</h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="preview"><img src="promotional/letterhead/logo-letterhead-600w.png"></div>
+      <div class="info"><div class="name">Letterhead</div><div class="meta">600w & 1200w transparent PNG for print</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="promotional/email-signature/logo-email-300w.png"></div>
+      <div class="info"><div class="name">Email Signature</div><div class="meta">200w & 300w transparent PNG</div></div>
+    </div>
+    <div class="card">
+      <div class="preview checker"><img src="promotional/watermark/watermark-800w.png"></div>
+      <div class="info"><div class="name">Watermark</div><div class="meta">25% opacity · Full logo & icon variants</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="promotional/business-card/logo-card-600x300.png"></div>
+      <div class="info"><div class="name">Business Card</div><div class="meta">600×300 logo + 300×300 icon</div></div>
+    </div>
+  </div>
+
+  <h3 style="margin: 24px 0 8px; font-size: 1.05rem;">Web Banners</h3>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="preview"><img src="promotional/banner/leaderboard-728x90.png"></div>
+      <div class="info"><div class="name">Leaderboard</div><div class="meta">728×90</div></div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="promotional/banner/wide-banner-1200x300.png"></div>
+      <div class="info"><div class="name">Wide Banner</div><div class="meta">1200×300</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- VARIANTS -->
+<div class="section">
+  <h2 class="section-title">Logo Variants</h2>
+
+  <h3 style="margin: 16px 0 8px; font-size: 1.05rem;">On White Background</h3>
+  <div class="grid grid-3">
+    <div class="card"><div class="preview"><img src="variants/white-bg/full-logo-white-500w.png"></div><div class="info"><div class="name">Full Logo</div><div class="meta">500w · White BG</div></div></div>
+    <div class="card"><div class="preview"><img src="variants/white-bg/icon-white-200x200.png"></div><div class="info"><div class="name">Icon</div><div class="meta">200×200 · White BG</div></div></div>
+  </div>
+
+  <h3 style="margin: 24px 0 8px; font-size: 1.05rem;">On Dark Background</h3>
+  <div class="grid grid-3">
+    <div class="card"><div class="preview dark"><img src="variants/dark-bg/full-logo-dark-500w.png"></div><div class="info"><div class="name">Full Logo</div><div class="meta">500w · Dark BG</div></div></div>
+    <div class="card"><div class="preview dark"><img src="variants/dark-bg/icon-dark-200x200.png"></div><div class="info"><div class="name">Icon</div><div class="meta">200×200 · Dark BG</div></div></div>
+  </div>
+
+  <h3 style="margin: 24px 0 8px; font-size: 1.05rem;">Transparent (for overlays)</h3>
+  <div class="grid grid-3">
+    <div class="card"><div class="preview checker"><img src="variants/transparent/full-logo-500w.png"></div><div class="info"><div class="name">Full Logo</div><div class="meta">200w–2000w · Transparent</div></div></div>
+    <div class="card"><div class="preview checker"><img src="variants/transparent/icon-200x200.png"></div><div class="info"><div class="name">Icon</div><div class="meta">100–1000px · Transparent</div></div></div>
+  </div>
+</div>
+
+<!-- USAGE GUIDELINES -->
+<div class="section">
+  <h2 class="section-title">Usage Guidelines</h2>
+  <table>
+    <tr><th>Context</th><th>Which Asset</th><th>Min Size</th><th>Notes</th></tr>
+    <tr><td>App icon (any platform)</td><td>Icon mark only</td><td>16×16</td><td>Text is unreadable below ~200px; always use icon mark</td></tr>
+    <tr><td>Social media profile</td><td>Icon mark on white</td><td>170×170</td><td>Circular crop safe — logo centered with padding</td></tr>
+    <tr><td>Social media cover/header</td><td>Full logo with tagline</td><td>820×312</td><td>Use platform-specific sizes from the kit</td></tr>
+    <tr><td>Website header / nav</td><td>Full logo transparent</td><td>200w</td><td>Use 200w–500w depending on layout</td></tr>
+    <tr><td>Print materials</td><td>Letterhead 1200w</td><td>300 DPI</td><td>1200w = ~4" at 300 DPI, suitable for A4/Letter</td></tr>
+    <tr><td>Email signature</td><td>Email signature 300w</td><td>200w</td><td>Keep under 10KB for email clients</td></tr>
+    <tr><td>Dark UI / Dark mode</td><td>Dark BG variants</td><td>—</td><td>Logo reads well on #1A202C and similar dark surfaces</td></tr>
+    <tr><td>Photo watermark</td><td>Watermark (25% opacity)</td><td>—</td><td>Overlay at ~20% of image width for subtlety</td></tr>
+  </table>
+
+  <div class="usage-note">
+    <strong>Clear space:</strong> Always maintain at least 10% of the logo width as clear space around all sides. Never stretch, rotate, or alter the colors of the logo.
+  </div>
+</div>
+
+<!-- TOTAL ASSET COUNT -->
+<div class="section">
+  <h2 class="section-title">Asset Summary</h2>
+  <table>
+    <tr><th>Category</th><th>Count</th><th>Formats</th></tr>
+    <tr><td>Desktop Icons</td><td>8</td><td>PNG (16–1024px)</td></tr>
+    <tr><td>iOS Icons</td><td>13</td><td>PNG (20–1024px)</td></tr>
+    <tr><td>Android Icons</td><td>8</td><td>PNG (mdpi–xxxhdpi + Play Store + Adaptive)</td></tr>
+    <tr><td>Favicons</td><td>6</td><td>PNG + ICO + Apple Touch</td></tr>
+    <tr><td>Social Media</td><td>13</td><td>PNG + JPG</td></tr>
+    <tr><td>Promotional</td><td>11</td><td>PNG + JPG</td></tr>
+    <tr><td>Variants (Transparent)</td><td>8</td><td>PNG</td></tr>
+    <tr><td>Variants (White BG)</td><td>6</td><td>PNG</td></tr>
+    <tr><td>Variants (Dark BG)</td><td>6</td><td>PNG</td></tr>
+    <tr><td>Variants (Icon Only)</td><td>7</td><td>PNG</td></tr>
+    <tr><th>Total</th><th>86</th><th></th></tr>
+  </table>
+</div>
+
+</div>
+
+<footer>
+  GoviHub Logo Kit · Sri Lanka's AI Farming Marketplace · Generated 2026-03-24<br>
+  All assets derived from original GoviHub brand design
+</footer>
+
+</body>
+</html>
