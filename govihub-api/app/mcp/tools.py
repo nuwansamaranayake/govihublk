@@ -433,6 +433,52 @@ TOOL_DEFINITIONS: list[dict] = [
             "additionalProperties": False,
         },
     },
+    {
+        "name": "send_admin_email",
+        "description": (
+            "Send an HTML email to GoviHub admins via SendGrid. Used by scheduled "
+            "automations to deliver daily reports and alerts autonomously. Returns "
+            "SendGrid status_code, message_id, and recipient count. Admin auth "
+            "is enforced by the MCP bearer-token layer."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "subject": {
+                    "type": "string",
+                    "description": "Email subject line (required, non-empty).",
+                },
+                "html_body": {
+                    "type": "string",
+                    "description": "Full HTML body content (required, non-empty).",
+                },
+                "to": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional recipient addresses. Defaults to the "
+                        "ADMIN_REPORT_RECIPIENTS env var (comma-separated)."
+                    ),
+                },
+                "cc": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional CC list.",
+                },
+                "bcc": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional BCC list.",
+                },
+                "plain_text_fallback": {
+                    "type": "string",
+                    "description": "Optional plain-text alternative for clients that don't render HTML.",
+                },
+            },
+            "required": ["subject", "html_body"],
+            "additionalProperties": False,
+        },
+    },
 ]
 
 
@@ -1712,6 +1758,47 @@ async def _handle_govihub_get_match_performance(params: dict) -> dict:
         }
 
 
+async def _handle_send_admin_email(params: dict) -> dict:
+    """Send an HTML email via SendGrid. Used by admin automations."""
+    from app.config import settings
+    from app.utils.email import email_service
+
+    subject = (params.get("subject") or "").strip()
+    html_body = (params.get("html_body") or "").strip()
+    if not subject:
+        raise ValueError("subject is required")
+    if not html_body:
+        raise ValueError("html_body is required")
+
+    to = params.get("to")
+    if not to:
+        to = [
+            addr.strip()
+            for addr in settings.ADMIN_REPORT_RECIPIENTS.split(",")
+            if addr.strip()
+        ]
+    if not to:
+        raise ValueError("No recipients configured")
+
+    # SendGrid's SDK is blocking; offload to a thread so the async loop keeps serving.
+    result = await asyncio.to_thread(
+        email_service.send_html,
+        to=to,
+        subject=subject,
+        html_body=html_body,
+        cc=params.get("cc"),
+        bcc=params.get("bcc"),
+        plain_text_fallback=params.get("plain_text_fallback"),
+    )
+    return {
+        "tool": "send_admin_email",
+        "sent": True,
+        "status_code": result["status_code"],
+        "message_id": result["message_id"],
+        "recipient_count": result["recipient_count"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Handler Dispatch Map
 # ---------------------------------------------------------------------------
@@ -1734,4 +1821,6 @@ TOOL_HANDLERS: dict[str, Any] = {
     "govihub_get_platform_stats": _handle_govihub_get_platform_stats,
     "govihub_get_listings_summary": _handle_govihub_get_listings_summary,
     "govihub_get_match_performance": _handle_govihub_get_match_performance,
+    # Admin email automation
+    "send_admin_email": _handle_send_admin_email,
 }
