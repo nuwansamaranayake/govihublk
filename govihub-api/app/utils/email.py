@@ -1,8 +1,8 @@
-"""GoviHub Email Service — SendGrid-backed transactional email sender.
+"""GoviHub Email Service — Resend-backed transactional email sender.
 
 Used by admin automations (daily reports, alerts) via the MCP tool
 `send_admin_email`. The service is lazy-initialised so the API container
-still starts when SendGrid credentials are absent; the first call to
+still starts when Resend credentials are absent; the first call to
 `send_html` raises if the key is missing.
 """
 
@@ -18,23 +18,31 @@ logger = structlog.get_logger()
 
 
 class EmailService:
-    """Thin wrapper around the SendGrid Python SDK.
+    """Thin wrapper around the Resend Python SDK.
 
     The SDK is imported lazily in `send_html` so missing package installs
     or missing API keys don't break module import at API startup.
     """
 
     def __init__(self) -> None:
-        self.api_key = settings.SENDGRID_API_KEY
-        self.from_email = settings.SENDGRID_FROM_EMAIL
-        self.from_name = settings.SENDGRID_FROM_NAME
-        self._client = None
+        self.api_key = settings.RESEND_API_KEY
+        self.from_email = settings.RESEND_FROM_EMAIL
+        self.from_name = settings.RESEND_FROM_NAME or "GoviHub Reports"
+        self._configured = False
 
     def _ensure_ready(self) -> None:
         if not self.api_key:
-            raise RuntimeError("SENDGRID_API_KEY not configured")
+            raise RuntimeError("RESEND_API_KEY not configured")
         if not self.from_email:
-            raise RuntimeError("SENDGRID_FROM_EMAIL not configured")
+            raise RuntimeError("RESEND_FROM_EMAIL not configured")
+        if not self._configured:
+            import resend
+
+            resend.api_key = self.api_key
+            self._configured = True
+
+    def _format_from(self) -> str:
+        return f"{self.from_name} <{self.from_email}>"
 
     def send_html(
         self,
@@ -43,61 +51,58 @@ class EmailService:
         html_body: str,
         cc: Optional[list[str]] = None,
         bcc: Optional[list[str]] = None,
+        reply_to: Optional[str] = None,
         plain_text_fallback: Optional[str] = None,
     ) -> dict:
-        """Send an HTML email via SendGrid.
+        """Send an HTML email via Resend.
 
-        Returns `{status_code, message_id, recipient_count}` on success.
-        Raises on any SendGrid error; callers handle the exception loudly.
+        Returns `{message_id, recipient_count}` on success.
+        Raises on any Resend error; callers handle the exception loudly.
         """
         self._ensure_ready()
 
         if not to or not isinstance(to, list):
             raise ValueError("`to` must be a non-empty list of email addresses")
 
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Bcc, Cc, Content, Email, Mail, To
+        import resend
 
-        if self._client is None:
-            self._client = SendGridAPIClient(self.api_key)
-
-        message = Mail(
-            from_email=Email(self.from_email, self.from_name),
-            to_emails=[To(addr) for addr in to],
-            subject=subject,
-            html_content=Content("text/html", html_body),
-        )
-
+        params: dict = {
+            "from": self._format_from(),
+            "to": to,
+            "subject": subject,
+            "html": html_body,
+        }
         if cc:
-            for addr in cc:
-                message.add_cc(Cc(addr))
+            params["cc"] = cc
         if bcc:
-            for addr in bcc:
-                message.add_bcc(Bcc(addr))
-
+            params["bcc"] = bcc
+        if reply_to:
+            params["reply_to"] = reply_to
         if plain_text_fallback:
-            message.add_content(Content("text/plain", plain_text_fallback))
+            params["text"] = plain_text_fallback
 
         try:
-            response = self._client.send(message)
+            response = resend.Emails.send(params)
         except Exception as exc:
-            logger.error("sendgrid_send_failed", error=str(exc), subject=subject)
+            logger.error("resend_send_failed", error=str(exc), subject=subject)
             raise
 
-        message_id = response.headers.get("X-Message-Id", "unknown")
+        # resend-python returns a dict-like object with at least an `id` key.
+        message_id = (
+            response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
+        ) or "unknown"
+        recipient_count = len(to) + len(cc or []) + len(bcc or [])
         logger.info(
-            "sendgrid_email_sent",
+            "resend_email_sent",
             to_count=len(to),
             cc_count=len(cc or []),
             bcc_count=len(bcc or []),
             subject=subject,
-            status_code=response.status_code,
             message_id=message_id,
         )
         return {
-            "status_code": response.status_code,
             "message_id": message_id,
-            "recipient_count": len(to) + len(cc or []) + len(bcc or []),
+            "recipient_count": recipient_count,
         }
 
 

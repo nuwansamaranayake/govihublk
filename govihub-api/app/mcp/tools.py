@@ -436,10 +436,10 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "send_admin_email",
         "description": (
-            "Send an HTML email to GoviHub admins via SendGrid. Used by scheduled "
+            "Send an HTML email to GoviHub admins via Resend. Used by scheduled "
             "automations to deliver daily reports and alerts autonomously. Returns "
-            "SendGrid status_code, message_id, and recipient count. Admin auth "
-            "is enforced by the MCP bearer-token layer."
+            "Resend message_id and recipient count. Admin auth is enforced by the "
+            "MCP bearer-token layer."
         ),
         "inputSchema": {
             "type": "object",
@@ -469,6 +469,10 @@ TOOL_DEFINITIONS: list[dict] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Optional BCC list.",
+                },
+                "reply_to": {
+                    "type": "string",
+                    "description": "Optional Reply-To address (e.g. support@govihublk.com).",
                 },
                 "plain_text_fallback": {
                     "type": "string",
@@ -1759,7 +1763,7 @@ async def _handle_govihub_get_match_performance(params: dict) -> dict:
 
 
 async def _handle_send_admin_email(params: dict) -> dict:
-    """Send an HTML email via SendGrid. Used by admin automations."""
+    """Send an HTML email via Resend. Used by admin automations."""
     from app.config import settings
     from app.utils.email import email_service
 
@@ -1780,7 +1784,7 @@ async def _handle_send_admin_email(params: dict) -> dict:
     if not to:
         raise ValueError("No recipients configured")
 
-    # SendGrid's SDK is blocking; offload to a thread so the async loop keeps serving.
+    # Resend's SDK is blocking; offload to a thread so the async loop keeps serving.
     result = await asyncio.to_thread(
         email_service.send_html,
         to=to,
@@ -1788,12 +1792,12 @@ async def _handle_send_admin_email(params: dict) -> dict:
         html_body=html_body,
         cc=params.get("cc"),
         bcc=params.get("bcc"),
+        reply_to=params.get("reply_to"),
         plain_text_fallback=params.get("plain_text_fallback"),
     )
     return {
         "tool": "send_admin_email",
         "sent": True,
-        "status_code": result["status_code"],
         "message_id": result["message_id"],
         "recipient_count": result["recipient_count"],
     }

@@ -47,10 +47,10 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
 
-    # Email (SendGrid)
-    SENDGRID_API_KEY: str = ""
-    SENDGRID_FROM_EMAIL: str = ""
-    SENDGRID_FROM_NAME: str = "GoviHub Reports"
+    # Email (Resend)
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
+    RESEND_FROM_NAME: str = "GoviHub Reports"
     ADMIN_REPORT_RECIPIENTS: str = "govihub.ai@gmail.com"  # comma-separated
 
     # App
