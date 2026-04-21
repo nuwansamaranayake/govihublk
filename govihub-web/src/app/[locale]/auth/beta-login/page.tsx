@@ -167,9 +167,6 @@ export default function BetaLoginPage() {
           <Image src="/images/logo-icon.png" alt="GoviHub" width={80} height={80} className="rounded-2xl mx-auto mb-3 shadow-lg" />
           <h1 className="text-2xl font-semibold text-neutral-900">{t('betaTitle')}</h1>
           <p className="text-neutral-500 text-sm mt-1">{t('smartFarmingMarketplace')}</p>
-          <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">
-            {t('betaNotProduction')}
-          </div>
         </div>
 
         {/* Tab Toggle */}
