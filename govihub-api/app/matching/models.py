@@ -15,14 +15,9 @@ from app.database import Base
 
 class MatchStatus(str, enum.Enum):
     proposed = "proposed"
-    accepted_farmer = "accepted_farmer"
-    accepted_buyer = "accepted_buyer"
-    confirmed = "confirmed"
-    in_transit = "in_transit"
-    fulfilled = "fulfilled"
-    disputed = "disputed"
-    cancelled = "cancelled"
-    expired = "expired"
+    accepted = "accepted"
+    completed = "completed"
+    dismissed = "dismissed"
 
 
 class Match(Base):
@@ -58,8 +53,7 @@ class Match(Base):
     __table_args__ = (
         UniqueConstraint("harvest_id", "demand_id", name="uq_matches_harvest_demand"),
         CheckConstraint(
-            "status IN ('proposed', 'accepted_farmer', 'accepted_buyer', 'confirmed', "
-            "'in_transit', 'fulfilled', 'disputed', 'cancelled', 'expired')",
+            "status IN ('proposed', 'accepted', 'completed', 'dismissed')",
             name="match_status_check",
         ),
         Index("ix_matches_harvest_status", "harvest_id", "status"),

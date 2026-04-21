@@ -1,4 +1,10 @@
-"""GoviHub Matching Service — Match lifecycle management."""
+"""GoviHub Matching Service — Match lifecycle management.
+
+Simplified status lifecycle:
+  proposed → accepted → completed
+                     ↘ dismissed
+  proposed → dismissed
+"""
 
 from __future__ import annotations
 
@@ -78,7 +84,7 @@ class MatchService:
         return match
 
     # ------------------------------------------------------------------
-    # State transitions
+    # State transitions (simplified: accept / complete / dismiss)
     # ------------------------------------------------------------------
 
     async def accept_match(
@@ -90,25 +96,17 @@ class MatchService:
         agreed_quantity_kg: Optional[float] = None,
         notes: Optional[str] = None,
     ) -> Match:
-        """Farmer or buyer accepts a proposed match.
+        """Accept a proposed match → status becomes 'accepted'.
 
-        Transition rules:
-        - proposed → accepted_farmer  (farmer acts)
-        - proposed → accepted_buyer   (buyer acts)
-        - accepted_farmer → confirmed  (buyer now accepts)
-        - accepted_buyer  → confirmed  (farmer now accepts)
+        Either farmer or buyer can accept. Once accepted, contact info
+        is visible and both parties can coordinate directly.
         """
         match = await self._get_and_assert_participant(match_id, current_user)
 
-        role = current_user.role
-        allowed_statuses = {MatchStatus.proposed, MatchStatus.accepted_farmer, MatchStatus.accepted_buyer}
-
-        if match.status not in allowed_statuses:
+        if match.status != MatchStatus.proposed:
             raise ValidationError(
                 detail=f"Cannot accept a match with status '{match.status.value}'"
             )
-        if match.status == MatchStatus.confirmed:
-            raise ValidationError(detail="Match is already confirmed")
 
         # Apply negotiation fields if provided
         if agreed_price_per_kg is not None:
@@ -118,157 +116,92 @@ class MatchService:
         if notes is not None:
             match.notes = notes
 
-        if role == UserRole.farmer:
-            if match.status == MatchStatus.accepted_buyer:
-                match.status = MatchStatus.confirmed
-                match.confirmed_at = datetime.now(timezone.utc)
-            else:
-                match.status = MatchStatus.accepted_farmer
-        elif role == UserRole.buyer:
-            if match.status == MatchStatus.accepted_farmer:
-                match.status = MatchStatus.confirmed
-                match.confirmed_at = datetime.now(timezone.utc)
-            else:
-                match.status = MatchStatus.accepted_buyer
-        else:
-            # Admin can accept on behalf — treat as full confirm
-            match.status = MatchStatus.confirmed
-            match.confirmed_at = datetime.now(timezone.utc)
+        match.status = MatchStatus.accepted
+        match.confirmed_at = datetime.now(timezone.utc)
 
-        # Cascade to listing statuses when match reaches confirmed
-        if match.status == MatchStatus.confirmed:
-            await self._cascade_confirmed(match)
+        # Cascade to listing statuses
+        await self._cascade_accepted(match)
 
         await self.db.flush()
         logger.info(
             "match_accepted",
             match_id=str(match_id),
-            new_status=match.status.value,
+            new_status="accepted",
             user_id=str(current_user.id),
         )
         return match
 
-    async def reject_match(
+    async def complete_match(
         self,
         match_id: UUID,
         current_user: User,
         *,
         notes: Optional[str] = None,
     ) -> Match:
-        """Cancel a match that has not yet been fulfilled."""
+        """Mark an accepted match as completed (goods delivered / payment done)."""
         match = await self._get_and_assert_participant(match_id, current_user)
 
-        terminal = {MatchStatus.fulfilled, MatchStatus.cancelled, MatchStatus.expired}
-        if match.status in terminal:
+        if match.status != MatchStatus.accepted:
             raise ValidationError(
-                detail=f"Cannot reject a match with status '{match.status.value}'"
+                detail=f"Cannot complete a match with status '{match.status.value}'"
             )
 
-        match.status = MatchStatus.cancelled
-        if notes:
-            match.notes = notes
-
-        # Revert listing statuses if no remaining active matches
-        await self._cascade_cancelled(match)
-
-        await self.db.flush()
-        logger.info("match_rejected", match_id=str(match_id), user_id=str(current_user.id))
-        return match
-
-    async def confirm_match(
-        self,
-        match_id: UUID,
-        current_user: User,
-        *,
-        agreed_price_per_kg: float,
-        agreed_quantity_kg: float,
-        notes: Optional[str] = None,
-    ) -> Match:
-        """Force-confirm a match (typically called by admin or after bilateral acceptance).
-
-        From the API perspective this is an explicit confirmation endpoint, useful
-        when both parties have already agreed out-of-band.
-        """
-        match = await self._get_and_assert_participant(match_id, current_user)
-
-        acceptable = {
-            MatchStatus.proposed,
-            MatchStatus.accepted_farmer,
-            MatchStatus.accepted_buyer,
-        }
-        if match.status not in acceptable:
-            raise ValidationError(
-                detail=f"Cannot confirm a match with status '{match.status.value}'"
-            )
-
-        match.status = MatchStatus.confirmed
-        match.agreed_price_per_kg = agreed_price_per_kg
-        match.agreed_quantity_kg = agreed_quantity_kg
-        match.confirmed_at = datetime.now(timezone.utc)
-        if notes:
-            match.notes = notes
-
-        await self._cascade_confirmed(match)
-
-        await self.db.flush()
-        logger.info("match_confirmed", match_id=str(match_id), user_id=str(current_user.id))
-        return match
-
-    async def fulfill_match(
-        self,
-        match_id: UUID,
-        current_user: User,
-        *,
-        notes: Optional[str] = None,
-    ) -> Match:
-        """Mark a confirmed match as fulfilled (goods delivered / payment done)."""
-        match = await self._get_and_assert_participant(match_id, current_user)
-
-        if match.status not in {MatchStatus.confirmed, MatchStatus.in_transit}:
-            raise ValidationError(
-                detail=f"Cannot fulfil a match with status '{match.status.value}'"
-            )
-
-        match.status = MatchStatus.fulfilled
+        match.status = MatchStatus.completed
         match.fulfilled_at = datetime.now(timezone.utc)
         if notes:
             match.notes = notes
 
-        await self._cascade_fulfilled(match)
+        await self._cascade_completed(match)
 
         await self.db.flush()
-        logger.info("match_fulfilled", match_id=str(match_id), user_id=str(current_user.id))
+        logger.info("match_completed", match_id=str(match_id), user_id=str(current_user.id))
         return match
 
-    async def dispute_match(
+    async def dismiss_match(
         self,
         match_id: UUID,
         current_user: User,
         *,
-        notes: str,
+        notes: Optional[str] = None,
     ) -> Match:
-        """Raise a dispute on a match in progress."""
+        """Dismiss a match (reject / cancel). Works from proposed or accepted."""
         match = await self._get_and_assert_participant(match_id, current_user)
 
-        disputable = {
-            MatchStatus.confirmed,
-            MatchStatus.in_transit,
-            MatchStatus.fulfilled,
-        }
-        if match.status not in disputable:
+        terminal = {MatchStatus.completed, MatchStatus.dismissed}
+        if match.status in terminal:
             raise ValidationError(
-                detail=f"Cannot dispute a match with status '{match.status.value}'"
+                detail=f"Cannot dismiss a match with status '{match.status.value}'"
             )
 
-        match.status = MatchStatus.disputed
-        match.notes = notes
+        match.status = MatchStatus.dismissed
+        if notes:
+            match.notes = notes
+
+        # Revert listing statuses if no remaining active matches
+        await self._cascade_dismissed(match)
 
         await self.db.flush()
-        logger.info("match_disputed", match_id=str(match_id), user_id=str(current_user.id))
+        logger.info("match_dismissed", match_id=str(match_id), user_id=str(current_user.id))
         return match
 
     # ------------------------------------------------------------------
-    # Cascade helpers — keep listing statuses in sync with match lifecycle
+    # Legacy aliases — keep old endpoints working during transition
+    # ------------------------------------------------------------------
+
+    async def reject_match(self, match_id: UUID, current_user: User, *, notes: Optional[str] = None) -> Match:
+        return await self.dismiss_match(match_id, current_user, notes=notes)
+
+    async def confirm_match(self, match_id: UUID, current_user: User, *, agreed_price_per_kg: float = None, agreed_quantity_kg: float = None, notes: Optional[str] = None) -> Match:
+        return await self.accept_match(match_id, current_user, agreed_price_per_kg=agreed_price_per_kg, agreed_quantity_kg=agreed_quantity_kg, notes=notes)
+
+    async def fulfill_match(self, match_id: UUID, current_user: User, *, notes: Optional[str] = None) -> Match:
+        return await self.complete_match(match_id, current_user, notes=notes)
+
+    async def dispute_match(self, match_id: UUID, current_user: User, *, notes: str = None) -> Match:
+        return await self.dismiss_match(match_id, current_user, notes=notes)
+
+    # ------------------------------------------------------------------
+    # Cascade helpers — keep listing statuses in sync
     # ------------------------------------------------------------------
 
     async def _cascade_proposed(self, match: Match) -> None:
@@ -283,16 +216,16 @@ class MatchService:
                 reason="match_proposed",
             )
 
-    async def _cascade_confirmed(self, match: Match) -> None:
-        """When a match is confirmed: harvest→'matched', demand→'confirmed'."""
+    async def _cascade_accepted(self, match: Match) -> None:
+        """When a match is accepted: harvest→'matched', demand→'confirmed'."""
         harvest = await self.db.get(HarvestListing, match.harvest_id)
-        if harvest and harvest.status == HarvestStatus.ready:
+        if harvest and harvest.status in (HarvestStatus.ready, HarvestStatus.planned):
             harvest.status = HarvestStatus.matched
             logger.info(
                 "harvest_status_cascade",
                 harvest_id=str(match.harvest_id),
                 new_status="matched",
-                reason="match_confirmed",
+                reason="match_accepted",
             )
 
         demand = await self.db.get(DemandPosting, match.demand_id)
@@ -302,11 +235,11 @@ class MatchService:
                 "demand_status_cascade",
                 demand_id=str(match.demand_id),
                 new_status="confirmed",
-                reason="match_confirmed",
+                reason="match_accepted",
             )
 
-    async def _cascade_fulfilled(self, match: Match) -> None:
-        """When a match is fulfilled: harvest→'fulfilled', demand→'fulfilled' if all matches fulfilled."""
+    async def _cascade_completed(self, match: Match) -> None:
+        """When a match is completed: harvest→'fulfilled', demand→'fulfilled' if all done."""
         harvest = await self.db.get(HarvestListing, match.harvest_id)
         if harvest and harvest.status == HarvestStatus.matched:
             harvest.status = HarvestStatus.fulfilled
@@ -314,16 +247,16 @@ class MatchService:
                 "harvest_status_cascade",
                 harvest_id=str(match.harvest_id),
                 new_status="fulfilled",
-                reason="match_fulfilled",
+                reason="match_completed",
             )
 
-        # Only move demand to fulfilled if all its non-cancelled matches are fulfilled
+        # Only move demand to fulfilled if all its non-dismissed matches are completed
         remaining = await self.db.execute(
             select(Match).where(
                 and_(
                     Match.demand_id == match.demand_id,
                     Match.id != match.id,
-                    Match.status.not_in([MatchStatus.cancelled, MatchStatus.expired, MatchStatus.fulfilled]),
+                    Match.status.not_in([MatchStatus.dismissed, MatchStatus.completed]),
                 )
             )
         )
@@ -335,19 +268,12 @@ class MatchService:
                     "demand_status_cascade",
                     demand_id=str(match.demand_id),
                     new_status="fulfilled",
-                    reason="all_matches_fulfilled",
+                    reason="all_matches_completed",
                 )
 
-    async def _cascade_cancelled(self, match: Match) -> None:
-        """When a match is cancelled: revert harvest→'ready' if no remaining active matches,
-        and demand→'open' if no remaining active matches."""
-        active_statuses = [
-            MatchStatus.proposed,
-            MatchStatus.accepted_farmer,
-            MatchStatus.accepted_buyer,
-            MatchStatus.confirmed,
-            MatchStatus.in_transit,
-        ]
+    async def _cascade_dismissed(self, match: Match) -> None:
+        """When a match is dismissed: revert harvest/demand if no remaining active matches."""
+        active_statuses = [MatchStatus.proposed, MatchStatus.accepted]
 
         # Check for other active matches on this harvest
         harvest_active = await self.db.execute(
@@ -367,7 +293,7 @@ class MatchService:
                     "harvest_status_cascade",
                     harvest_id=str(match.harvest_id),
                     new_status="ready",
-                    reason="match_cancelled_no_remaining",
+                    reason="match_dismissed_no_remaining",
                 )
 
         # Check for other active matches on this demand
@@ -388,7 +314,7 @@ class MatchService:
                     "demand_status_cascade",
                     demand_id=str(match.demand_id),
                     new_status="open",
-                    reason="match_cancelled_no_remaining",
+                    reason="match_dismissed_no_remaining",
                 )
 
     # ------------------------------------------------------------------

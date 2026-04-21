@@ -37,6 +37,71 @@ async def run_matching_for_new_listing(
             raise
 
 
+async def run_matching_inline(
+    db: AsyncSession,
+    listing_type: Literal["harvest", "demand"],
+    listing_id: UUID,
+) -> int:
+    """Run matching synchronously within the caller's DB session.
+
+    Unlike run_matching_for_new_listing(), this does NOT open a new session
+    or commit — matches are flushed into the caller's transaction so they
+    exist before the HTTP response is sent.  Use inside request handlers
+    where matches must be available immediately.
+    """
+    engine = MatchingEngine(db)
+
+    if listing_type == "demand":
+        candidates = await engine.find_matches_for_demand(listing_id)
+    else:
+        candidates = await engine.find_matches_for_harvest(listing_id)
+
+    created = 0
+    for candidate in candidates:
+        if candidate["score"] < SCORE_THRESHOLD:
+            continue
+
+        harvest_id = candidate["harvest_id"]
+        demand_id = candidate["demand_id"]
+
+        # Skip if a Match already exists for this pair
+        existing = await db.execute(
+            select(Match).where(
+                Match.harvest_id == harvest_id,
+                Match.demand_id == demand_id,
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            continue
+
+        try:
+            async with db.begin_nested():
+                match = Match(
+                    harvest_id=harvest_id,
+                    demand_id=demand_id,
+                    score=candidate["score"],
+                    score_breakdown=candidate["score_breakdown"],
+                    status=MatchStatus.proposed,
+                )
+                db.add(match)
+                await db.flush()
+            created += 1
+            logger.info(
+                "match_created_inline",
+                harvest_id=str(harvest_id),
+                demand_id=str(demand_id),
+                score=candidate["score"],
+            )
+        except IntegrityError:
+            logger.debug(
+                "match_already_exists",
+                harvest_id=str(harvest_id),
+                demand_id=str(demand_id),
+            )
+
+    return created
+
+
 async def _run_matching(
     db: AsyncSession,
     listing_type: Literal["harvest", "demand"],

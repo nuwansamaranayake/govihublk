@@ -86,17 +86,12 @@ class MatchingEngine:
             FROM harvest_listings hl
             JOIN demand_postings dp ON dp.id = :demand_id
             WHERE hl.crop_id   = dp.crop_id
-              AND hl.status    = 'ready'
+              AND hl.status    IN ('ready', 'planned')
               AND dp.status    = 'open'
               AND (
                     hl.location IS NULL
                     OR dp.location IS NULL
                     OR ST_DWithin(hl.location::geography, dp.location::geography, :radius_m)
-              )
-              AND (
-                    hl.available_until IS NULL
-                    OR dp.needed_by    IS NULL
-                    OR hl.available_until >= CURRENT_DATE
               )
         """)
 
@@ -162,17 +157,12 @@ class MatchingEngine:
             JOIN harvest_listings hl ON hl.id = :harvest_id
             WHERE dp.crop_id   = hl.crop_id
               AND dp.status    = 'open'
-              AND hl.status    = 'ready'
+              AND hl.status    IN ('ready', 'planned')
               AND (
                     hl.location IS NULL
                     OR dp.location IS NULL
                     OR ST_DWithin(hl.location::geography, dp.location::geography,
                                   (COALESCE(dp.radius_km, :default_radius_km) * 1000))
-              )
-              AND (
-                    hl.available_until IS NULL
-                    OR dp.needed_by    IS NULL
-                    OR hl.available_until >= CURRENT_DATE
               )
         """)
 
@@ -239,7 +229,7 @@ class MatchingEngine:
             FROM harvest_listings hl
             JOIN demand_postings dp ON dp.id = :demand_id
             WHERE hl.crop_id   = dp.crop_id
-              AND hl.status    = 'ready'
+              AND hl.status    IN ('ready', 'planned')
               AND dp.status    = 'open'
               AND (
                     hl.location IS NULL

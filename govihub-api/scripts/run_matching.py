@@ -45,19 +45,17 @@ async def run_batch_matching() -> int:
     from app.matching.tasks import run_matching_for_new_listing
 
     async with async_session_factory() as db:
-        # Ready harvests that have zero matches yet
+        # All ready/planned harvests (not just unmatched — new demands may have appeared)
         unmatched_harvests = await db.execute(text("""
             SELECT hl.id FROM harvest_listings hl
-            WHERE hl.status = 'ready'
-              AND hl.id NOT IN (SELECT DISTINCT harvest_id FROM matches)
+            WHERE hl.status IN ('ready', 'planned')
         """))
         harvest_ids = [row[0] for row in unmatched_harvests.fetchall()]
 
-        # Open demands that have zero matches yet
+        # All open demands (not just unmatched — new harvests may have appeared)
         unmatched_demands = await db.execute(text("""
             SELECT dp.id FROM demand_postings dp
             WHERE dp.status = 'open'
-              AND dp.id NOT IN (SELECT DISTINCT demand_id FROM matches)
         """))
         demand_ids = [row[0] for row in unmatched_demands.fetchall()]
 

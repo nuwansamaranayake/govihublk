@@ -24,6 +24,15 @@ class MatchScoreBreakdown(BaseModel):
 # Read schemas
 # ---------------------------------------------------------------------------
 
+class MatchPartyInfo(BaseModel):
+    """Contact details for a matched party (farmer or buyer)."""
+
+    name: str
+    phone: Optional[str] = None
+    district: Optional[str] = None
+    crop_name: Optional[str] = None
+
+
 class MatchBrief(BaseModel):
     """Lightweight match summary for list views."""
 
@@ -36,6 +45,12 @@ class MatchBrief(BaseModel):
     agreed_quantity_kg: Optional[float] = None
     created_at: datetime
     updated_at: datetime
+    # Contact info — populated only after at least one party has accepted
+    farmer: Optional[MatchPartyInfo] = None
+    buyer: Optional[MatchPartyInfo] = None
+    crop_name: Optional[str] = None
+    harvest_quantity_kg: Optional[float] = None
+    demand_quantity_kg: Optional[float] = None
 
     model_config = {"from_attributes": True}
 
@@ -84,18 +99,19 @@ class MatchAcceptRequest(BaseModel):
 
 
 class MatchRejectRequest(BaseModel):
+    """Legacy — kept for backward compat, use MatchDismissRequest."""
     notes: Optional[str] = Field(None, max_length=1000, description="Reason for rejection")
 
 
-class MatchConfirmRequest(BaseModel):
-    agreed_price_per_kg: float = Field(..., gt=0, description="Final agreed price per kg")
-    agreed_quantity_kg: float = Field(..., gt=0, description="Final agreed quantity in kg")
-    notes: Optional[str] = Field(None, max_length=1000)
+class MatchCompleteRequest(BaseModel):
+    notes: Optional[str] = Field(None, max_length=1000, description="Completion notes / delivery confirmation")
 
 
-class MatchFulfillRequest(BaseModel):
-    notes: Optional[str] = Field(None, max_length=1000, description="Fulfilment notes / delivery confirmation")
+class MatchDismissRequest(BaseModel):
+    notes: Optional[str] = Field(None, max_length=1000, description="Reason for dismissing the match")
 
 
-class MatchDisputeRequest(BaseModel):
-    notes: str = Field(..., min_length=10, max_length=2000, description="Description of the dispute")
+# Legacy aliases for backward compatibility
+MatchConfirmRequest = MatchAcceptRequest
+MatchFulfillRequest = MatchCompleteRequest
+MatchDisputeRequest = MatchDismissRequest
