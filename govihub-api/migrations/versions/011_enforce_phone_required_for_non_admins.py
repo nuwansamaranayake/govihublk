@@ -27,22 +27,26 @@ def upgrade() -> None:
         """
         UPDATE users
         SET phone = NULL
-        WHERE phone = '' OR phone IS NULL
+        WHERE phone = ''
         """
     )
 
-    # Non-admin users must have a phone; admins may remain NULL.
+    # Non-admin users must have a non-empty phone; admins may remain NULL or any format.
+    # Fails loudly if any non-admin row has NULL phone at migration time (expected = 0).
     op.create_check_constraint(
         "ck_users_phone_required_for_non_admin",
         "users",
         "(role = 'admin') OR (phone IS NOT NULL AND phone <> '')",
     )
 
-    # Any non-NULL phone must be in strict E.164 format.
+    # Non-admin phones must be strict E.164. Admins are fully exempt — their
+    # phone column may be NULL or any legacy format. The non-empty requirement
+    # for non-admins is already enforced by ck_users_phone_required_for_non_admin
+    # above, so this constraint only needs to validate the format shape.
     op.create_check_constraint(
         "ck_users_phone_e164",
         "users",
-        r"phone IS NULL OR phone ~ '^\+[1-9][0-9]{1,14}$'",
+        r"(role = 'admin') OR (phone IS NOT NULL AND phone ~ '^\+[1-9][0-9]{1,14}$')",
     )
 
 
