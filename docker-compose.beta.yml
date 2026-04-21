@@ -16,13 +16,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.govihub-api-beta.rule=Host(`beta.govihublk.com`) && (PathPrefix(`/api`) || PathPrefix(`/mcp`))"
-      - "traefik.http.routers.govihub-api-beta.entrypoints=websecure"
-      - "traefik.http.routers.govihub-api-beta.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.govihub-api-beta.priority=20"
-      - "traefik.http.services.govihub-api-beta.loadbalancer.server.port=8000"
-      - "traefik.http.services.govihub-api-beta.loadbalancer.responseForwarding.flushInterval=1ms"
+      - "traefik.enable=false"
     networks:
       - govihub-beta-net
 
@@ -39,12 +33,7 @@ services:
       - "3002:3000"
     restart: unless-stopped
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.govihub-web-beta.rule=Host(`beta.govihublk.com`)"
-      - "traefik.http.routers.govihub-web-beta.entrypoints=websecure"
-      - "traefik.http.routers.govihub-web-beta.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.govihub-web-beta.priority=10"
-      - "traefik.http.services.govihub-web-beta.loadbalancer.server.port=3000"
+      - "traefik.enable=false"
     networks:
       - govihub-beta-net
 

@@ -1,0 +1,16 @@
+services:
+  govihub-beta-notice:
+    build:
+      context: ./govihub-beta-notice
+      dockerfile: Dockerfile
+    image: govihub-beta-notice:v1
+    ports:
+      - "3004:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.govihub-beta-notice.rule=Host(`beta.govihublk.com`)"
+      - "traefik.http.routers.govihub-beta-notice.entrypoints=websecure"
+      - "traefik.http.routers.govihub-beta-notice.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.govihub-beta-notice.priority=100"
+      - "traefik.http.services.govihub-beta-notice.loadbalancer.server.port=80"
