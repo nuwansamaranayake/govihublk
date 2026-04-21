@@ -7,7 +7,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, get_current_active_user, get_redis
+from app.dependencies import get_db, get_redis, require_complete_profile
 from app.alerts.weather import WeatherService
 from app.alerts.prices import PriceService
 from app.alerts.schemas import (
@@ -34,7 +34,7 @@ router = APIRouter()
 async def get_my_weather(
     db: AsyncSession = Depends(get_db),
     redis=Depends(get_redis),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """
     Fetch weather forecast for the authenticated user's registered location.
@@ -54,7 +54,7 @@ async def get_weather_for_location(
     lat: float,
     lng: float,
     redis=Depends(get_redis),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """
     Fetch weather forecast for any lat/lng coordinate pair.
@@ -82,7 +82,7 @@ async def get_weather_for_location(
 )
 async def get_all_prices(
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """
     Return latest market prices for all active crops, with price alerts
@@ -101,7 +101,7 @@ async def get_prices_for_crop(
     crop_id: UUID,
     days: int = Query(30, ge=1, le=365, description="Number of days of history"),
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """
     Return latest per-market prices and current alerts for a specific crop.
@@ -125,7 +125,7 @@ async def get_price_trend(
     crop_id: UUID,
     days: int = Query(30, ge=7, le=365, description="Number of days for trend window"),
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """
     Return daily average, min, and max prices per market for a crop

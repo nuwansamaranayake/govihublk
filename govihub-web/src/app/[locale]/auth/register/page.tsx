@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import TopBar from "@/components/ui/TopBar";
+import { PhoneInput, isValidE164Phone } from "@/components/ui/PhoneInput";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -83,8 +84,8 @@ export default function RegisterPage() {
     const errs: FormErrors = {};
     if (!form.name.trim() || form.name.trim().length < 2)
       errs.name = "Full name must be at least 2 characters";
-    if (!form.phone.trim() || !/^\+?[\d\s\-]{9,15}$/.test(form.phone.trim()))
-      errs.phone = "Enter a valid phone number";
+    if (!isValidE164Phone(form.phone))
+      errs.phone = t("auth.phone_invalid");
     if (!form.district) errs.district = "Please select your district";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -111,7 +112,12 @@ export default function RegisterPage() {
         }
       );
       updateUser({ role: data.role as Role, name: data.name, isProfileComplete: true });
-      router.replace("/" + locale + "/" + selectedRole + "/dashboard");
+      // Farmers go to crop selection first, others straight to dashboard
+      if (selectedRole === "farmer") {
+        router.replace("/" + locale + "/auth/select-crops");
+      } else {
+        router.replace("/" + locale + "/" + selectedRole + "/dashboard");
+      }
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Registration failed. Please try again.";
@@ -208,15 +214,14 @@ export default function RegisterPage() {
           error={errors.name}
         />
 
-        <Input
-          label="Phone Number"
+        <PhoneInput
+          label={t("auth.phone_label")}
           required
-          type="tel"
-          placeholder="+94 77 123 4567"
           value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          onChange={(v) => setForm({ ...form, phone: v })}
+          defaultCountry="LK"
           error={errors.phone}
-          helperText="Used for matching notifications"
+          helperText={t("auth.phone_required_explanation")}
         />
 
         <Select
@@ -242,7 +247,14 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <Button type="submit" variant="primary" size="lg" fullWidth loading={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          disabled={isSubmitting || !isValidE164Phone(form.phone)}
+        >
           {t("common.submit")}
         </Button>
       </form>

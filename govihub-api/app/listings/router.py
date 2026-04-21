@@ -6,13 +6,13 @@ from typing import Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_active_user, get_db, require_role
+from app.dependencies import get_db, require_complete_profile, require_role
 from app.exceptions import ForbiddenError, ValidationError
-from app.listings.models import CropTaxonomy
+from app.listings.models import CropTaxonomy, HarvestStatus
 from app.listings.schemas import (
     DemandPostingCreate,
     DemandPostingRead,
@@ -24,7 +24,7 @@ from app.listings.schemas import (
     HarvestStatusUpdate,
 )
 from app.listings.service import ListingService
-from app.matching.tasks import run_matching_for_new_listing
+from app.matching.tasks import run_matching_for_new_listing, run_matching_inline
 from app.utils.pagination import PaginationMeta, PaginationParams, paginate
 from app.utils.sri_lanka import get_districts_list
 
@@ -132,7 +132,7 @@ async def list_districts():
 async def upload_listing_image(
     folder: str = Query("listings", description="Storage folder (e.g. harvests, demands)"),
     file: UploadFile = File(..., description="JPEG or PNG image, max 10 MB"),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """Upload an image for a listing. Returns the public URL."""
     from app.utils.storage import storage_service
@@ -160,7 +160,6 @@ async def upload_listing_image(
 )
 async def create_harvest_listing(
     data: HarvestListingCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
@@ -174,16 +173,21 @@ async def create_harvest_listing(
             data_dict["longitude"] = coords[0]
             data_dict["latitude"] = coords[1]
 
+    # Auto-promote to ready for immediate matching (pilot simplification)
+    if data_dict.get("status") in (None, "planned"):
+        data_dict["status"] = "ready"
+
     svc = ListingService(db)
     listing = await svc.create_harvest(
         farmer_id=current_user.id,
         data=data_dict,
     )
 
-    # Trigger matching engine if listing is ready for market
-    if str(listing.status) in ("ready", "HarvestStatus.ready"):
-        background_tasks.add_task(run_matching_for_new_listing, "harvest", listing.id)
-        logger.info("matching_triggered", listing_type="harvest", listing_id=str(listing.id))
+    # Run matching engine inline so matches exist before response is sent
+    if str(listing.status) in ("ready", "HarvestStatus.ready", "planned", "HarvestStatus.planned"):
+        await db.flush()  # ensure listing is visible to engine SQL queries
+        count = await run_matching_inline(db, "harvest", listing.id)
+        logger.info("matching_inline", listing_type="harvest", listing_id=str(listing.id), matches_created=count)
 
     return _harvest_to_read(listing)
 
@@ -239,7 +243,7 @@ async def browse_harvests(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """Browse active harvest listings (buyers/public view) with optional geo filter."""
     if (latitude is None) != (longitude is None):
@@ -279,7 +283,7 @@ async def browse_harvests(
 async def get_harvest_listing(
     listing_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """Get a single harvest listing by ID."""
     svc = ListingService(db)
@@ -305,6 +309,18 @@ async def update_harvest_listing(
         farmer_id=current_user.id,
         data=data.model_dump(exclude_none=True),
     )
+
+    # Auto-promote planned → ready on update (pilot simplification)
+    if str(listing.status) in ("planned", "HarvestStatus.planned"):
+        listing.status = HarvestStatus.ready
+        await db.flush()
+
+    # Re-run matching when listing is updated (crop/qty/dates may have changed)
+    if str(listing.status) in ("ready", "HarvestStatus.ready"):
+        await db.flush()
+        count = await run_matching_inline(db, "harvest", listing.id)
+        logger.info("matching_inline_update", listing_type="harvest", listing_id=str(listing.id), matches_created=count)
+
     return _harvest_to_read(listing)
 
 
@@ -316,7 +332,6 @@ async def update_harvest_listing(
 async def update_harvest_status(
     listing_id: UUID,
     data: HarvestStatusUpdate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
@@ -328,10 +343,11 @@ async def update_harvest_status(
         new_status=data.status,
     )
 
-    # Trigger matching when a harvest transitions to "ready"
+    # Run matching inline when a harvest transitions to "ready"
     if str(listing.status) in ("ready", "HarvestStatus.ready"):
-        background_tasks.add_task(run_matching_for_new_listing, "harvest", listing.id)
-        logger.info("matching_triggered", listing_type="harvest", listing_id=str(listing.id))
+        await db.flush()
+        count = await run_matching_inline(db, "harvest", listing.id)
+        logger.info("matching_inline_status", listing_type="harvest", listing_id=str(listing.id), matches_created=count)
 
     return _harvest_to_read(listing)
 
@@ -363,7 +379,6 @@ async def delete_harvest_listing(
 )
 async def create_demand_posting(
     data: DemandPostingCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
@@ -383,10 +398,11 @@ async def create_demand_posting(
         data=data_dict,
     )
 
-    # Trigger matching engine if demand is open
+    # Run matching engine inline so matches exist before response is sent
     if str(posting.status) in ("open", "DemandStatus.open"):
-        background_tasks.add_task(run_matching_for_new_listing, "demand", posting.id)
-        logger.info("matching_triggered", listing_type="demand", listing_id=str(posting.id))
+        await db.flush()  # ensure demand is visible to engine SQL queries
+        count = await run_matching_inline(db, "demand", posting.id)
+        logger.info("matching_inline", listing_type="demand", listing_id=str(posting.id), matches_created=count)
 
     return _demand_to_read(posting)
 
@@ -439,7 +455,7 @@ async def browse_demands(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """Browse active demand postings (farmers/public view) with optional geo filter."""
     if (latitude is None) != (longitude is None):
@@ -476,7 +492,7 @@ async def browse_demands(
 async def get_demand_posting(
     posting_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_complete_profile),
 ):
     """Get a single demand posting by ID."""
     svc = ListingService(db)
@@ -502,6 +518,13 @@ async def update_demand_posting(
         buyer_id=current_user.id,
         data=data.model_dump(exclude_none=True),
     )
+
+    # Re-run matching when an open demand is updated (crop/qty/dates may have changed)
+    if str(posting.status) in ("open", "DemandStatus.open"):
+        await db.flush()
+        count = await run_matching_inline(db, "demand", posting.id)
+        logger.info("matching_inline_update", listing_type="demand", listing_id=str(posting.id), matches_created=count)
+
     return _demand_to_read(posting)
 
 
@@ -513,7 +536,6 @@ async def update_demand_posting(
 async def update_demand_status(
     posting_id: UUID,
     data: DemandStatusUpdate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("buyer")),
 ):
@@ -525,10 +547,11 @@ async def update_demand_status(
         new_status=data.status,
     )
 
-    # Trigger matching when a demand transitions to "open"
+    # Run matching inline when a demand transitions to "open"
     if str(posting.status) in ("open", "DemandStatus.open"):
-        background_tasks.add_task(run_matching_for_new_listing, "demand", posting.id)
-        logger.info("matching_triggered", listing_type="demand", listing_id=str(posting.id))
+        await db.flush()
+        count = await run_matching_inline(db, "demand", posting.id)
+        logger.info("matching_inline_status", listing_type="demand", listing_id=str(posting.id), matches_created=count)
 
     return _demand_to_read(posting)
 

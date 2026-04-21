@@ -68,7 +68,13 @@
     "dontHaveAccount": "[TA] Don't have an account?",
     "termsAgreement": "[TA] By continuing, you agree to our Terms of Service and Privacy Policy",
     "sessionExpired": "[TA] Your session has expired. Please log in again.",
-    "logoutSuccess": "[TA] You have been logged out successfully."
+    "logoutSuccess": "[TA] You have been logged out successfully.",
+    "phone_label": "தொலைபேசி இலக்கம்",
+    "phone_required_explanation": "வாங்குபவர்களும் விற்பவர்களும் உங்களை நேரடியாகத் தொடர்புகொள்வதற்காக உங்கள் தொலைபேசி இலக்கம் கட்டாயமாகும்.",
+    "phone_invalid": "தயவுசெய்து நாட்டுக் குறியீட்டுடன் சரியான தொலைபேசி இலக்கத்தை உள்ளிடவும்.",
+    "complete_your_profile": "உங்கள் சுயவிவரத்தை பூர்த்தி செய்யவும்",
+    "save_and_continue": "சேமித்து தொடரவும்",
+    "saving": "சேமிக்கப்படுகிறது..."
   },
   "roles": {
     "farmer": "[TA] Farmer",

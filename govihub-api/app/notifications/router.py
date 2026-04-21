@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_active_user, get_db
+from app.dependencies import get_db, require_complete_profile
 from app.notifications.models import NotificationChannel, NotificationType
 from app.notifications.schemas import (
     NotificationListFilter,
@@ -32,7 +32,7 @@ async def list_notifications(
     is_read: bool = Query(None, description="Filter by read status"),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Return paginated notifications for the authenticated user."""
@@ -54,7 +54,7 @@ async def list_notifications(
     summary="Get unread notification count",
 )
 async def get_unread_count(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the number of unread notifications for the authenticated user."""
@@ -69,7 +69,7 @@ async def get_unread_count(
     summary="Mark all notifications as read",
 )
 async def mark_all_read(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Mark every unread notification as read for the authenticated user.
@@ -89,7 +89,7 @@ async def mark_all_read(
 )
 async def mark_notification_read(
     notification_id: UUID,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Mark a single notification as read.
@@ -114,7 +114,7 @@ async def mark_notification_read(
     summary="Get my notification preferences",
 )
 async def get_preferences(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the notification preferences for the authenticated user.
@@ -134,7 +134,7 @@ async def get_preferences(
 )
 async def update_preferences(
     body: NotificationPreferenceUpdate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
     """Update notification preferences for the authenticated user.

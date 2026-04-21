@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db as _get_db
-from app.exceptions import ForbiddenError, UnauthorizedError
+from app.exceptions import ForbiddenError, ProfileIncompleteError, UnauthorizedError
 
 # Re-export for consistent imports
 get_db = _get_db
@@ -65,10 +65,30 @@ async def get_current_active_user(
     return user
 
 
-def require_role(*allowed_roles: str):
-    """Dependency factory: require user has one of the allowed roles."""
+async def require_complete_profile(user=Depends(get_current_active_user)):
+    """Non-admin users with a role must have a phone number.
 
-    async def _check_role(user=Depends(get_current_active_user)):
+    Returns 428 PROFILE_INCOMPLETE so the frontend can redirect to /complete-profile.
+    Admins are exempt — their phone field stays nullable.
+    Users with role=None are passed through; they will be blocked separately by
+    require_registration_complete or require_role on routes that need a role.
+    """
+    from app.users.models import UserRole
+
+    if user.role is None or user.role == UserRole.admin:
+        return user
+    if not user.phone or not user.phone.strip():
+        raise ProfileIncompleteError(required_field="phone")
+    return user
+
+
+def require_role(*allowed_roles: str):
+    """Dependency factory: require user has one of the allowed roles AND a complete profile.
+
+    Non-admin users must have a phone set (profile gate); admins are exempt.
+    """
+
+    async def _check_role(user=Depends(require_complete_profile)):
         if user.role is None:
             raise ForbiddenError(
                 detail="Registration incomplete",

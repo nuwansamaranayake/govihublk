@@ -50,6 +50,18 @@ class UnauthorizedError(GoviHubException):
         super().__init__(status_code=401, detail=detail, error_code="UNAUTHORIZED", details=details)
 
 
+class ProfileIncompleteError(GoviHubException):
+    """428 — non-admin user must finish capturing required profile fields (e.g. phone)."""
+
+    def __init__(self, required_field: str = "phone"):
+        super().__init__(
+            status_code=428,
+            detail="Profile is incomplete — required field missing.",
+            error_code="PROFILE_INCOMPLETE",
+            details={"required_field": required_field},
+        )
+
+
 async def govihub_exception_handler(request: Request, exc: GoviHubException) -> ORJSONResponse:
     """Format all GoviHub exceptions as consistent JSON error responses."""
     return ORJSONResponse(

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { PhoneInput, isValidE164Phone } from "@/components/ui/PhoneInput";
 
 const DISTRICTS = [
   "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
@@ -118,6 +119,7 @@ export default function BetaLoginPage() {
     if (!/^[a-zA-Z0-9_]+$/.test(regUsername.trim())) { setError(t('usernameHint')); return; }
     if (regPassword.length < 6) { setError(t('passwordHint')); return; }
     if (!regDistrict) { setError(t('selectDistrict')); return; }
+    if (!isValidE164Phone(regPhone)) { setError(t('phone_invalid')); return; }
     setLoading(true);
     try {
       const body: Record<string, string> = {
@@ -127,8 +129,8 @@ export default function BetaLoginPage() {
         role: regRole,
         district: regDistrict,
         language: regLanguage,
+        phone: regPhone,
       };
-      if (regPhone.trim()) body.phone = regPhone.trim();
       const res = await fetch(`${API_URL}/auth/beta/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -379,24 +381,21 @@ export default function BetaLoginPage() {
               </div>
             </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                {t('phoneOptional')} <span className="text-neutral-400 font-normal">({tCommon('optional')})</span>
-              </label>
-              <input
-                type="tel"
-                value={regPhone}
-                onChange={(e) => setRegPhone(e.target.value)}
-                placeholder={t('phonePlaceholder')}
-                className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-              />
-            </div>
+            {/* Phone (required — E.164) */}
+            <PhoneInput
+              label={t('phone_label')}
+              required
+              value={regPhone}
+              onChange={setRegPhone}
+              defaultCountry="LK"
+              error={regPhone && !isValidE164Phone(regPhone) ? t('phone_invalid') : undefined}
+              helperText={t('phone_required_explanation')}
+            />
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isValidE164Phone(regPhone)}
               className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? <><Spinner /> {t('creatingAccount')}</> : t('createAccount')}
@@ -418,7 +417,8 @@ export default function BetaLoginPage() {
         {/* Footer */}
         <div className="mt-6 text-center text-xs text-neutral-400">
           <p>{t('betaFooter')}</p>
-          <p className="mt-1">API: {API_URL}</p>
+          <p className="mt-1">Product of AiGNITE Sri Lanka Pvt. Ltd (<a href="https://aignitelk.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-600">AiGNITELk.com</a>)</p>
+          <p className="mt-0.5">Version 1</p>
         </div>
       </div>
     </div>

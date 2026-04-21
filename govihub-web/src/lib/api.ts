@@ -124,10 +124,32 @@ async function request<T>(
     } catch {
       // non-JSON error body
     }
+    // Handle nested error format: {"error": {"code": ..., "message": ...}}
+    const nestedError = errBody.error as Record<string, unknown> | undefined;
+    const code =
+      (nestedError?.code as string) || (errBody.code as string) || undefined;
+
+    // 428 PROFILE_INCOMPLETE — redirect the user to /complete-profile, then
+    // reject so the caller sees a clean error (not a partial success).
+    if (res.status === 428 && code === "PROFILE_INCOMPLETE" && typeof window !== "undefined") {
+      const locale = window.location.pathname.split("/")[1] || "en";
+      const current = window.location.pathname + window.location.search;
+      if (!current.includes("/complete-profile")) {
+        sessionStorage.setItem("resumeAfterProfile", current);
+        window.location.href = `/${locale}/auth/complete-profile`;
+      }
+    }
+
     throw new ApiException({
       status: res.status,
-      code: errBody.code as string | undefined,
-      message: (errBody.message as string) || (errBody.detail as string) || res.statusText,
+      code,
+      message:
+        (nestedError?.message as string) ||
+        (errBody.message as string) ||
+        (Array.isArray(errBody.detail)
+          ? errBody.detail.map((d: any) => d.msg).join("; ")
+          : (errBody.detail as string)) ||
+        res.statusText,
       details: errBody,
     });
   }

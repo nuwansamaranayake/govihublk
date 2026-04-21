@@ -35,6 +35,23 @@ async def _matching_scheduler():
         await asyncio.sleep(300)  # 5 minutes
 
 
+async def _weather_alert_scheduler():
+    """Generate weather alerts for farmers every 60 minutes."""
+    import asyncio
+
+    await asyncio.sleep(60)  # initial delay
+    while True:
+        try:
+            from app.weather.alert_engine import generate_alerts_for_all_farmers
+
+            count = await generate_alerts_for_all_farmers()
+            if count:
+                logger.info("weather_alert_cycle", new_alerts=count)
+        except Exception as e:
+            logger.error("weather_alert_scheduler_error", error=str(e))
+        await asyncio.sleep(3600)  # 60 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -56,10 +73,15 @@ async def lifespan(app: FastAPI):
     matching_task = asyncio.create_task(_matching_scheduler())
     logger.info("matching_scheduler_started", interval_seconds=300)
 
+    # Start the weather alert scheduler
+    weather_alert_task = asyncio.create_task(_weather_alert_scheduler())
+    logger.info("weather_alert_scheduler_started", interval_seconds=3600)
+
     yield
 
-    # Shutdown: cancel scheduler and dispose engine
+    # Shutdown: cancel schedulers and dispose engine
     matching_task.cancel()
+    weather_alert_task.cancel()
     await engine.dispose()
     logger.info("govihub_shutdown")
 
@@ -88,6 +110,36 @@ def create_app() -> FastAPI:
 
     # Exception handlers
     app.add_exception_handler(GoviHubException, govihub_exception_handler)
+
+    # Log validation errors with request body for debugging
+    from fastapi.exceptions import RequestValidationError
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    import structlog
+    _val_log = structlog.get_logger("validation_error")
+
+    @app.exception_handler(RequestValidationError)
+    async def log_validation_error(request: Request, exc: RequestValidationError):
+        body = None
+        try:
+            body = await request.body()
+            body = body.decode("utf-8")[:500]
+        except Exception:
+            pass
+        # Strip non-JSON-serializable context (e.g. raw ValueError instances
+        # emitted by custom field_validator callables in Pydantic v2).
+        safe_errors = [
+            {"loc": list(e.get("loc", [])), "msg": e.get("msg"), "type": e.get("type")}
+            for e in exc.errors()
+        ]
+        _val_log.warning(
+            "validation_error",
+            path=str(request.url.path),
+            method=request.method,
+            body=body,
+            errors=safe_errors,
+        )
+        return JSONResponse(status_code=422, content={"detail": safe_errors})
 
     # Request ID + Logging middleware — pure ASGI to avoid Content-Length
     # mismatch with ORJSONResponse when using call_next() buffering.
@@ -153,6 +205,8 @@ def create_app() -> FastAPI:
     from app.admin.router import router as admin_router
     from app.mcp.router import router as mcp_router
     from app.sector.router import router as sector_router
+    from app.weather.router import router as weather_router
+    from app.ads.router import router as ads_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
@@ -168,6 +222,8 @@ def create_app() -> FastAPI:
     app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
     app.include_router(mcp_router, prefix="/mcp", tags=["MCP"])
     app.include_router(sector_router, prefix="/api/v1", tags=["Sector"])
+    app.include_router(weather_router, prefix="/api/v1/weather", tags=["Weather"])
+    app.include_router(ads_router, prefix="/api/v1", tags=["Advertisements"])
 
     # Beta auth — username/password login for beta testing
     if settings.APP_ENV in ("beta", "development"):
@@ -184,6 +240,14 @@ def create_app() -> FastAPI:
         from app.auth.dev_router import router as dev_auth_router
         app.include_router(dev_auth_router, prefix="/api/v1/auth", tags=["Dev Auth"])
         logger.warning("dev_auth_enabled", note="Development-only login bypass is active")
+
+    # Serve /uploads/ as static files (local fallback for R2 image storage)
+    from pathlib import Path
+    uploads_dir = Path("/app/uploads")
+    if uploads_dir.is_dir():
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+        logger.info("static_uploads_mounted", path=str(uploads_dir))
 
     return app
 

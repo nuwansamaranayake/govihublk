@@ -9,27 +9,35 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
+import { PhoneInput, isValidE164Phone } from "@/components/ui/PhoneInput";
 import { useAuth } from "@/lib/auth";
 
-interface UserProfile {
+interface ProfileData {
   name: string;
   email: string;
   phone: string;
   district: string;
   language: "en"|"si"|"ta";
-  notifyMatches: boolean;
-  notifyPrices: boolean;
-  notifyAdvisory: boolean;
-  notifySystem: boolean;
+}
+
+interface NotifPrefs {
+  match_alerts: boolean;
+  price_alerts: boolean;
+  weather_alerts: boolean;
+  push_enabled: boolean;
+  sms_enabled: boolean;
 }
 
 const DISTRICTS = ["Ampara","Anuradhapura","Badulla","Batticaloa","Colombo","Galle","Gampaha","Hambantota","Jaffna","Kalutara","Kandy","Kegalle","Kurunegala","Matale","Matara","Monaragala","Nuwara Eliya","Polonnaruwa","Puttalam","Ratnapura","Trincomalee"];
 
-
 export default function BuyerSettingsPage() {
   const t = useTranslations();
   const { isReady } = useAuth();
-  const [profile, setProfile] = useState<UserProfile|null>(null);
+  const [profile, setProfile] = useState<ProfileData|null>(null);
+  const [notifs, setNotifs] = useState<NotifPrefs>({
+    match_alerts: true, price_alerts: true, weather_alerts: true,
+    push_enabled: true, sms_enabled: true,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -38,25 +46,74 @@ export default function BuyerSettingsPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    api.get<UserProfile>("/users/me")
-      .then(setProfile)
-      .catch((err: any) => {
-        setError(err?.message || "Failed to load profile");
+    Promise.all([
+      api.get<any>("/users/me"),
+      api.get<any>("/users/me/preferences").catch(() => null),
+    ])
+      .then(([user, prefs]) => {
+        setProfile({
+          name: user.name || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          district: user.district || "",
+          language: user.language || "en",
+        });
+        if (prefs) {
+          setNotifs({
+            match_alerts: prefs.match_alerts ?? true,
+            price_alerts: prefs.price_alerts ?? true,
+            weather_alerts: prefs.weather_alerts ?? true,
+            push_enabled: prefs.push_enabled ?? true,
+            sms_enabled: prefs.sms_enabled ?? true,
+          });
+        }
       })
+      .catch((err: any) => setError(err?.message || "Failed to load profile"))
       .finally(() => setLoading(false));
   }, [isReady]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+    if (!isValidE164Phone(profile.phone)) {
+      setError(t("auth.phone_invalid"));
+      return;
+    }
     setSaving(true);
-    try { await api.put("/users/me", profile); } catch (err: any) { setError(err?.message || "Failed to save"); }
-    finally { setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    setError(null);
+    try {
+      await Promise.all([
+        api.put("/users/me", {
+          name: profile.name,
+          email: profile.email || undefined,
+          phone: profile.phone,
+          language: profile.language,
+          district: profile.district || undefined,
+        }),
+        api.put("/users/me/preferences", notifs),
+      ]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggle = (key: keyof UserProfile) => { if (!profile) return; setProfile({...profile, [key]: !profile[key as keyof UserProfile]}); };
-  const setField = (key: keyof UserProfile, val: string) => { if (!profile) return; setProfile({...profile, [key]: val}); };
-  const handleDeactivate = async () => { try { await api.post("/users/me/deactivate"); } catch {} setConfirmDeactivate(false); };
+  const toggleNotif = (key: keyof NotifPrefs) => {
+    setNotifs(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const setField = (key: keyof ProfileData, val: string) => {
+    if (!profile) return;
+    setProfile({ ...profile, [key]: val });
+  };
+
+  const handleDeactivate = async () => {
+    try { await api.delete("/users/me"); } catch {}
+    setConfirmDeactivate(false);
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
@@ -64,6 +121,13 @@ export default function BuyerSettingsPage() {
         <h1 className="text-xl font-bold">{t("nav.settings")}</h1>
         <p className="text-amber-100 text-sm mt-1">Manage your account preferences</p>
       </div>
+
+      {error && (
+        <div className="mx-4 mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
       {loading ? (
         <div className="px-4 py-4 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-32 w-full" />)}</div>
       ) : profile && (
@@ -71,11 +135,19 @@ export default function BuyerSettingsPage() {
           <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Profile Information</h2>} padding="md">
             <div className="space-y-3 mt-3">
               <Input label="Full Name" value={profile.name} onChange={e => setField("name", e.target.value)} required />
-              <Input label="Email" type="email" value={profile.email} onChange={e => setField("email", e.target.value)} required />
-              <Input label="Phone" type="tel" value={profile.phone} onChange={e => setField("phone", e.target.value)} />
+              <Input label="Email" type="email" value={profile.email} onChange={e => setField("email", e.target.value)} placeholder="your@email.com" />
+              <PhoneInput
+                label={t("auth.phone_label")}
+                required
+                value={profile.phone}
+                onChange={(v) => setField("phone", v)}
+                defaultCountry="LK"
+                error={profile.phone && !isValidE164Phone(profile.phone) ? t("auth.phone_invalid") : undefined}
+              />
               <Select label="District" value={profile.district} onChange={e => setField("district", e.target.value)} options={DISTRICTS.map(d => ({value:d,label:d}))} />
             </div>
           </Card>
+
           <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Language Preference</h2>} padding="md">
             <div className="space-y-2 mt-3">
               {[{value:"en",label:"English"},{value:"si",label:"සිංහල (Sinhala)"},{value:"ta",label:"தமிழ் (Tamil)"}].map(lang => (
@@ -86,25 +158,29 @@ export default function BuyerSettingsPage() {
               ))}
             </div>
           </Card>
+
           <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Notification Preferences</h2>} padding="md">
             <div className="space-y-3 mt-3">
               {[
-                { key:"notifyMatches" as keyof UserProfile, label:"New farmer matches" },
-                { key:"notifyPrices" as keyof UserProfile, label:"Market price alerts" },
-                { key:"notifyAdvisory" as keyof UserProfile, label:"Advisory updates" },
-                { key:"notifySystem" as keyof UserProfile, label:"System announcements" },
+                { key: "match_alerts" as keyof NotifPrefs, label: "New farmer match notifications" },
+                { key: "price_alerts" as keyof NotifPrefs, label: "Market price alerts" },
+                { key: "weather_alerts" as keyof NotifPrefs, label: "Weather & advisory alerts" },
+                { key: "push_enabled" as keyof NotifPrefs, label: "Push notifications" },
+                { key: "sms_enabled" as keyof NotifPrefs, label: "SMS notifications" },
               ].map(item => (
                 <div key={item.key} className="flex items-center justify-between">
                   <span className="text-sm text-neutral-700">{item.label}</span>
-                  <button type="button" role="switch" aria-checked={!!profile[item.key]} onClick={() => toggle(item.key)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${profile[item.key]?"bg-amber-500":"bg-neutral-300"}`}>
-                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${profile[item.key]?"translate-x-5":"translate-x-0"}`} />
+                  <button type="button" role="switch" aria-checked={notifs[item.key]} onClick={() => toggleNotif(item.key)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${notifs[item.key]?"bg-amber-500":"bg-neutral-300"}`}>
+                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${notifs[item.key]?"translate-x-5":"translate-x-0"}`} />
                   </button>
                 </div>
               ))}
             </div>
           </Card>
+
           <Button type="submit" variant="accent" fullWidth loading={saving}>{saved ? "✓ Saved!" : "Save Changes"}</Button>
+
           <Card padding="md" className="border-red-200">
             <h2 className="font-semibold text-red-700 text-sm mb-2">Danger Zone</h2>
             <p className="text-sm text-neutral-500 mb-3">Deactivating removes your demands from the marketplace.</p>
@@ -112,6 +188,7 @@ export default function BuyerSettingsPage() {
           </Card>
         </form>
       )}
+
       <Modal isOpen={confirmDeactivate} onClose={() => setConfirmDeactivate(false)} title="Deactivate Account"
         footer={<div className="flex gap-3"><Button variant="ghost" fullWidth onClick={() => setConfirmDeactivate(false)}>Cancel</Button><Button variant="danger" fullWidth onClick={handleDeactivate}>Yes, Deactivate</Button></div>}>
         <p className="text-sm text-neutral-700">Are you sure? Your demands will be paused until you reactivate.</p>

@@ -4,18 +4,36 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.users.phone import validate_e164_phone, validate_e164_phone_optional
 
 
 class CompleteRegistrationRequest(BaseModel):
     role: str = Field(..., pattern="^(farmer|buyer|supplier)$")
     name: str = Field(..., min_length=2, max_length=255)
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: str = Field(..., min_length=8, max_length=16, description="Phone number in E.164 format")
     language: str = Field("si", pattern="^(si|en|ta)$")
     district: Optional[str] = None
     gn_division: Optional[str] = None
     ds_division: Optional[str] = None
     province: Optional[str] = None
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        return validate_e164_phone(v)
+
+
+class CompleteProfileRequest(BaseModel):
+    """Payload for POST /users/me/complete-profile — gate for existing NULL-phone users."""
+
+    phone: str = Field(..., min_length=8, max_length=16)
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        return validate_e164_phone(v)
 
 
 class UserRead(BaseModel):
@@ -46,12 +64,31 @@ class UserPublic(BaseModel):
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=255)
-    phone: Optional[str] = Field(None, max_length=20)
+    email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=16)
     language: Optional[str] = Field(None, pattern="^(si|en|ta)$")
     district: Optional[str] = None
     gn_division: Optional[str] = None
     ds_division: Optional[str] = None
     province: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip().lower()
+        if not v:
+            return None
+        import re
+        if not re.match(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$", v):
+            raise ValueError("Invalid email address")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        return validate_e164_phone_optional(v)
 
 
 class UserLocationUpdate(BaseModel):

@@ -7,7 +7,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, get_current_active_user, require_role
+from app.dependencies import get_db, require_complete_profile, require_role
 from app.marketplace.models import SupplyCategory, SupplyStatus
 from app.marketplace.schemas import (
     SupplyListingCreate,
@@ -105,7 +105,7 @@ async def search_listings(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """
     Search supply listings with optional keyword, category, proximity, and price filters.
@@ -139,7 +139,7 @@ async def search_listings(
 async def get_listing(
     listing_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """Retrieve a single supply listing by its UUID."""
     svc = SupplyMarketplaceService(db)
@@ -192,7 +192,7 @@ async def list_listings(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_active_user),
+    _current_user=Depends(require_complete_profile),
 ):
     """Browse active supply listings, optionally filtered by category."""
     filters = SupplySearchFilter(
