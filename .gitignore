@@ -72,3 +72,17 @@ coverage.xml
 # Beta environment files (contain secrets)
 .env.beta
 .env.beta.frontend
+
+# TypeScript build info (generated)
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Test runtime artifacts
+screenshots/
+e2e-v3/screenshots/
+e2e-v3/results/
+e2e-v3/node_modules/
+
+# Temp translation files
+temp_help_*.json
+chunks_for_ingestion.json
