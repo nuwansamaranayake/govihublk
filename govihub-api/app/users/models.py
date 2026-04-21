@@ -5,7 +5,7 @@ from datetime import datetime, time, timezone
 from typing import Optional
 
 from geoalchemy2 import Geography
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, Text, Float, Integer
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, Text, Float, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,8 +25,8 @@ class User(Base):
     username: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True, index=True)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     auth_provider: Mapped[Optional[str]] = mapped_column(String(20), default="beta", server_default="beta")
-    phone: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role", create_constraint=True),
         nullable=False,
@@ -59,6 +59,8 @@ class User(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("email", "role", name="uq_users_email_role"),
+        UniqueConstraint("phone", "role", name="uq_users_phone_role"),
         Index("ix_users_role", "role"),
         Index("ix_users_district", "district"),
     )
