@@ -118,7 +118,7 @@ Translation key `brand.sectorSpices` added in en/si/ta.
 
 ## Git
 
-**Branch:** `beta-auth`
+**Branch:** `spices` (renamed from `beta-auth`)
 
 **Commits pushed (this session):**
 
@@ -127,7 +127,7 @@ Translation key `brand.sectorSpices` added in en/si/ta.
 147f3f5 feat(umbrella): add govihublk.com marketing site
 ```
 
-Pushed to `origin/beta-auth`. Working tree still has pre-existing uncommitted changes from earlier sessions (backend API, page components, help translations) — those were intentionally left alone and not bundled into the umbrella/PWA commits.
+Pushed to `origin/spices` (the active branch, renamed from `beta-auth`). Working tree still has pre-existing uncommitted changes from earlier sessions (backend API, page components, help translations) — those were intentionally left alone and not bundled into the umbrella/PWA commits.
 
 ---
 
@@ -138,7 +138,7 @@ Pushed to `origin/beta-auth`. Working tree still has pre-existing uncommitted ch
 3. **Email capture is mailto-only**. Works but not trackable. v2: POST `/api/v1/interest-signups` endpoint on spices API writing to a new `interest_signups` table. TODO comment is in both tile forms.
 4. **WhatsApp number** on contact pages is a placeholder — Nuwan to provide.
 5. **Maskable 512** was regenerated with 10% padding. Existing PWA installs on users' phones will pick up the new icon on their next visit (Next.js refetches the manifest on load; actual icon swap happens on re-install for already-installed users).
-6. **Ads router + MCP stats fixes** from the prior session's LAUNCH_VERIFICATION are on the VPS but not yet merged to `main` (they're committed to `beta-auth` via the earlier commits on the branch). Merge once sanity tests pass on Saturday.
+6. **Ads router + MCP stats fixes** from the prior session's LAUNCH_VERIFICATION are on the VPS but not yet merged to `main` (they're committed to `spices` via the earlier commits on the branch — originally authored under the `beta-auth` name before the rename). Merge once sanity tests pass on Saturday.
 
 ---
 

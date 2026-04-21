@@ -151,7 +151,7 @@ Note: no `govihub-mcp-beta` container ever existed — plan's Part 9 reference w
 1. **MCP stats discrepancy** (Part 2 of the earlier spec): removed `WHERE is_active = TRUE` from `get_platform_stats` user query at `govihub-api/app/mcp/tools.py:986-996` + same filter in the growth branch. Both MCP tools now use the canonical definition.
 2. **`/ads/active` 500 bug**: pre-existing `func.cast(json.dumps(...), text("jsonb"))` pattern fails under SQLAlchemy 2.x (`TextClause` has no `_is_tuple_type`). Replaced with `bindparam("role_target", value=[role], type_=JSONB)` in `govihub-api/app/ads/router.py:111`. Verified authenticated users now get role-filtered ads.
 
-Both fixes were rebuilt with `--no-cache` and deployed to the spices container. Fixes should be merged back to `main` in a follow-up PR (I only edited files and shipped via scp + rebuild on the VPS; beta-auth branch of the repo also has these edits in the working tree).
+Both fixes were rebuilt with `--no-cache` and deployed to the spices container. Fixes should be merged back to `main` in a follow-up PR (I only edited files and shipped via scp + rebuild on the VPS; the `spices` branch of the repo also has these edits in the working tree).
 
 ## Summary for Nuwan
 
