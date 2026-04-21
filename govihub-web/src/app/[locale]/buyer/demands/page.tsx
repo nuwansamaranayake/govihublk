@@ -13,8 +13,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
-import { cropName } from "@/lib/utils";
+import { cropName, formatDateSafe } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useSector } from "@/hooks/useSector";
 
 interface Demand {
   id: string;
@@ -37,7 +38,7 @@ interface Demand {
   updated_at: string;
 }
 
-const CROPS = ["Tomato","Cabbage","Carrot","Beans","Potato","Onion","Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish"];
+// CROPS is now sector-aware, set inside the component via useSector()
 
 
 const EMPTY_FORM = { crop_id:"", variety:"", quantity_kg:"", max_price_per_kg:"", radius_km:"50", needed_by:"", description:"", quality_grade:"A", is_recurring:false };
@@ -50,7 +51,9 @@ export default function BuyerDemandsPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const { isReady } = useAuth();
+  const { varietyPlaceholder } = useSector();
   const [demands, setDemands] = useState<Demand[]>([]);
+  const [cropOptions, setCropOptions] = useState<{value:string;label:string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string|null>(null);
@@ -73,12 +76,20 @@ export default function BuyerDemandsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { if (isReady) load(); }, [isReady]);
+  useEffect(() => {
+    if (isReady) {
+      load();
+      api.get<any>("/crops").then((res) => {
+        const crops = Array.isArray(res) ? res : res?.data ?? [];
+        setCropOptions(crops.map((c: any) => ({ value: c.id, label: locale === "si" ? c.name_si : c.name_en })));
+      }).catch(() => {});
+    }
+  }, [isReady]);
 
-  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setError(null); setShowModal(true); };
   const openEdit = (d: Demand) => {
     setEditId(d.id);
-    setForm({ crop_id:String(d.crop_id || ''), variety:d.variety || '', quantity_kg:String(d.quantity_kg), max_price_per_kg:String(d.max_price_per_kg), radius_km:String(d.radius_km || '50'), needed_by:d.needed_by?.split('T')[0] || '', description:d.description || '', quality_grade:d.quality_grade || 'A', is_recurring:d.is_recurring || false });
+    setForm({ crop_id: d.crop?.id || d.crop_id || '', variety:d.variety || '', quantity_kg:String(d.quantity_kg), max_price_per_kg:String(d.max_price_per_kg), radius_km:String(d.radius_km || '50'), needed_by:d.needed_by?.split('T')[0] || '', description:d.description || '', quality_grade:d.quality_grade || 'A', is_recurring:d.is_recurring || false });
     setShowModal(true);
   };
 
@@ -86,8 +97,12 @@ export default function BuyerDemandsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editId) await api.put(`/listings/demand/${editId}`, form);
-      else await api.post("/listings/demand", form);
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(form)) {
+        if (v !== "" && v !== undefined) payload[k] = v;
+      }
+      if (editId) await api.put(`/listings/demand/${editId}`, payload);
+      else await api.post("/listings/demand", payload);
       setShowModal(false);
       await load();
     } catch (err: any) {
@@ -150,7 +165,7 @@ export default function BuyerDemandsPage() {
                           {demand.quantity_kg} kg · Rs. {demand.max_price_per_kg}/kg max
                         </p>
                         <p className="text-xs text-neutral-400 mt-1">
-                          🗓 Need by: {demand.needed_by ? new Date(demand.needed_by).toLocaleDateString() : ''} · {demand.radius_km}km radius
+                          🗓 Need by: {formatDateSafe(demand.needed_by)} · {demand.radius_km}km radius
                         </p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
@@ -182,10 +197,11 @@ export default function BuyerDemandsPage() {
         }
       >
         <form id="demand-form" onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-2">{error}</div>}
           <Select label={t("buyer.cropName")} required value={form.crop_id} onChange={e => f("crop_id", e.target.value)}
-            placeholder={t("listing.selectCrop")} options={CROPS.map((c, i) => ({value:String(i+1),label:c}))} />
+            placeholder={t("listing.selectCrop")} options={cropOptions} />
           <Input label={t("buyer.variety")} value={form.variety}
-            onChange={e => f("variety", e.target.value)} placeholder="e.g. Big Beef" />
+            onChange={e => f("variety", e.target.value)} placeholder={varietyPlaceholder} />
           <div className="grid grid-cols-2 gap-3">
             <Input label={t("buyer.quantity") + " (kg)"} type="number" required min="1" value={form.quantity_kg}
               onChange={e => f("quantity_kg", e.target.value)} placeholder="e.g. 500" />

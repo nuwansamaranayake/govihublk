@@ -18,15 +18,16 @@ type Category = "fertilizer"|"seeds"|"pesticide"|"equipment"|"irrigation"|"other
 
 interface Listing {
   id: string;
-  title: string;
+  name: string;
   category: Category;
   description: string;
   price: number;
   unit: string;
-  coverageArea: string;
-  availability: string;
-  active: boolean;
-  views: number;
+  status: string;
+  delivery_available: boolean;
+  delivery_radius_km?: number;
+  stock_quantity?: number;
+  created_at?: string;
 }
 
 const CATEGORIES: Category[] = ["fertilizer","seeds","pesticide","equipment","irrigation","other"];
@@ -37,7 +38,7 @@ const CATEGORY_ICON: Record<Category, string> = {
 };
 
 
-const EMPTY_FORM = { title:"", category:"fertilizer" as Category, description:"", price:"", unit:"kg", coverageArea:"", availability:"In Stock", active:true };
+const EMPTY_FORM = { name:"", category:"fertilizer" as Category, description:"", price:"", unit:"kg", stock_quantity:"", delivery_available:false };
 type FormData = typeof EMPTY_FORM;
 
 export default function SupplierListingsPage() {
@@ -54,7 +55,7 @@ export default function SupplierListingsPage() {
   const load = () => {
     setLoading(true);
     setError(null);
-    api.get<any>("/marketplace/search")
+    api.get<any>("/marketplace/listings/mine")
       .then((res) => {
         const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
         setListings(items);
@@ -68,19 +69,29 @@ export default function SupplierListingsPage() {
 
   useEffect(() => { if (isReady) load(); }, [isReady]);
 
-  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setError(null); setShowModal(true); };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
-    setForm({ title:l.title, category:l.category, description:l.description, price:String(l.price), unit:l.unit, coverageArea:l.coverageArea, availability:l.availability, active:l.active });
+    setForm({ name:l.name||"", category:l.category, description:l.description||"", price:String(l.price||""), unit:l.unit||"kg", stock_quantity:String(l.stock_quantity||""), delivery_available:l.delivery_available||false });
+    setError(null);
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError(null);
     try {
-      if (editId) await api.put(`/marketplace/listings/${editId}`, form);
-      else await api.post("/marketplace/listings", form);
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(form)) {
+        if (v !== "" && v !== undefined) payload[k] = v;
+      }
+      // delivery_radius_km required when delivery_available is true
+      if (payload.delivery_available && !payload.delivery_radius_km) {
+        payload.delivery_radius_km = 50; // default 50km radius
+      }
+      if (editId) await api.put(`/marketplace/listings/${editId}`, payload);
+      else await api.post("/marketplace/listings", payload);
       setShowModal(false);
       await load();
     } catch (err: any) {
@@ -132,15 +143,15 @@ export default function SupplierListingsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-base" aria-hidden="true">{CATEGORY_ICON[listing.category]}</span>
-                          <h3 className="font-semibold text-neutral-900 text-sm">{listing.title}</h3>
-                          <Badge color={listing.active?"green":"gray"} size="sm" dot>{listing.active ? t("common.active").toLowerCase() : t("common.inactive").toLowerCase()}</Badge>
+                          <span className="text-base" aria-hidden="true">{CATEGORY_ICON[listing.category] || "📦"}</span>
+                          <h3 className="font-semibold text-neutral-900 text-sm">{listing.name}</h3>
+                          <Badge color={listing.status==="active"?"green":"gray"} size="sm" dot>{listing.status}</Badge>
                         </div>
                         <p className="text-xs text-neutral-500 mt-1 line-clamp-1">{listing.description}</p>
-                        <p className="text-sm text-neutral-600 mt-1">Rs. {listing.price.toLocaleString()}/{listing.unit}</p>
+                        {listing.price != null && <p className="text-sm text-neutral-600 mt-1">Rs. {listing.price.toLocaleString()}/{listing.unit || "unit"}</p>}
                         <div className="flex items-center gap-3 mt-1">
-                          <p className="text-xs text-neutral-400">📍 {listing.coverageArea}</p>
-                          <p className="text-xs text-neutral-400">👁 {listing.views} {t("common.views")}</p>
+                          {listing.stock_quantity != null && <p className="text-xs text-neutral-400">Stock: {listing.stock_quantity}</p>}
+                          {listing.delivery_available && <p className="text-xs text-neutral-400">🚚 Delivery available</p>}
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
@@ -172,9 +183,10 @@ export default function SupplierListingsPage() {
         }
       >
         <form id="supply-form" onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-2">{error}</div>}
           <Select label={t("supplier.category")} required value={form.category} onChange={e => f("category", e.target.value as Category)}
             options={CATEGORIES.map(c => ({value:c, label: `${CATEGORY_ICON[c]} ${c.charAt(0).toUpperCase()+c.slice(1)}`}))} />
-          <Input label={t("supplier.title")} required value={form.title} onChange={e => f("title", e.target.value)} placeholder="e.g. Organic NPK Fertilizer 50kg" />
+          <Input label={t("supplier.title")} required value={form.name} onChange={e => f("name", e.target.value)} placeholder="e.g. Organic NPK Fertilizer 50kg" />
           <div>
             <label className="text-sm font-medium text-neutral-700 block mb-1.5">{t("supplier.description")}</label>
             <textarea value={form.description} onChange={e => f("description", e.target.value)} rows={3}
@@ -182,30 +194,20 @@ export default function SupplierListingsPage() {
               placeholder={t("common.describeProduct")} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("supplier.priceRs")} type="number" required min="1" value={form.price}
+            <Input label={t("supplier.priceRs")} type="number" min="1" value={form.price}
               onChange={e => f("price", e.target.value)} placeholder="e.g. 2500" />
             <Select label={t("supplier.unit")} value={form.unit} onChange={e => f("unit", e.target.value)}
               options={UNITS.map(u => ({value:u,label:u}))} />
           </div>
-          <Input label={t("supplier.coverageArea")} value={form.coverageArea} onChange={e => f("coverageArea", e.target.value)}
-            placeholder="e.g. Southern Province, All Island" />
-          <Select label={t("supplier.availability")} value={form.availability} onChange={e => f("availability", e.target.value)}
-            options={["In Stock","Limited Stock","Pre-order","Out of Stock"].map(s => ({value:s,label:s}))} />
+          <Input label="Stock Quantity" type="number" min="0" value={form.stock_quantity}
+            onChange={e => f("stock_quantity", e.target.value)} placeholder="e.g. 100" />
           <label className="flex items-center gap-3 cursor-pointer">
-            <div role="switch" aria-checked={form.active} onClick={() => f("active", !form.active)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${form.active?"bg-blue-500":"bg-neutral-300"}`}>
-              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.active?"translate-x-5":"translate-x-0"}`} />
+            <div role="switch" aria-checked={form.delivery_available} onClick={() => f("delivery_available", !form.delivery_available)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${form.delivery_available?"bg-blue-500":"bg-neutral-300"}`}>
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.delivery_available?"translate-x-5":"translate-x-0"}`} />
             </div>
-            <span className="text-sm font-medium text-neutral-700">{t("supplier.activeListing")}</span>
+            <span className="text-sm font-medium text-neutral-700">Delivery Available</span>
           </label>
-          <div>
-            <p className="text-sm font-medium text-neutral-700 mb-1.5">{t("supplier.photos")}</p>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-blue-400 transition-colors">
-              <span className="text-3xl mb-2" aria-hidden="true">📸</span>
-              <span className="text-sm text-neutral-500">{t("common.tapToAddPhotos")}</span>
-              <input type="file" accept="image/*" multiple className="sr-only" />
-            </label>
-          </div>
         </form>
       </Modal>
     </div>

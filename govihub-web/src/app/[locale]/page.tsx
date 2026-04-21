@@ -127,13 +127,20 @@ export default function HomePage({ params }: { params: { locale: string } }) {
               : t("heroSubtitle")}
           </p>
 
-          {/* CTA Button */}
-          <Link href={`/${locale}/auth/beta-login`}>
-            <button className="group relative px-10 py-4 bg-[#E8A838] hover:bg-[#C68A2E] text-white text-lg font-semibold rounded-2xl shadow-lg shadow-amber-900/30 transition-all duration-300 hover:shadow-xl hover:shadow-amber-900/40 hover:-translate-y-0.5">
-              {t("getStarted")}
-              <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">&rarr;</span>
-            </button>
-          </Link>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Link href={`/${locale}/auth/beta-login`}>
+              <button className="group relative px-10 py-4 bg-[#E8A838] hover:bg-[#C68A2E] text-white text-lg font-semibold rounded-2xl shadow-lg shadow-amber-900/30 transition-all duration-300 hover:shadow-xl hover:shadow-amber-900/40 hover:-translate-y-0.5">
+                {t("getStarted")}
+                <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">&rarr;</span>
+              </button>
+            </Link>
+            <Link href={`/${locale}/learn`}>
+              <button className="group px-8 py-4 border-2 border-white/40 hover:border-white text-white text-lg font-semibold rounded-2xl transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5">
+                {locale === "si" ? "GoviHub ගැන දැනගන්න" : "Learn about GoviHub"}
+              </button>
+            </Link>
+          </div>
 
           {/* Scroll indicator */}
           <div className="mt-16 animate-bounce">
@@ -217,6 +224,24 @@ export default function HomePage({ params }: { params: { locale: string } }) {
         </div>
       </section>
 
+      {/* ── YouTube Banner ─────────────────────────────────────────── */}
+      <a
+        href="https://www.youtube.com/@GoviHubSriLanka"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-[#1A1A2E] hover:bg-[#2a2a4e] transition-colors"
+      >
+        <div className="max-w-5xl mx-auto flex items-center justify-center gap-3 px-6 py-4">
+          <div className="flex-shrink-0 w-9 h-6 bg-red-600 rounded flex items-center justify-center">
+            <div className="w-0 h-0 border-l-[8px] border-l-white border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent ml-0.5" />
+          </div>
+          <span className="text-white text-sm font-medium">
+            {locale === "si" ? "YouTube නාලිකාවේ පුහුණු වීඩියෝ නරඹන්න" : "Watch training videos on our YouTube channel"}
+          </span>
+          <span className="text-[#E8A838] text-sm font-semibold">@GoviHubSriLanka</span>
+        </div>
+      </a>
+
       {/* ── Footer ────────────────────────────────────────────────── */}
       <footer className="py-10 px-6 bg-[#1B5E20] text-green-100">
         <div className="max-w-5xl mx-auto">
@@ -232,6 +257,9 @@ export default function HomePage({ params }: { params: { locale: string } }) {
 
             {/* Links */}
             <div className="flex gap-6 text-sm">
+              <Link href={`/${locale}/learn`} className="hover:text-white transition-colors">
+                {locale === "si" ? "දැනගන්න" : "Learn"}
+              </Link>
               <a href="#" className="hover:text-white transition-colors">{t("footerAbout")}</a>
               <a href="#" className="hover:text-white transition-colors">{t("footerPrivacy")}</a>
               <a href="#" className="hover:text-white transition-colors">{t("footerTerms")}</a>

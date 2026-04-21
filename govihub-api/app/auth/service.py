@@ -154,11 +154,11 @@ class GoogleAuthService:
             logger.info("user_login", user_id=str(user.id), email=user.email)
             return user, False
 
-        # Check if email already exists (edge case)
+        # Check if email already exists — prefer a role-less user (pending registration)
         result = await db.execute(
-            select(User).where(User.email == google_info["email"])
+            select(User).where(User.email == google_info["email"]).order_by(User.role.is_(None).desc())
         )
-        existing_user = result.scalar_one_or_none()
+        existing_user = result.scalars().first()
 
         if existing_user:
             # Link Google account to existing user

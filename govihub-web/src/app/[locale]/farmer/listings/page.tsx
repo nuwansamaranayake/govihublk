@@ -13,8 +13,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus, cropName } from "@/lib/utils";
+import { formatStatus, cropName, formatDateSafe } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useSector } from "@/hooks/useSector";
 
 interface Listing {
   id: string;
@@ -41,11 +42,7 @@ interface Listing {
   updated_at: string;
 }
 
-const CROPS = [
-  "Tomato","Cabbage","Carrot","Beans","Potato","Onion",
-  "Chilli","Brinjal","Cucumber","Pumpkin","Leek","Radish",
-  "Lettuce","Spinach","Peas","Corn","Ginger","Garlic",
-];
+// CROPS is now sector-aware, set inside the component via useSector()
 
 
 const EMPTY_FORM = { crop_id:"", variety:"", quantity_kg:"", price_per_kg:"", min_price_per_kg:"", available_from:"", available_until:"", description:"", quality_grade:"A", is_organic:false, delivery_available:false };
@@ -58,7 +55,9 @@ export default function FarmerListingsPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const { isReady } = useAuth();
+  const { varietyPlaceholder } = useSector();
   const [listings, setListings] = useState<Listing[]>([]);
+  const [cropOptions, setCropOptions] = useState<{value:string;label:string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string|null>(null);
@@ -81,12 +80,20 @@ export default function FarmerListingsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { if (isReady) load(); }, [isReady]);
+  useEffect(() => {
+    if (isReady) {
+      load();
+      api.get<any>("/crops").then((res) => {
+        const crops = Array.isArray(res) ? res : res?.data ?? [];
+        setCropOptions(crops.map((c: any) => ({ value: c.id, label: locale === "si" ? c.name_si : c.name_en })));
+      }).catch(() => {});
+    }
+  }, [isReady]);
 
-  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setError(null); setShowModal(true); };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
-    setForm({ crop_id:String(l.crop_id || ''), variety:l.variety || '', quantity_kg:String(l.quantity_kg), price_per_kg:String(l.price_per_kg), min_price_per_kg:String(l.min_price_per_kg || ''), available_from:l.available_from?.split('T')[0] || '', available_until:l.available_until?.split('T')[0] || '', description:l.description || '', quality_grade:l.quality_grade || 'A', is_organic:l.is_organic || false, delivery_available:l.delivery_available || false });
+    setForm({ crop_id: l.crop?.id || l.crop_id || '', variety:l.variety || '', quantity_kg:String(l.quantity_kg), price_per_kg:String(l.price_per_kg), min_price_per_kg:String(l.min_price_per_kg || ''), available_from:l.available_from?.split('T')[0] || '', available_until:l.available_until?.split('T')[0] || '', description:l.description || '', quality_grade:l.quality_grade || 'A', is_organic:l.is_organic || false, delivery_available:l.delivery_available || false });
     setShowModal(true);
   };
 
@@ -94,10 +101,15 @@ export default function FarmerListingsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Strip empty strings so Pydantic Optional fields receive null, not ""
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(form)) {
+        if (v !== "" && v !== undefined) payload[k] = v;
+      }
       if (editId) {
-        await api.put(`/listings/harvest/${editId}`, form);
+        await api.put(`/listings/harvest/${editId}`, payload);
       } else {
-        await api.post("/listings/harvest", form);
+        await api.post("/listings/harvest", payload);
       }
       setShowModal(false);
       await load();
@@ -160,7 +172,7 @@ export default function FarmerListingsPage() {
                           <Badge color={STATUS_COLOR[listing.status]||"gray"} size="sm" dot>{formatStatus(listing.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">{listing.quantity_kg} kg · Rs. {listing.price_per_kg}/kg</p>
-                        <p className="text-xs text-neutral-400 mt-1">{listing.variety && `${listing.variety} · `}🗓 {listing.available_from ? new Date(listing.available_from).toLocaleDateString() : ''}</p>
+                        <p className="text-xs text-neutral-400 mt-1">{listing.variety && `${listing.variety} · `}🗓 {formatDateSafe(listing.available_from)}</p>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(listing)}>{t("common.edit")}</Button>
@@ -195,10 +207,11 @@ export default function FarmerListingsPage() {
         }
       >
         <form id="listing-form" onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-2">{error}</div>}
           <Select label={t("farmer.cropName")} required value={form.crop_id} onChange={e => f("crop_id", e.target.value)}
-            placeholder={t("listing.selectCrop")} options={CROPS.map((c, i) => ({value:String(i+1), label:c}))} />
+            placeholder={t("listing.selectCrop")} options={cropOptions} />
           <Input label={t("farmer.variety")} value={form.variety}
-            onChange={e => f("variety", e.target.value)} placeholder="e.g. Big Beef" />
+            onChange={e => f("variety", e.target.value)} placeholder={varietyPlaceholder} />
           <div className="grid grid-cols-2 gap-3">
             <Input label={t("farmer.quantity") + " (kg)"} type="number" required min="1" value={form.quantity_kg}
               onChange={e => f("quantity_kg", e.target.value)} placeholder="e.g. 500" />

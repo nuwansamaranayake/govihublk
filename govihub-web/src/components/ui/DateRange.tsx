@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatDateSafe } from "@/lib/utils";
 
 interface DateRangeProps {
   start: string | Date;
@@ -10,16 +11,13 @@ interface DateRangeProps {
   showIcon?: boolean;
 }
 
-function formatDate(date: string | Date, format: "short" | "long"): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (format === "short") {
-    return d.toLocaleDateString("en-LK", { day: "numeric", month: "short" });
-  }
-  return d.toLocaleDateString("en-LK", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+function toDateStr(date: string | Date): string {
+  if (typeof date === "string") return date;
+  // For Date objects, extract YYYY-MM-DD without timezone shift
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function DateRange({
@@ -29,6 +27,9 @@ export function DateRange({
   className = "",
   showIcon = true,
 }: DateRangeProps) {
+  const startStr = toDateStr(start);
+  const endStr = end ? toDateStr(end) : null;
+
   return (
     <span className={"inline-flex items-center gap-1.5 text-sm text-neutral-600 " + className}>
       {showIcon && (
@@ -47,13 +48,13 @@ export function DateRange({
           />
         </svg>
       )}
-      <time dateTime={new Date(start).toISOString()}>{formatDate(start, format)}</time>
-      {end && (
+      <time dateTime={startStr.split("T")[0]}>{formatDateSafe(startStr, format)}</time>
+      {endStr && (
         <>
           <span className="text-neutral-400" aria-hidden="true">
             &ndash;
           </span>
-          <time dateTime={new Date(end).toISOString()}>{formatDate(end, format)}</time>
+          <time dateTime={endStr.split("T")[0]}>{formatDateSafe(endStr, format)}</time>
         </>
       )}
     </span>

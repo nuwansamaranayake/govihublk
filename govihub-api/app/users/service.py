@@ -81,8 +81,22 @@ class UserService:
         return await self.get_user(user_id)
 
     async def update_user(self, user_id: UUID, data: dict) -> User:
-        """Update basic user fields."""
+        """Update basic user fields (including email with uniqueness check)."""
         user = await self._get_user(user_id)
+
+        # Email uniqueness check — scoped to same role
+        new_email = data.get("email")
+        if new_email and new_email != user.email:
+            existing = await self.db.execute(
+                select(User).where(
+                    User.email == new_email,
+                    User.role == user.role,
+                    User.id != user_id,
+                )
+            )
+            if existing.scalar_one_or_none():
+                raise ValidationError(detail="Email already in use by another account with this role")
+
         for key, value in data.items():
             if value is not None and hasattr(user, key):
                 setattr(user, key, value)

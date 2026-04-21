@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { ChangeRoleModal } from "@/components/ui";
 import Image from "next/image";
@@ -12,13 +13,32 @@ export default function BuyerMorePage() {
   const t = useTranslations();
   const router = useRouter();
   const { locale } = useParams();
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
 
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [notifyPrices, setNotifyPrices] = useState(true);
-  const [notifySupply, setNotifySupply] = useState(false);
+  const [notifySupply, setNotifySupply] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+
+  useEffect(() => {
+    if (!isReady) return;
+    api.get<any>("/users/me/preferences")
+      .then(prefs => {
+        if (prefs) {
+          setNotifyMatches(prefs.match_alerts ?? true);
+          setNotifyPrices(prefs.price_alerts ?? true);
+          setNotifySupply(prefs.weather_alerts ?? true);
+        }
+      })
+      .catch(() => {});
+  }, [isReady]);
+
+  const toggleAndSave = (setter: (v: boolean) => void, current: boolean, apiKey: string) => {
+    const newVal = !current;
+    setter(newVal);
+    api.put("/users/me/preferences", { [apiKey]: newVal }).catch(() => setter(current));
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -151,9 +171,9 @@ export default function BuyerMorePage() {
           </div>
           <div className="space-y-3">
             {[
-              { label: t("more.matchNotifications"), value: notifyMatches, setter: setNotifyMatches },
-              { label: t("more.priceAlerts"), value: notifyPrices, setter: setNotifyPrices },
-              { label: t("more.supplyUpdates"), value: notifySupply, setter: setNotifySupply },
+              { label: t("more.matchNotifications"), value: notifyMatches, setter: setNotifyMatches, apiKey: "match_alerts" },
+              { label: t("more.priceAlerts"), value: notifyPrices, setter: setNotifyPrices, apiKey: "price_alerts" },
+              { label: t("more.supplyUpdates"), value: notifySupply, setter: setNotifySupply, apiKey: "weather_alerts" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700">{item.label}</span>
@@ -161,7 +181,7 @@ export default function BuyerMorePage() {
                   type="button"
                   role="switch"
                   aria-checked={item.value}
-                  onClick={() => item.setter(!item.value)}
+                  onClick={() => toggleAndSave(item.setter, item.value, item.apiKey)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     item.value ? "bg-amber-500" : "bg-neutral-300"
                   }`}
@@ -207,6 +227,15 @@ export default function BuyerMorePage() {
                 </svg>
               ),
               onClick: () => router.push(`/${locale}/buyer/matches`),
+            },
+            {
+              label: locale === "si" ? "GoviHub ගැන දැනගන්න" : "Learn about GoviHub",
+              icon: (
+                <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              ),
+              onClick: () => router.push(`/${locale}/learn`),
             },
           ].map((item, idx, arr) => (
             <button

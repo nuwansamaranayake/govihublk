@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
+import { formatDateSafe } from "@/lib/utils";
 
 type InquiryStatus = "new" | "responded" | "closed";
 
@@ -25,44 +26,9 @@ const STATUS_CONFIG: Record<InquiryStatus, { label: string; color: "blue" | "gre
   closed: { label: "Closed", color: "gray" },
 };
 
-const MOCK_INQUIRIES: Inquiry[] = [
-  {
-    id: "inq-1",
-    farmerName: "Kamal Perera",
-    product: "NPK Fertilizer 50kg",
-    message: "I need 20 bags for my paddy field in Anuradhapura. Can you deliver by next week? What is the bulk price?",
-    date: "2026-03-24",
-    status: "new",
-  },
-  {
-    id: "inq-2",
-    farmerName: "Nimali Fernando",
-    product: "Hybrid Paddy Seeds (BG 360)",
-    message: "Do you have BG 360 seeds available? I need 10kg for the upcoming Yala season.",
-    date: "2026-03-22",
-    status: "new",
-  },
-  {
-    id: "inq-3",
-    farmerName: "Saman Kumara",
-    product: "Drip Irrigation Kit",
-    message: "I saw your drip irrigation kit listing. Can it cover half an acre? Also, do you provide installation support?",
-    date: "2026-03-20",
-    status: "responded",
-  },
-  {
-    id: "inq-4",
-    farmerName: "Anura Bandara",
-    product: "Organic Pesticide Spray",
-    message: "Is your organic pesticide safe for vegetable crops? I grow beans and tomatoes in Polonnaruwa.",
-    date: "2026-03-18",
-    status: "closed",
-  },
-];
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-LK", { month: "short", day: "numeric", year: "numeric" });
+  return formatDateSafe(dateStr);
 }
 
 function InquiryIcon() {
@@ -105,12 +71,12 @@ export default function SupplierInquiriesPage() {
       try {
         const data = await api.get<Inquiry[]>("/supplier/inquiries");
         if (!cancelled) {
-          setInquiries(data);
+          setInquiries(Array.isArray(data) ? data : []);
         }
       } catch {
-        // API not available yet — use mock data
+        // API not available yet — show empty state
         if (!cancelled) {
-          setInquiries(MOCK_INQUIRIES);
+          setInquiries([]);
         }
       } finally {
         if (!cancelled) {

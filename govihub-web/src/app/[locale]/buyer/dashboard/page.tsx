@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-// cropName not needed — matches don't carry crop data
+import { formatDateSafe } from "@/lib/utils";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/lib/auth";
+import { FEATURES } from "@/config/feature-flags";
+import AdCarousel from "@/components/ads/AdCarousel";
 
 interface PipelineStage {
   label: string;
@@ -54,7 +56,7 @@ export default function BuyerDashboardPage() {
       api.get<any>("/users/me").catch(() => null),
       api.get<any>("/listings/demand").catch(() => null),
       api.get<any>("/matches").catch(() => null),
-      api.get<any>("/alerts/prices").catch(() => null),
+      Promise.resolve(null), // prices API disabled until HARTI feed connected (see feature-flags.ts)
     ])
       .then(([userRes, demandsRes, matchesRes, _pricesRes]) => {
         const demands = Array.isArray(demandsRes) ? demandsRes : demandsRes?.data ?? [];
@@ -127,6 +129,9 @@ export default function BuyerDashboardPage() {
           ))}
         </div>
 
+        {/* Advertisement Carousel */}
+        {FEATURES.SHOW_ADS && <AdCarousel />}
+
         {/* Procurement Pipeline */}
         <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.procurementPipeline")}</h2>} padding="md">
           {loading ? <Skeleton className="h-12 w-full" /> : (
@@ -177,7 +182,7 @@ export default function BuyerDashboardPage() {
                       <span className="font-medium text-neutral-900 text-sm">Match #{match.id?.slice(0, 8)}</span>
                       <Badge color={STATUS_COLOR[match.status]||"gray"} size="sm" dot>{match.status}</Badge>
                     </div>
-                    <p className="text-xs text-neutral-500 mt-0.5">{match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : 'Price TBD'} · {match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg` : ''} · {match.created_at ? new Date(match.created_at).toLocaleDateString() : ''}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : 'Price TBD'} · {match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg` : ''} · {formatDateSafe(match.created_at)}</p>
                   </div>
                   <div className={`text-lg font-bold shrink-0 ${scoreColor(Math.round(match.score * 100))}`}>{Math.round(match.score * 100)}%</div>
                 </li>

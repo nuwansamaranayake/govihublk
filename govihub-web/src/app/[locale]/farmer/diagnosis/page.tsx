@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useAuth } from "@/lib/auth";
+import { useSector } from "@/hooks/useSector";
 
 interface DiagnosisResult {
   id: string;
@@ -35,20 +36,12 @@ interface HistoryItem {
   date: string;
 }
 
-const CROP_OPTIONS = [
-  { value: "", labelKey: "selectCrop" },
-  { value: "Rice", labelKey: "cropRice" },
-  { value: "Tomato", labelKey: "cropTomato" },
-  { value: "Chili", labelKey: "cropChili" },
-  { value: "Onion", labelKey: "cropOnion" },
-  { value: "Beans", labelKey: "cropBeans" },
-  { value: "Brinjal", labelKey: "cropBrinjal" },
-  { value: "Other", labelKey: "cropOther" },
-];
+// CROP_OPTIONS is now sector-aware, set inside the component via useSector()
 
 export default function CropDiagnosisPage() {
   const t = useTranslations();
   const { isReady } = useAuth();
+  const { diagnosisOptions: CROP_OPTIONS } = useSector();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);

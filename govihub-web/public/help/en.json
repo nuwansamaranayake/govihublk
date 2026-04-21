@@ -6,11 +6,16 @@
       { "title": "Check your stats", "content": "Look at the top cards to see your total listings, pending orders, and earnings this month." },
       { "title": "View market prices", "content": "Scroll down to the Market Prices section to see current prices for your crops in nearby markets." },
       { "title": "Check the weather", "content": "The weather widget shows the 3-day forecast for your area. Plan your harvesting and spraying around it." },
-      { "title": "See recent activity", "content": "The Activity Feed at the bottom shows your latest matches, messages, and listing updates." }
+      { "title": "See recent activity", "content": "The Activity Feed at the bottom shows your latest matches, messages, and listing updates." },
+      { "title": "Weather card", "content": "The weather card at the top of your dashboard shows the next 3 days of weather with temperature, rain chance, and soil conditions. Below the weather, you'll see advice specific to each crop you've selected." },
+      { "title": "Soil conditions", "content": "The soil row shows current soil temperature and moisture at 6cm depth. This is especially important for ginger and turmeric growers — soil must be above 25°C for rhizome sprouting." },
+      { "title": "Crop advisories", "content": "Each of your selected crops gets a one-line advisory. Green ✅ means good conditions. Amber ⚠️ means watch out. Tap '7-day forecast' for full details." },
+      { "title": "No crops selected?", "content": "If you see 'Select your crops' on the weather card, tap it to go to Settings and choose which crops you grow. This unlocks personalized weather advice." }
     ],
     "tips": [
       "Tap any stat card to jump to its detail page.",
-      "Pull down on the page to refresh all data with the latest prices and weather."
+      "Pull down on the page to refresh all data with the latest prices and weather.",
+      "Check the weather card every morning before field work. The soil temperature and moisture readings help you decide the best time to plant, water, or harvest."
     ],
     "faq": [
       { "question": "Why are market prices not showing?", "answer": "Prices update every morning. If you see no data, check your internet connection and pull down to refresh." },
@@ -57,20 +62,22 @@
   },
   "farmer.matches": {
     "title": "Your Buyer Matches",
-    "description": "GoviHub matches your listings with buyers looking for your crops. View match scores, accept offers, or decline them.",
+    "description": "GoviHub matches your listings with buyers looking for your crops. Each match shows the buyer's demand details so you can decide whether to accept.",
     "steps": [
-      { "title": "View your matches", "content": "Each match card shows the buyer name, crop they want, quantity, their offered price, and a match score." },
-      { "title": "Understand the match score", "content": "The score (0-100) shows how well the demand fits your listing. Higher scores mean better fit on price, quantity, and location." },
-      { "title": "Accept a match", "content": "Tap a match card to see details. If you agree with the terms, tap Accept Match to confirm the deal." },
-      { "title": "Decline a match", "content": "If the offer does not work for you, tap Decline. You can add an optional reason to help the buyer adjust." }
+      { "title": "View your matches", "content": "Each match card shows the crop name, match score percentage, and the buyer's demand details — quantity needed, maximum price they'll pay, variety, grade, and needed-by date." },
+      { "title": "Understand the match score", "content": "The score (0-100%) shows how well the demand fits your listing based on price, quantity, location, and timing. Higher is better." },
+      { "title": "Accept a match", "content": "Tap Accept to agree to the deal. The status moves from Proposed to Accepted. The buyer's contact details (name, phone, district) are shown on the card." },
+      { "title": "Complete or dismiss", "content": "Once goods are delivered, tap Complete. If the deal falls through, tap Dismiss to close the match." }
     ],
     "tips": [
       "Respond to matches quickly. Buyers often choose the first farmer who accepts.",
-      "A score above 80 usually means the buyer is very close to your area and price range."
+      "A score above 80% usually means the buyer is very close to your area and price range.",
+      "Check the demand details panel on each match to see exactly what the buyer needs before accepting."
     ],
     "faq": [
-      { "question": "Can I negotiate the price?", "answer": "Not directly in the app yet. Accept or decline based on the offered price. You can message the buyer after accepting to discuss details." },
-      { "question": "What happens after I accept?", "answer": "The buyer gets notified. You will see the order in your dashboard with pickup or delivery details." }
+      { "question": "What are the match statuses?", "answer": "Proposed (new match), Accepted (deal agreed), Completed (goods delivered), and Dismissed (match closed). Simple and clear." },
+      { "question": "Can I see the buyer's contact info?", "answer": "Yes. Every match card shows the buyer's name, phone number, and district so you can coordinate directly." },
+      { "question": "What happens after I accept?", "answer": "The match moves to Accepted status. Call the buyer using the phone number shown on the card to arrange pickup or delivery. Once done, tap Complete." }
     ]
   },
   "farmer.diagnosis": {
@@ -102,7 +109,7 @@
       { "title": "Ask follow-up questions", "content": "You can ask more questions in the same chat. The AI remembers what you discussed before." }
     ],
     "tips": [
-      "Be specific. Instead of saying 'my paddy is sick', say 'my paddy leaves have brown spots and are curling'.",
+      "Be specific. Instead of saying 'my crop is sick', say 'my pepper leaves have yellow spots and are drooping'.",
       "Mention your district. The AI gives better advice when it knows your local conditions."
     ],
     "faq": [
@@ -132,17 +139,21 @@
     "title": "Settings & More",
     "description": "Manage your account, change language, set notification preferences, and log out.",
     "steps": [
-      { "title": "Edit your profile", "content": "Tap Account Settings to update your name, phone number, farm location, and profile photo." },
-      { "title": "Change language", "content": "Tap Language and select Sinhala, Tamil, or English. The app will reload in your chosen language." },
-      { "title": "Set notifications", "content": "Tap Notifications to choose which alerts you receive — matches, price updates, weather warnings, and more." },
-      { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out of your account." }
+      { "title": "Edit your profile", "content": "Go to Settings to update your name, email, phone number, district, and language. Your email can be changed from the default beta address to your real email." },
+      { "title": "Change language", "content": "In Settings, select Sinhala, Tamil, or English under Language Preference. The app will reload in your chosen language." },
+      { "title": "Set notifications", "content": "Toggle notification switches to choose which alerts you receive — match alerts, price updates, weather warnings, push and SMS." },
+      { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out of your account." },
+      { "title": "My Crops", "content": "Scroll to the 'My Crops' section to add, change, or remove the crops you're cultivating. Your crop selections control which weather alerts you receive and what advice appears on your forecast." },
+      { "title": "Alert preferences", "content": "In the 'Weather Alerts' section, choose how many alerts you want — critical only, warnings too, or all alerts including informational ones." }
     ],
     "tips": [
+      "Update your email address in Settings — the default beta email won't receive real notifications.",
       "Keep your phone number updated so buyers can reach you.",
       "Enable price alert notifications to know when market prices change for your crops."
     ],
     "faq": [
-      { "question": "Can I delete my account?", "answer": "Yes. Go to Account Settings, scroll to the bottom, and tap Delete Account. This action cannot be undone." },
+      { "question": "Can I change my email?", "answer": "Yes. Go to Settings and edit the Email field. Enter your real email address and tap Save Changes." },
+      { "question": "Can I delete my account?", "answer": "Yes. Go to Settings, scroll to the Danger Zone, and tap Deactivate Account. Contact support to fully delete." },
       { "question": "How do I switch between farmer and buyer roles?", "answer": "Tap Switch Role at the top of the More page to access your buyer or supplier account if you have one." }
     ]
   },
@@ -204,20 +215,22 @@
   },
   "buyer.matches": {
     "title": "Your Farmer Matches",
-    "description": "See farmers who have crops matching your demands. Review their listings, compare prices, and accept the best offers.",
+    "description": "See farmers who have crops matching your demands. Each match shows the farmer's harvest details so you can compare and choose the best offer.",
     "steps": [
-      { "title": "View available matches", "content": "Each match card shows the farmer name, crop variety, available quantity, asking price, and match score." },
-      { "title": "Compare matches", "content": "Look at the match score and price to find the best deal. Higher scores mean better fit." },
-      { "title": "Accept a match", "content": "Tap a match card to see full details. If it looks good, tap Accept Match to start the purchase." },
-      { "title": "Decline a match", "content": "Tap Decline if the match does not suit your needs. The farmer will be notified." }
+      { "title": "View available matches", "content": "Each match card shows the crop name, match score, and the farmer's harvest details — quantity available, asking price, variety, grade, and availability dates." },
+      { "title": "Compare matches", "content": "Look at the match score and the harvest details panel to find the best deal. Higher scores mean better fit on price, quantity, and location." },
+      { "title": "Accept a match", "content": "Tap Accept to agree to the deal. The status moves from Proposed to Accepted. The farmer's contact details (name, phone, district) are shown on the card." },
+      { "title": "Complete or dismiss", "content": "Once you receive the goods, tap Complete. If the deal falls through, tap Dismiss to close the match." }
     ],
     "tips": [
       "Accept matches quickly during peak season. Good farmers get snapped up fast.",
-      "Check the farmer profile and past ratings before accepting."
+      "Check the harvest details panel on each match to see exactly what the farmer is offering — quantity, price, and availability.",
+      "Use the farmer's phone number shown on the card to coordinate delivery or pickup."
     ],
     "faq": [
+      { "question": "What are the match statuses?", "answer": "Proposed (new match), Accepted (deal agreed), Completed (goods received), and Dismissed (match closed). Simple and clear." },
       { "question": "Can I accept multiple matches for one demand?", "answer": "Yes, if you need crops from several farmers to fill your total quantity. Each accepted match is tracked separately." },
-      { "question": "What does the match score mean?", "answer": "It is a number from 0 to 100 based on how closely the farmer crop matches your demand in price, quantity, location, and timing." }
+      { "question": "Can I see the farmer's contact info?", "answer": "Yes. Every match card shows the farmer's name, phone number, and district so you can coordinate directly." }
     ]
   },
   "buyer.marketplace": {
@@ -242,18 +255,19 @@
     "title": "Settings & More",
     "description": "Manage your account, change language, set notification preferences, and log out.",
     "steps": [
-      { "title": "Edit your profile", "content": "Tap Account Settings to update your business name, phone number, location, and profile photo." },
-      { "title": "Change language", "content": "Tap Language and select Sinhala, Tamil, or English. The app will reload in your chosen language." },
-      { "title": "Set notifications", "content": "Tap Notifications to choose which alerts you get — new matches, price changes, and order updates." },
+      { "title": "Edit your profile", "content": "Go to Settings to update your business name, email, phone number, district, and language. Change your email from the default beta address to your real email." },
+      { "title": "Change language", "content": "In Settings, select Sinhala, Tamil, or English under Language Preference." },
+      { "title": "Set notifications", "content": "Toggle notification switches to choose which alerts you get — match alerts, price changes, weather, push and SMS." },
       { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out of your account." }
     ],
     "tips": [
+      "Update your email address in Settings — the default beta email won't receive real notifications.",
       "Keep your business location updated for better local farmer matches.",
       "Enable match notifications so you never miss a new farmer offering your crops."
     ],
     "faq": [
       { "question": "Can I have both a buyer and farmer account?", "answer": "Yes. Tap Switch Role at the top of the More page to access your other role." },
-      { "question": "How do I change my email?", "answer": "Go to Account Settings, tap Email, and enter your new email. You will receive a verification link." }
+      { "question": "How do I change my email?", "answer": "Go to Settings, edit the Email field with your real email address, and tap Save Changes." }
     ]
   },
   "supplier.dashboard": {
@@ -334,17 +348,18 @@
     "title": "Settings & More",
     "description": "Manage your supplier account, shop details, language, notifications, and more.",
     "steps": [
-      { "title": "Edit shop profile", "content": "Tap Account Settings to update your shop name, address, phone number, and business hours." },
-      { "title": "Change language", "content": "Tap Language to switch between Sinhala, Tamil, and English." },
-      { "title": "Set notifications", "content": "Tap Notifications to control alerts for inquiries, orders, and system updates." },
+      { "title": "Edit shop profile", "content": "Go to Settings to update your contact name, email, phone number, and district. Change your email from the default beta address to your real email." },
+      { "title": "Change language", "content": "In Settings, select Sinhala, Tamil, or English under Language Preference." },
+      { "title": "Set notifications", "content": "Toggle notification switches to control alerts for inquiries, price changes, and system updates." },
       { "title": "Log out", "content": "Scroll to the bottom and tap Log Out to sign out." }
     ],
     "tips": [
-      "Complete your shop profile fully. Shops with photos, hours, and location get more trust from farmers.",
+      "Update your email address in Settings — the default beta email won't receive real notifications.",
+      "Complete your shop profile fully. Shops with accurate contact info get more trust from farmers.",
       "Enable inquiry notifications so you never miss a potential sale."
     ],
     "faq": [
-      { "question": "Can I add my shop location on the map?", "answer": "Yes. Go to Account Settings > Location and tap Set on Map. Drag the pin to your shop location and save." },
+      { "question": "How do I change my email?", "answer": "Go to Settings, edit the Email field with your real email address, and tap Save Changes." },
       { "question": "How do I get the Verified Supplier badge?", "answer": "Complete your profile, upload a business registration document, and maintain a response rate above 80% for 30 days." }
     ]
   },
@@ -371,7 +386,7 @@
     "steps": [
       { "title": "Open registration", "content": "Tap Create Account on the home screen or the Register link on the login page." },
       { "title": "Choose your role", "content": "Select Farmer, Buyer, or Supplier. This sets up your dashboard for your needs. You can add more roles later." },
-      { "title": "Fill in your details", "content": "Enter your name, phone number, email, district, and create a password." },
+      { "title": "Fill in your details", "content": "Enter your name, phone number (required — 9 to 15 digits), district, and create a password. Your email can be updated later in Settings." },
       { "title": "Verify your phone", "content": "You will receive an SMS with a verification code. Enter the code to confirm your phone number." },
       { "title": "Complete registration", "content": "Tap Create Account. You will be taken to your new dashboard." }
     ],
@@ -382,6 +397,103 @@
     "faq": [
       { "question": "Is registration free?", "answer": "Yes. Creating a GoviHub account is completely free for all users." },
       { "question": "Can I change my role later?", "answer": "Yes. You can add additional roles (farmer, buyer, supplier) from the More > Switch Role page at any time." }
+    ]
+  },
+  "auth.selectCrops": {
+    "title": "Select Your Crops",
+    "description": "Tell GoviHub which spice crops you grow. This lets us give you weather advice, soil alerts, and farming tips customized for YOUR crops — not generic weather.",
+    "steps": [
+      { "title": "Tap the crops you grow", "content": "You'll see cards for all 8 spice crops — black pepper, turmeric, ginger, cinnamon, cloves, nutmeg, cardamom, and mixed spices. Tap any crop to select it. A green border and checkmark will appear." },
+      { "title": "Select 1 to 5 crops", "content": "Pick the crops you are actively cultivating right now. You can always add or remove crops later from Settings." },
+      { "title": "Tap 'Continue'", "content": "This saves your selections and takes you to your dashboard, where you'll immediately see weather advice for your crops." },
+      { "title": "Skip for now", "content": "If you're not sure yet, tap 'Select Later'. You can set your crops anytime from the Settings page. But the sooner you do, the sooner you get personalized weather alerts!" }
+    ],
+    "tips": [
+      "The more accurately you set your crops, the better your weather alerts will be. A cinnamon farmer needs different weather advice than a ginger farmer.",
+      "You can change your crop selections anytime from Settings → My Crops."
+    ],
+    "faq": []
+  },
+  "farmer.weather": {
+    "title": "7-Day Weather Forecast",
+    "description": "Your personalized weather forecast for the next 7 days, with advice specific to the crops you grow. The first 3 days are highly reliable. Days 4-7 are an outlook that may change.",
+    "steps": [
+      { "title": "Reliable forecast (Days 1-3)", "content": "The top section marked 'Reliable' shows the next 3 days with detailed weather — temperature, rain chance, wind speed, soil temperature, and soil moisture. These predictions are accurate enough to make planting and harvesting decisions." },
+      { "title": "Read the crop advice", "content": "Below each day's weather, you'll see advice for each of your selected crops. A green ✅ means conditions are good. An amber ⚠️ means take caution. A red 🚨 means take action immediately." },
+      { "title": "Check soil conditions", "content": "Each day card shows soil temperature at 6cm depth and soil moisture level. This is critical for crops like ginger and turmeric — they need soil above 25°C for sprouting. Cinnamon needs moderate moisture for bark peeling." },
+      { "title": "View hourly detail", "content": "Tap 'Hourly' on any day to see the hour-by-hour breakdown — when exactly rain is expected, how soil temperature changes through the day, and what time is best for field work." },
+      { "title": "Extended outlook (Days 4-7)", "content": "The bottom section marked 'Outlook' shows days 4-7 in a compact format. Use this to plan ahead, but be aware these predictions may change. Check back daily for updates." }
+    ],
+    "tips": [
+      "Check the forecast every morning before going to the field. Weather can change, and our data updates every hour.",
+      "Pay special attention to rain probability above 40% — if you're growing black pepper or ginger, heavy rain can cause waterlogging and root diseases.",
+      "The soil temperature reading is especially important if you're planting new ginger or turmeric — don't plant if soil is below 25°C.",
+      "If you see a dry spell of more than 7 days predicted, start planning irrigation for your cardamom and ginger."
+    ],
+    "faq": [
+      { "question": "Where does the weather data come from?", "answer": "We use Open-Meteo, which combines the best weather models from European, American, and Asian weather services. The data is updated every hour with the latest satellite and radar information." },
+      { "question": "Why are days 4-7 less detailed?", "answer": "Weather predictions become less accurate further into the future. Research shows that tropical weather forecasts for Sri Lanka are most reliable for 3 days. We show 7 days so you can plan ahead, but mark the difference clearly." },
+      { "question": "The forecast was wrong yesterday. Why?", "answer": "Tropical weather is harder to predict than temperate weather due to sudden monsoon changes. Our forecast is the most accurate available, but no forecast is 100% perfect. The closer to the day, the more accurate it is." },
+      { "question": "I don't see advice for my crops. Why?", "answer": "You need to select your crops first. Go to Settings → My Crops and add the crops you're growing. Once selected, personalized advice will appear on every forecast day." }
+    ]
+  },
+  "farmer.weather.hourly": {
+    "title": "Hourly Weather & Soil Detail",
+    "description": "Hour-by-hour weather and soil conditions for a specific day. Use this to plan exactly when to work in the field — when to water, when to harvest, and when to stay indoors.",
+    "steps": [
+      { "title": "Soil temperature chart", "content": "The top chart shows soil temperature at 6cm depth throughout the day. Soil is coolest in the early morning and warmest in the afternoon. For ginger and turmeric, look for temperatures between 25-30°C — that's the sweet spot for growth." },
+      { "title": "Soil moisture chart", "content": "The second chart shows how wet the soil is throughout the day. Values around 30-35% mean good moisture. Below 20% means the soil is too dry — consider irrigating. Above 40% after rain means check drainage." },
+      { "title": "Hourly data table", "content": "The table shows every hour of the day with temperature, humidity, rainfall in mm, and cloud cover. Look for the ⚠️ marker — it shows which hours have rain expected." },
+      { "title": "Crop timing notes", "content": "At the bottom, you'll see timing advice for your crops. For example, if rain is expected at 3pm, the system might advise finishing pepper harvest before noon, or delaying cinnamon bark peeling until the next dry day." }
+    ],
+    "tips": [
+      "Early morning (6-8am) is usually the best time for field work — cool temperatures and soil moisture from overnight dew.",
+      "If rain is expected in the afternoon, plan your drying operations for morning hours.",
+      "Watch the humidity column — when humidity stays above 85% for several hours, fungal disease risk increases for pepper and cinnamon.",
+      "Soil temperature below 17°C means ginger and turmeric rhizomes won't sprout. Wait for warmer soil before planting."
+    ],
+    "faq": []
+  },
+  "farmer.alerts": {
+    "title": "Weather Alerts",
+    "description": "GoviHub monitors the weather every hour and sends you alerts when conditions could affect your crops. You'll get alerts about heavy rain, high wind, temperature extremes, dry spells, and soil conditions — all specific to the crops you grow.",
+    "steps": [
+      { "title": "Understanding alert colors", "content": "Red 🚨 = Critical — take action NOW. Amber ⚠️ = Warning — prepare and take precaution. Blue = Information — good to know. Green ✅ = Good conditions for your crop." },
+      { "title": "Read the action items", "content": "Each warning and critical alert includes a 'What to do' section with specific actions. For example, 'Clear drainage channels before heavy rain' or 'Check vine supports before high winds'." },
+      { "title": "Mark alerts as read", "content": "Tap on any alert card to mark it as read. The blue dot will disappear. You can also tap 'Mark all read' at the top right to clear all unread alerts at once." },
+      { "title": "Check the bell icon", "content": "The bell icon at the top of every page shows how many unread alerts you have. A red number badge means you have new alerts to check." }
+    ],
+    "tips": [
+      "Check your alerts every morning — they update throughout the night as new weather data arrives.",
+      "Don't ignore warnings. For example, a 'heavy rain + waterlog risk' warning for black pepper means you should clear drainage channels BEFORE the rain arrives, not after.",
+      "Alerts are generated based on your specific crops. If you grow both ginger and cinnamon, the same rain event might be a warning for ginger (waterlogging risk) but good news for cinnamon (moisture for growth).",
+      "Go to Settings → Alert Preferences to choose whether you want all alerts or only warnings and critical ones."
+    ],
+    "faq": [
+      { "question": "Why am I not getting any alerts?", "answer": "Make sure you have selected your crops in Settings → My Crops. Alerts are only generated for crops you've selected. Also, if the weather is stable and good, there may genuinely be no alerts to show." },
+      { "question": "Can I get alerts on my phone even when the app is closed?", "answer": "If you've installed GoviHub as an app on your phone (PWA) and allowed notifications, you'll receive push notifications for critical and warning alerts. This feature is coming soon." },
+      { "question": "The alert says 'heavy rain' but it didn't rain. Why?", "answer": "Weather alerts are based on forecasts, which are predictions — not guarantees. It's better to prepare for rain that doesn't come than to be caught unprepared by rain that does." }
+    ]
+  },
+  "farmer.crops": {
+    "title": "My Crops — Settings",
+    "description": "Manage the crops you're currently growing. Your crop selections control which weather alerts you receive and what advice appears on your weather forecast.",
+    "steps": [
+      { "title": "Add a crop", "content": "Tap '+ Add Crop' to see the available spice crops. Tap any crop card to add it to your list. It will appear immediately in your My Crops section." },
+      { "title": "Set the growth stage", "content": "For each crop, use the dropdown to set the current growth stage — Seedling, Vegetative, Flowering, Harvesting, or Dormant. This helps GoviHub give you stage-specific advice. For example, rain during flowering affects black pepper pollination." },
+      { "title": "Enter the area (optional)", "content": "You can enter how many hectares you have for each crop. This is optional but helps us give better advice in the future." },
+      { "title": "Remove a crop", "content": "Tap the 'Remove' button on any crop and confirm. You'll stop receiving weather alerts for that crop. You can always add it back later." },
+      { "title": "Update as seasons change", "content": "Remember to update your growth stages as your crops progress. Change from 'Seedling' to 'Vegetative' when plants establish, to 'Flowering' when flowers appear, and to 'Harvesting' when you begin picking." }
+    ],
+    "tips": [
+      "Keep your growth stages current — the system gives different advice for flowering pepper (protect from rain) versus vegetative pepper (rain is fine).",
+      "If you stop cultivating a crop, remove it from your list so you don't get unnecessary alerts.",
+      "You can have up to 5 crops selected at once. If you grow more, select the ones most affected by weather."
+    ],
+    "faq": [
+      { "question": "Do I need to select crops to see the weather?", "answer": "No — the basic weather forecast (temperature, rain, wind) is always visible on your dashboard. But crop-specific advice and alerts only work after you select your crops." },
+      { "question": "What is the growth stage used for?", "answer": "Different growth stages have different weather sensitivities. Flowering black pepper is sensitive to rain (it reduces pollination), but vegetative pepper actually benefits from rain. By telling us the stage, we give you the right advice at the right time." },
+      { "question": "I grow rice too. Can I add it?", "answer": "Currently GoviHub Spices focuses on 8 spice crops only. Rice, vegetables, and other crops may be added in a future version." }
     ]
   },
   "common.feedback": {
@@ -400,6 +512,29 @@
     "faq": [
       { "question": "Will I get a response to my feedback?", "answer": "We review all feedback. Bug reports receive a status update. Feature requests are considered for future releases." },
       { "question": "Can I attach screenshots?", "answer": "Yes. Tap Attach Image in the feedback form to include screenshots showing the issue." }
+    ]
+  },
+  "admin.ads": {
+    "title": "Advertisement Management",
+    "description": "Manage banner advertisements shown on user dashboards. Create ads with images, set targeting by role and district, schedule start/end dates, and track impressions and clicks.",
+    "steps": [
+      { "title": "View all ads", "content": "The main page shows all advertisements with their status, impression count, click count, and CTR. Use the filter to show only active or inactive ads." },
+      { "title": "Create a new ad", "content": "Click '+ New Ad' to open the creation form. Upload a banner image (800×450 recommended, JPEG/PNG/WebP, max 2MB), enter title in English and optionally Sinhala, add a click URL, and set targeting options." },
+      { "title": "Target specific users", "content": "Choose which user roles (farmer, buyer, supplier) see the ad. Optionally restrict to specific districts. Leave districts empty to show to all users." },
+      { "title": "Schedule ads", "content": "Set a start date and optional end date. Ads only appear during their scheduled period. Leave end date empty for ads that run indefinitely." },
+      { "title": "Track performance", "content": "Click 'Stats' on any ad to see detailed analytics: impressions and clicks by day, by user role, and by district. The CTR (click-through rate) shows the percentage of impressions that led to clicks." },
+      { "title": "Pause or delete", "content": "Click 'Pause' to temporarily hide an ad without deleting it. Click 'Delete' to permanently remove an ad." }
+    ],
+    "tips": [
+      "Use high-quality 800×450 images for the best display on mobile devices.",
+      "Ads appear on farmer, buyer, and supplier dashboards below the weather card.",
+      "The Sinhala title and description are shown to users browsing in Sinhala language.",
+      "Ads with lower display order numbers appear first."
+    ],
+    "faq": [
+      { "question": "Where do ads appear?", "answer": "Ads appear as a carousel banner on all user dashboards (farmer, buyer, supplier) and optionally on the landing page. They sit below the weather card." },
+      { "question": "What image size should I use?", "answer": "Recommended: 800×450 pixels (16:9 aspect ratio). Maximum file size: 2MB. Accepted formats: JPEG, PNG, WebP." },
+      { "question": "Can I target ads to specific districts?", "answer": "Yes. When creating or editing an ad, specify target districts. Leave empty to show to all users regardless of location." }
     ]
   }
 }

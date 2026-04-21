@@ -18,6 +18,7 @@ ALLOWED_CONTENT_TYPES: dict[str, str] = {
     "image/jpeg": ".jpg",
     "image/jpg": ".jpg",
     "image/png": ".png",
+    "image/webp": ".webp",
 }
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -78,7 +79,7 @@ class StorageService:
         normalised = content_type.lower().split(";")[0].strip()
         if normalised not in ALLOWED_CONTENT_TYPES:
             raise ValidationError(
-                detail=f"Unsupported file type '{content_type}'. Only JPEG and PNG are accepted.",
+                detail=f"Unsupported file type '{content_type}'. Only JPEG, PNG, and WebP are accepted.",
                 details={"allowed": list(ALLOWED_CONTENT_TYPES.keys())},
             )
         if len(file_bytes) > MAX_FILE_SIZE_BYTES:

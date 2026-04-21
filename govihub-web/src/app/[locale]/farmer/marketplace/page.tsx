@@ -127,12 +127,15 @@ export default function FarmerMarketplacePage() {
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
                     <p className="text-xs text-neutral-500">📍 {supplier.location}</p>
-                    <a
-                      href={`tel:${supplier.phone}`}
-                      className="text-sm font-medium text-green-600 hover:text-green-700"
-                    >
-                      📞 {supplier.phone}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${supplier.phone}`} className="text-sm font-medium text-green-600">
+                        📞 {supplier.phone}
+                      </a>
+                      <a href={`tel:${supplier.phone}`}
+                        className="px-3 py-1 text-xs font-medium rounded-lg bg-green-600 text-white">
+                        {t("common.call")}
+                      </a>
+                    </div>
                   </div>
                 </Card>
               ))

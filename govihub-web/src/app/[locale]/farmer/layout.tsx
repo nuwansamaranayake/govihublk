@@ -1,11 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useParams, usePathname } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import BottomNav, { BottomNavItem } from "@/components/ui/BottomNav";
 import TopBar from "@/components/ui/TopBar";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -95,6 +98,29 @@ function DiagnosisIcon({ active }: { active: boolean }) {
   );
 }
 
+function MarketplaceIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      className="w-6 h-6"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={active ? 0 : 1.8}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {active ? (
+        <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+      ) : (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+        />
+      )}
+    </svg>
+  );
+}
+
 function MoreIcon({ active }: { active: boolean }) {
   return (
     <svg
@@ -122,7 +148,23 @@ const farmerHelpKeyMap: Record<string, string> = {
   '/farmer/advisory': 'farmer.advisory',
   '/farmer/marketplace': 'farmer.marketplace',
   '/farmer/more': 'farmer.more',
+  '/farmer/weather': 'farmer.weather',
+  '/farmer/alerts': 'farmer.alerts',
 };
+
+function resolveFarmerHelpKey(path: string): string {
+  if (farmerHelpKeyMap[path]) return farmerHelpKeyMap[path];
+  if (/\/farmer\/weather\/\d{4}-\d{2}-\d{2}/.test(path)) return 'farmer.weather.hourly';
+  return '';
+}
+
+function BellIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+  );
+}
 
 export default function FarmerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
@@ -132,13 +174,34 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
   const locale = (params?.locale as string) || "en";
   const base = `/${locale}/farmer`;
   const pathWithoutLocale = pathname.replace(/^\/(en|si|ta)/, '');
-  const helpKey = farmerHelpKeyMap[pathWithoutLocale] || '';
+  const helpKey = resolveFarmerHelpKey(pathWithoutLocale);
+
+  const { isReady } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    try {
+      const res = await api.get<{ unread_count: number }>("/weather/alerts/unread-count");
+      setUnreadCount(res.unread_count);
+    } catch {
+      // silently fail — user may not be authenticated yet
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isReady) return;
+    fetchUnread();
+    // Poll every 5 minutes
+    const interval = setInterval(fetchUnread, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isReady, fetchUnread]);
 
   const navItems: BottomNavItem[] = [
     { href: base + "/dashboard", label: t("home"), icon: (a) => <HomeIcon active={a} /> },
     { href: base + "/listings", label: t("listings"), icon: (a) => <ListingsIcon active={a} /> },
     { href: base + "/matches", label: t("matches"), icon: (a) => <MatchIcon active={a} /> },
     { href: base + "/diagnosis", label: t("diagnosis"), icon: (a) => <DiagnosisIcon active={a} /> },
+    { href: base + "/marketplace", label: t("marketplace"), icon: (a) => <MarketplaceIcon active={a} /> },
     { href: base + "/more", label: t("more"), icon: (a) => <MoreIcon active={a} /> },
   ];
 
@@ -153,8 +216,22 @@ export default function FarmerLayout({ children }: { children: React.ReactNode }
           </span>
         }
         rightActions={
-          <span className="text-xs font-semibold text-accent-600 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
-            {tRoles("farmer")}
+          <span className="flex items-center gap-2">
+            <Link
+              href={`/${locale}/farmer/alerts`}
+              className="relative p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100 transition-colors"
+              aria-label="Weather alerts"
+            >
+              <BellIcon />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full px-1">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+            <span className="text-xs font-semibold text-accent-600 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+              {tRoles("farmer")}
+            </span>
           </span>
         }
       />

@@ -58,7 +58,7 @@ Host: localhost:5434 | DB: govihub | User: govihub | Pass: govihub_dev_2026
 
 ```bash
 cd E:\AiGNITE\projects\GoviHub
-docker compose -f docker-compose.dev.yml up -d --build
+docker compose -f docker-compose.dev.yml up -d --build --no-cache
 # Wait for postgres health, then:
 docker compose -f docker-compose.dev.yml exec govihub-api alembic upgrade head
 docker compose -f docker-compose.dev.yml exec govihub-api python scripts/seed_crops.py
@@ -94,8 +94,8 @@ docker compose -f docker-compose.dev.yml restart govihub-api govihub-web
 ### Rebuild after dependency change
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d --build govihub-api   # requirements.txt changed
-docker compose -f docker-compose.dev.yml up -d --build govihub-web   # package.json changed
+docker compose -f docker-compose.dev.yml up -d --build --no-cache govihub-api   # requirements.txt changed
+docker compose -f docker-compose.dev.yml up -d --build --no-cache govihub-web   # package.json changed
 ```
 
 ### Logs

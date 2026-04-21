@@ -55,11 +55,20 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Username already taken")
 
-    # Check email uniqueness if provided
-    if body.email:
-        email_check = await db.execute(select(User).where(User.email == body.email))
-        if email_check.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email already registered")
+    # Check email uniqueness scoped to role (same email allowed across different roles)
+    target_email = body.email or f"{body.username.lower()}@beta.govihub.lk"
+    email_check = await db.execute(
+        select(User).where(User.email == target_email, User.role == UserRole(body.role))
+    )
+    if email_check.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"You already have a {body.role} account with this email")
+
+    # Cap at 3 accounts per email (one per role: farmer, buyer, supplier)
+    email_count = await db.execute(
+        select(func.count()).select_from(User).where(User.email == target_email)
+    )
+    if email_count.scalar() >= 3:
+        raise HTTPException(status_code=409, detail="Maximum 3 accounts per email (one per role)")
 
     # Create user
     user = User(

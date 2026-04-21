@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.marketplace.models import SupplyCategory, SupplyListing, SupplyStatus
 from app.marketplace.schemas import SupplyListingCreate, SupplyListingUpdate, SupplySearchFilter
+from app.users.models import User
 
 logger = structlog.get_logger()
 
@@ -147,8 +148,13 @@ class SupplyMarketplaceService:
         - Price range filter
         - Delivery filter
         """
-        # Build base conditions list
-        conditions = [SupplyListing.status == filters.status]
+        # Build base conditions list — exclude listings from deactivated suppliers
+        conditions = [
+            SupplyListing.status == filters.status,
+            SupplyListing.supplier_id.in_(
+                select(User.id).where(User.is_active.is_(True))
+            ),
+        ]
 
         if filters.category:
             conditions.append(SupplyListing.category == filters.category)

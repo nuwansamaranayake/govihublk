@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { ChangeRoleModal } from "@/components/ui";
 import Image from "next/image";
@@ -12,13 +13,85 @@ export default function FarmerMorePage() {
   const t = useTranslations();
   const router = useRouter();
   const { locale } = useParams();
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
 
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [notifyPrices, setNotifyPrices] = useState(true);
-  const [notifyAdvisory, setNotifyAdvisory] = useState(false);
+  const [notifyAdvisory, setNotifyAdvisory] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+
+  // Crop management state
+  const [myCrops, setMyCrops] = useState<any[]>([]);
+  const [cropsLoading, setCropsLoading] = useState(true);
+  const [showAddCrop, setShowAddCrop] = useState(false);
+  const [availableCrops, setAvailableCrops] = useState<any[]>([]);
+
+  const GROWTH_STAGES = [
+    { value: "seedling", label_en: "Seedling", label_si: "බීජ" },
+    { value: "vegetative", label_en: "Vegetative", label_si: "වැඩීම" },
+    { value: "flowering", label_en: "Flowering", label_si: "මල් පිපීම" },
+    { value: "harvesting", label_en: "Harvesting", label_si: "අස්වැන්න" },
+    { value: "dormant", label_en: "Dormant", label_si: "නිදි" },
+  ];
+
+  // Load notification preferences and crops from API
+  useEffect(() => {
+    if (!isReady) return;
+    api.get<any>("/users/me/preferences")
+      .then(prefs => {
+        if (prefs) {
+          setNotifyMatches(prefs.match_alerts ?? true);
+          setNotifyPrices(prefs.price_alerts ?? true);
+          setNotifyAdvisory(prefs.weather_alerts ?? true);
+        }
+      })
+      .catch(() => {});
+    // Load crops
+    api.get<any>("/users/me/crops")
+      .then(res => setMyCrops(res.crops || []))
+      .catch(() => {})
+      .finally(() => setCropsLoading(false));
+  }, [isReady]);
+
+  const loadAvailableCrops = () => {
+    api.get<any>("/users/me/crops/available")
+      .then(res => {
+        setAvailableCrops((res.crops || []).filter((c: any) => !c.selected));
+        setShowAddCrop(true);
+      })
+      .catch(() => {});
+  };
+
+  const addCrop = async (cropType: string) => {
+    try {
+      const res = await api.post<any>("/users/me/crops", { crop_type: cropType });
+      setMyCrops(prev => [...prev, res]);
+      setShowAddCrop(false);
+    } catch {}
+  };
+
+  const removeCrop = async (cropType: string) => {
+    if (!confirm(locale === "si" ? "ඔබට විශ්වාසද?" : "Are you sure?")) return;
+    try {
+      await api.delete(`/users/me/crops/${cropType}`);
+      setMyCrops(prev => prev.filter(c => c.crop_type !== cropType));
+    } catch {}
+  };
+
+  const updateGrowthStage = async (cropType: string, stage: string) => {
+    try {
+      await api.put(`/users/me/crops/${cropType}`, { growth_stage: stage });
+      setMyCrops(prev => prev.map(c => c.crop_type === cropType ? { ...c, growth_stage: stage } : c));
+    } catch {}
+  };
+
+  // Save toggle changes to API
+  const toggleAndSave = (setter: (v: boolean) => void, current: boolean, apiKey: string) => {
+    const newVal = !current;
+    setter(newVal);
+    api.put("/users/me/preferences", { [apiKey]: newVal }).catch(() => setter(current));
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -105,6 +178,135 @@ export default function FarmerMorePage() {
           </div>
         </Card>
 
+        {/* My Crops Section */}
+        <Card padding="md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-lg">
+                🌿
+              </div>
+              <h3 className="font-semibold text-neutral-800 text-sm">
+                {t("crops.myCrops")}
+              </h3>
+            </div>
+            <button
+              onClick={loadAvailableCrops}
+              className="text-xs font-medium text-green-600 hover:text-green-700 bg-green-50 px-3 py-1.5 rounded-lg"
+            >
+              + {t("crops.addCrop")}
+            </button>
+          </div>
+
+          {cropsLoading ? (
+            <div className="space-y-2">
+              <div className="h-16 bg-neutral-100 rounded-xl animate-pulse" />
+              <div className="h-16 bg-neutral-100 rounded-xl animate-pulse" />
+            </div>
+          ) : myCrops.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-3xl mb-2">🌱</p>
+              <p className="text-sm text-neutral-500">{t("crops.noCrops")}</p>
+              <p className="text-xs text-neutral-400 mt-1">{t("crops.addFirst")}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myCrops.map((crop) => (
+                <div
+                  key={crop.crop_type}
+                  className="bg-green-50 rounded-xl p-3 border border-green-100"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="text-sm font-semibold text-neutral-800">
+                        {locale === "si" ? crop.name_si : crop.name_en}
+                      </span>
+                      <span className="text-xs text-neutral-400 ml-2">
+                        {locale === "si" ? crop.name_en : crop.name_si}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeCrop(crop.crop_type)}
+                      className="text-xs text-red-500 hover:text-red-600 font-medium"
+                    >
+                      {t("crops.removeCrop")}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-neutral-500 uppercase font-semibold block mb-1">
+                        {t("crops.growthStage")}
+                      </label>
+                      <select
+                        value={crop.growth_stage || "vegetative"}
+                        onChange={(e) => updateGrowthStage(crop.crop_type, e.target.value)}
+                        className="w-full text-xs bg-white border border-neutral-200 rounded-lg px-2 py-1.5 text-neutral-700"
+                      >
+                        {GROWTH_STAGES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {locale === "si" ? s.label_si : s.label_en}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {crop.area_hectares && (
+                      <div>
+                        <label className="text-[10px] text-neutral-500 uppercase font-semibold block mb-1">
+                          {t("crops.areaHectares")}
+                        </label>
+                        <p className="text-xs text-neutral-700">{crop.area_hectares} ha</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Add Crop Modal */}
+        {showAddCrop && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+            <div className="bg-white w-full max-w-md rounded-t-2xl p-4 max-h-[70vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-neutral-800">{t("crops.addCrop")}</h3>
+                <button
+                  onClick={() => setShowAddCrop(false)}
+                  className="p-2 hover:bg-neutral-100 rounded-lg"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {availableCrops.map((crop) => (
+                  <button
+                    key={crop.crop_type}
+                    onClick={() => addCrop(crop.crop_type)}
+                    className="rounded-xl border-2 border-neutral-200 p-3 text-center hover:border-green-400 hover:bg-green-50 transition-all"
+                  >
+                    <p className="text-2xl mb-1">
+                      {crop.crop_type === "black_pepper" ? "🌶" :
+                       crop.crop_type === "cinnamon" ? "🌿" :
+                       crop.crop_type === "turmeric" ? "🟡" :
+                       crop.crop_type === "ginger" ? "🫚" :
+                       crop.crop_type === "cloves" ? "🌸" :
+                       crop.crop_type === "nutmeg" ? "🥜" :
+                       crop.crop_type === "cardamom" ? "💚" : "🌿"}
+                    </p>
+                    <p className="text-xs font-semibold text-neutral-800">
+                      {locale === "si" ? crop.name_si : crop.name_en}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              {availableCrops.length === 0 && (
+                <p className="text-center text-sm text-neutral-500 py-4">
+                  {locale === "si" ? "සියලු බෝග දැනටමත් තෝරා ඇත" : "All crops already selected"}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Language Selector */}
         <Card padding="md">
           <div className="flex items-center gap-3 mb-3">
@@ -151,9 +353,9 @@ export default function FarmerMorePage() {
           </div>
           <div className="space-y-3">
             {[
-              { label: t("more.matchNotifications"), value: notifyMatches, setter: setNotifyMatches },
-              { label: t("more.priceAlerts"), value: notifyPrices, setter: setNotifyPrices },
-              { label: t("more.farmAdvisory"), value: notifyAdvisory, setter: setNotifyAdvisory },
+              { label: t("more.matchNotifications"), value: notifyMatches, setter: setNotifyMatches, apiKey: "match_alerts" },
+              { label: t("more.priceAlerts"), value: notifyPrices, setter: setNotifyPrices, apiKey: "price_alerts" },
+              { label: t("more.farmAdvisory"), value: notifyAdvisory, setter: setNotifyAdvisory, apiKey: "weather_alerts" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-sm text-neutral-700">{item.label}</span>
@@ -161,7 +363,7 @@ export default function FarmerMorePage() {
                   type="button"
                   role="switch"
                   aria-checked={item.value}
-                  onClick={() => item.setter(!item.value)}
+                  onClick={() => toggleAndSave(item.setter, item.value, item.apiKey)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     item.value ? "bg-green-500" : "bg-neutral-300"
                   }`}
@@ -207,6 +409,15 @@ export default function FarmerMorePage() {
                 </svg>
               ),
               onClick: () => router.push(`/${locale}/farmer/matches`),
+            },
+            {
+              label: locale === "si" ? "GoviHub ගැන දැනගන්න" : "Learn about GoviHub",
+              icon: (
+                <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              ),
+              onClick: () => router.push(`/${locale}/learn`),
             },
           ].map((item, idx, arr) => (
             <button

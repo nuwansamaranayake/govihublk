@@ -73,9 +73,9 @@ async def dev_login(role: str, db: AsyncSession = Depends(get_db)):
 
     user_data = DEV_USERS[role]
 
-    # Find or create the test user
+    # Find or create the test user (scoped by email + role)
     result = await db.execute(
-        select(User).where(User.email == user_data["email"])
+        select(User).where(User.email == user_data["email"], User.role == user_data["role"])
     )
     user = result.scalar_one_or_none()
 

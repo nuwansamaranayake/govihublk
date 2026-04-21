@@ -77,7 +77,7 @@ export default function FeedbackFAB() {
       {/* FAB Button */}
       <button
         onClick={() => { setOpen(true); setError(null); }}
-        className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+        className="fixed bottom-36 right-4 z-40 w-10 h-10 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         aria-label={t("feedback.sendFeedback")}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

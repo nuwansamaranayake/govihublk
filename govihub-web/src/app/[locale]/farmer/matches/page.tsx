@@ -10,10 +10,38 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { formatStatus } from "@/lib/utils";
+import { formatStatus, formatDateSafe } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { ListingDetailsModal } from "@/components/ui/ListingDetailsModal";
 
-type MatchStatus = "proposed" | "farmer_accepted" | "buyer_accepted" | "in_transit" | "disputed" | "cancelled";
+type MatchStatus = "proposed" | "accepted" | "completed" | "dismissed";
+
+interface MatchParty {
+  name: string;
+  phone: string | null;
+  district: string | null;
+}
+
+interface ListingDetail {
+  id: string;
+  quantity_kg: number | null;
+  price_per_kg?: number | null;
+  min_price_per_kg?: number | null;
+  max_price_per_kg?: number | null;
+  variety: string | null;
+  grade: string | null;
+  harvest_date?: string | null;
+  available_from?: string | null;
+  available_until?: string | null;
+  needed_by?: string | null;
+  description: string | null;
+  images?: string[] | null;
+  status: string | null;
+  is_organic?: boolean | null;
+  delivery_available?: boolean | null;
+  is_recurring?: boolean | null;
+  created_at?: string | null;
+}
 
 interface Match {
   id: string;
@@ -25,19 +53,33 @@ interface Match {
   agreed_quantity_kg: number | null;
   created_at: string;
   updated_at: string;
+  farmer?: MatchParty | null;
+  buyer?: MatchParty | null;
+  crop_name?: string | null;
+  harvest_quantity_kg?: number | null;
+  demand_quantity_kg?: number | null;
+  harvest?: ListingDetail | null;
+  demand?: ListingDetail | null;
 }
 
-
-const STATUS_COLOR: Record<MatchStatus, "gold"|"green"|"gray"|"red"|"blue"|"orange"> = {
-  proposed:"blue", farmer_accepted:"gold", buyer_accepted:"gold", in_transit:"orange", disputed:"red", cancelled:"gray",
+const STATUS_COLOR: Record<MatchStatus, "blue" | "green" | "gold" | "gray"> = {
+  proposed: "blue",
+  accepted: "gold",
+  completed: "green",
+  dismissed: "gray",
 };
-const ACTION_KEYS: Record<MatchStatus, { key:string; apiAction:string; variant:"primary"|"danger"|"secondary" }[]> = {
-  proposed: [{key:"accept",apiAction:"accept",variant:"primary"},{key:"reject",apiAction:"reject",variant:"danger"}],
-  farmer_accepted: [{key:"confirm",apiAction:"confirm",variant:"primary"}],
-  buyer_accepted: [{key:"fulfill",apiAction:"fulfill",variant:"secondary"}],
-  in_transit: [],
-  disputed: [{key:"respond",apiAction:"respond",variant:"primary"}],
-  cancelled: [],
+
+const ACTION_KEYS: Record<MatchStatus, { key: string; apiAction: string; variant: "primary" | "danger" | "secondary" }[]> = {
+  proposed: [
+    { key: "accept", apiAction: "accept", variant: "primary" },
+    { key: "dismiss", apiAction: "dismiss", variant: "danger" },
+  ],
+  accepted: [
+    { key: "complete", apiAction: "complete", variant: "primary" },
+    { key: "dismiss", apiAction: "dismiss", variant: "danger" },
+  ],
+  completed: [],
+  dismissed: [],
 };
 
 export default function FarmerMatchesPage() {
@@ -48,7 +90,8 @@ export default function FarmerMatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string|null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [detailModal, setDetailModal] = useState<{ open: boolean; type: "harvest" | "demand"; match: Match | null }>({ open: false, type: "demand", match: null });
 
   const loadMatches = () => {
     setError(null);
@@ -79,13 +122,13 @@ export default function FarmerMatchesPage() {
   const scoreColor = (score: number) =>
     score >= 85 ? "text-green-600" : score >= 70 ? "text-amber-500" : "text-red-500";
 
-  const allStatuses: MatchStatus[] = ["proposed","farmer_accepted","buyer_accepted","in_transit","disputed","cancelled"];
+  const allStatuses: MatchStatus[] = ["proposed", "accepted", "completed", "dismissed"];
   const tabs = [
-    { key:"all", label:t("matches.all"), badge: matches.length },
+    { key: "all", label: t("matches.all"), badge: matches.length },
     ...allStatuses.map(s => ({
       key: s,
       label: t(`matches.status_${s}`),
-      badge: matches.filter(m => m.status===s).length,
+      badge: matches.filter(m => m.status === s).length,
     })),
   ];
 
@@ -98,11 +141,11 @@ export default function FarmerMatchesPage() {
 
       <Tabs tabs={tabs} defaultTab="all">
         {(activeTab) => {
-          const filtered = activeTab==="all" ? matches : matches.filter(m => m.status===activeTab);
+          const filtered = activeTab === "all" ? matches : matches.filter(m => m.status === activeTab);
           return (
             <div className="px-4 py-4 space-y-3">
               {loading ? (
-                Array.from({length:3}).map((_,i) => (
+                Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-2">
                     <Skeleton className="h-5 w-1/2" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-8 w-full mt-2" />
                   </div>
@@ -116,29 +159,78 @@ export default function FarmerMatchesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-neutral-900 text-sm">Match #{match.id?.slice(0, 8)}</h3>
-                          <Badge color={STATUS_COLOR[match.status]} size="sm" dot>{formatStatus(match.status)}</Badge>
+                          <Badge color={STATUS_COLOR[match.status] || "gray"} size="sm" dot>{formatStatus(match.status)}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
+                          {match.crop_name && <span className="font-medium">{match.crop_name} · </span>}
                           {t("matches.score")}: {Math.round(match.score * 100)}% · {match.agreed_price_per_kg ? `Rs. ${match.agreed_price_per_kg}/kg` : t("matches.priceTBD")}
                         </p>
-                        <p className="text-xs text-neutral-400 mt-1">{match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg · ` : ''}{new Date(match.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {match.demand_quantity_kg ? `${match.demand_quantity_kg} kg · ` : ''}
+                          {match.agreed_quantity_kg ? `${match.agreed_quantity_kg} kg · ` : ''}{formatDateSafe(match.created_at)}
+                        </p>
                       </div>
                       <div className="text-center shrink-0 bg-neutral-50 rounded-xl px-3 py-2">
                         <div className={`text-2xl font-bold ${scoreColor(Math.round(match.score * 100))}`}>{Math.round(match.score * 100)}</div>
                         <p className="text-[10px] text-neutral-400">{t("matches.matchPercent")}</p>
                       </div>
                     </div>
-                    {ACTION_KEYS[match.status].length > 0 && (
+                    {/* Demand listing details — what the buyer wants */}
+                    {match.demand && (
+                      <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl p-3">
+                        <p className="text-xs font-semibold text-amber-800 mb-2">📋 {t("matches.demandDetails")}</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <div className="text-neutral-500">{t("matches.quantityNeeded")}</div>
+                          <div className="font-medium text-neutral-800">{match.demand.quantity_kg ? `${match.demand.quantity_kg} kg` : "—"}</div>
+                          <div className="text-neutral-500">{t("matches.maxPrice")}</div>
+                          <div className="font-medium text-neutral-800">{match.demand.max_price_per_kg ? `Rs. ${match.demand.max_price_per_kg}/kg` : "—"}</div>
+                          {match.demand.variety && (<><div className="text-neutral-500">{t("matches.variety")}</div><div className="font-medium text-neutral-800">{match.demand.variety}</div></>)}
+                          {match.demand.grade && (<><div className="text-neutral-500">{t("matches.grade")}</div><div className="font-medium text-neutral-800">{match.demand.grade}</div></>)}
+                          <div className="text-neutral-500">{t("matches.neededBy")}</div>
+                          <div className="font-medium text-neutral-800">{match.demand.needed_by ? formatDateSafe(match.demand.needed_by) : "—"}</div>
+                        </div>
+                        {match.demand.description && (
+                          <p className="text-xs text-neutral-600 mt-2 italic">{match.demand.description}</p>
+                        )}
+                        <button
+                          onClick={() => setDetailModal({ open: true, type: "demand", match })}
+                          className="mt-2 w-full py-1.5 text-xs font-medium text-amber-700 border border-amber-300 bg-white hover:bg-amber-50 rounded-lg transition-colors"
+                        >
+                          🔍 {t("matches.viewDetails")}
+                        </button>
+                      </div>
+                    )}
+                    {(ACTION_KEYS[match.status] || []).length > 0 && (
                       <div className="flex gap-2 pt-3 border-t border-neutral-100">
-                        {ACTION_KEYS[match.status].map(({key, apiAction, variant}) => (
+                        {(ACTION_KEYS[match.status] || []).map(({ key, apiAction, variant }) => (
                           <Button key={key} variant={variant} size="sm"
-                            loading={actionLoading===`${match.id}-${apiAction}`}
+                            loading={actionLoading === `${match.id}-${apiAction}`}
                             onClick={() => handleAction(match.id, apiAction)}>
                             {t(`matches.${key}`)}
                           </Button>
                         ))}
                       </div>
                     )}
+                    {/* Buyer contact info */}
+                    {match.buyer?.name ? (
+                      <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <p className="text-xs font-medium text-blue-800 mb-1">👤 {match.buyer.name}</p>
+                        {match.buyer.phone && (
+                          <div className="flex items-center justify-between">
+                            <a href={`tel:${match.buyer.phone}`} className="text-sm font-medium text-blue-600">
+                              📞 {match.buyer.phone}
+                            </a>
+                            <a href={`tel:${match.buyer.phone}`}
+                              className="px-3 py-1 text-xs font-medium rounded-lg bg-blue-600 text-white">
+                              {t("common.call")}
+                            </a>
+                          </div>
+                        )}
+                        {match.buyer.district && (
+                          <p className="text-xs text-blue-600 mt-1">📍 {match.buyer.district}</p>
+                        )}
+                      </div>
+                    ) : null}
                   </Card>
                 ))
               )}
@@ -146,6 +238,17 @@ export default function FarmerMatchesPage() {
           );
         }}
       </Tabs>
+
+      {/* Listing Details Modal */}
+      <ListingDetailsModal
+        isOpen={detailModal.open}
+        onClose={() => setDetailModal({ open: false, type: "demand", match: null })}
+        type={detailModal.type}
+        listing={detailModal.match?.demand ?? null}
+        cropName={detailModal.match?.crop_name}
+        partyName={detailModal.match?.buyer?.name}
+        partyDistrict={detailModal.match?.buyer?.district}
+      />
     </div>
   );
 }

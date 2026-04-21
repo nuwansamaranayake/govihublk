@@ -43,6 +43,7 @@ class HarvestListingCreate(BaseModel):
     is_organic: bool = False
     delivery_available: bool = False
     delivery_radius_km: Optional[int] = Field(None, ge=0, le=500)
+    status: Optional[str] = Field("ready", description="Initial status (defaults to ready for immediate matching)")
 
     @model_validator(mode="after")
     def validate_location(self) -> "HarvestListingCreate":

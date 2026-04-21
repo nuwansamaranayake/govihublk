@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/lib/auth";
+import { FEATURES } from "@/config/feature-flags";
+import AdCarousel from "@/components/ads/AdCarousel";
 
 type Category = "fertilizer"|"seeds"|"pesticide"|"equipment"|"irrigation"|"other";
 
@@ -121,6 +123,9 @@ export default function SupplierDashboardPage() {
             </Card>
           ))}
         </div>
+
+        {/* Advertisement Carousel */}
+        {FEATURES.SHOW_ADS && <AdCarousel />}
 
         {/* Listings by Category */}
         <Card header={<h2 className="font-semibold text-neutral-800 text-sm">{t("common.listingsByCategory")}</h2>} padding="md">
