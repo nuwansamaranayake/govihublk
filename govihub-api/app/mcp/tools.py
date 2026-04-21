@@ -434,6 +434,51 @@ TOOL_DEFINITIONS: list[dict] = [
         },
     },
     {
+        "name": "get_ad_stats",
+        "description": (
+            "Get advertisement performance summary. Returns total ads, active ads, "
+            "total impressions, total clicks, overall CTR, and top-performing ads."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": "Number of recent days to analyse (default 30)",
+                    "default": 30,
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_ads",
+        "description": (
+            "Search advertisements by status or advertiser name. "
+            "Returns list of ads with basic stats."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "description": "Filter by status: 'active', 'inactive', 'all' (default 'all')",
+                    "default": "all",
+                },
+                "advertiser": {
+                    "type": "string",
+                    "description": "Filter by advertiser name (partial match)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum results (default 20, max 50)",
+                    "default": 20,
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "send_admin_email",
         "description": (
             "Send an HTML email to GoviHub admins via Resend. Used by scheduled "
@@ -996,7 +1041,6 @@ async def _handle_get_platform_stats(params: dict) -> dict:
         user_stmt = text("""
             SELECT role, COUNT(*) AS count
             FROM users
-            WHERE is_active = TRUE
             GROUP BY role
         """)
         r = await session.execute(user_stmt)
@@ -1069,8 +1113,7 @@ async def _handle_get_platform_stats(params: dict) -> dict:
             prev_stmt = text("""
                 SELECT COUNT(*) AS prev_month_users
                 FROM users
-                WHERE is_active = TRUE
-                  AND created_at < DATE_TRUNC('month', NOW())
+                WHERE created_at < DATE_TRUNC('month', NOW())
                   AND created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month'
             """)
             r7 = await session.execute(prev_stmt)
@@ -1762,6 +1805,115 @@ async def _handle_govihub_get_match_performance(params: dict) -> dict:
         }
 
 
+async def _handle_get_ad_stats(params: dict) -> dict:
+    """Get advertisement performance summary."""
+    days = int(params.get("days", 30))
+
+    async with async_session_factory() as session:
+        # Overall stats
+        stats_stmt = text("""
+            SELECT
+                COUNT(*) AS total_ads,
+                COUNT(*) FILTER (WHERE is_active = TRUE AND starts_at <= NOW() AND (ends_at IS NULL OR ends_at > NOW())) AS active_ads,
+                COALESCE(SUM(impression_count), 0) AS total_impressions,
+                COALESCE(SUM(click_count), 0) AS total_clicks
+            FROM advertisements
+        """)
+        r = await session.execute(stats_stmt)
+        stats = r.mappings().one()
+
+        total_imp = int(stats["total_impressions"])
+        total_clk = int(stats["total_clicks"])
+
+        # Top performing
+        top_stmt = text("""
+            SELECT id, title, impression_count, click_count,
+                   CASE WHEN impression_count > 0 THEN ROUND(click_count::numeric / impression_count * 100, 2) ELSE 0 END AS ctr
+            FROM advertisements
+            WHERE impression_count >= 10
+            ORDER BY ctr DESC
+            LIMIT 5
+        """)
+        r2 = await session.execute(top_stmt)
+        top_rows = r2.mappings().all()
+
+        return {
+            "tool": "get_ad_stats",
+            "period_days": days,
+            "total_ads": int(stats["total_ads"]),
+            "active_ads": int(stats["active_ads"]),
+            "total_impressions": total_imp,
+            "total_clicks": total_clk,
+            "overall_ctr": round(total_clk / total_imp * 100, 2) if total_imp > 0 else 0,
+            "top_performing": [
+                {
+                    "id": str(row["id"]),
+                    "title": row["title"],
+                    "impressions": row["impression_count"],
+                    "clicks": row["click_count"],
+                    "ctr": float(row["ctr"]),
+                }
+                for row in top_rows
+            ],
+        }
+
+
+async def _handle_search_ads(params: dict) -> dict:
+    """Search advertisements by status or advertiser."""
+    status = params.get("status", "all")
+    advertiser = params.get("advertiser")
+    limit = min(int(params.get("limit", 20)), 50)
+
+    conditions = []
+    bind_params: dict[str, Any] = {"limit": limit}
+
+    if status == "active":
+        conditions.append("is_active = TRUE AND starts_at <= NOW() AND (ends_at IS NULL OR ends_at > NOW())")
+    elif status == "inactive":
+        conditions.append("(is_active = FALSE OR ends_at <= NOW())")
+
+    if advertiser:
+        conditions.append("advertiser_name ILIKE :advertiser")
+        bind_params["advertiser"] = f"%{advertiser}%"
+
+    where_clause = (" AND ".join(conditions)) if conditions else "TRUE"
+
+    async with async_session_factory() as session:
+        stmt = text(f"""
+            SELECT id, title, title_si, is_active, starts_at, ends_at,
+                   advertiser_name, impression_count, click_count,
+                   target_roles, display_order
+            FROM advertisements
+            WHERE {where_clause}
+            ORDER BY display_order ASC, created_at DESC
+            LIMIT :limit
+        """)
+        r = await session.execute(stmt, bind_params)
+        rows = r.mappings().all()
+
+        return {
+            "tool": "search_ads",
+            "status_filter": status,
+            "advertiser_filter": advertiser,
+            "count": len(rows),
+            "ads": [
+                {
+                    "id": str(row["id"]),
+                    "title": row["title"],
+                    "title_si": row["title_si"],
+                    "is_active": row["is_active"],
+                    "starts_at": row["starts_at"].isoformat() if row["starts_at"] else None,
+                    "ends_at": row["ends_at"].isoformat() if row["ends_at"] else None,
+                    "advertiser": row["advertiser_name"],
+                    "impressions": row["impression_count"],
+                    "clicks": row["click_count"],
+                    "ctr": round(row["click_count"] / row["impression_count"] * 100, 2) if row["impression_count"] > 0 else 0,
+                }
+                for row in rows
+            ],
+        }
+
+
 async def _handle_send_admin_email(params: dict) -> dict:
     """Send an HTML email via Resend. Used by admin automations."""
     from app.config import settings
@@ -1825,6 +1977,9 @@ TOOL_HANDLERS: dict[str, Any] = {
     "govihub_get_platform_stats": _handle_govihub_get_platform_stats,
     "govihub_get_listings_summary": _handle_govihub_get_listings_summary,
     "govihub_get_match_performance": _handle_govihub_get_match_performance,
+    # Advertisement tools
+    "get_ad_stats": _handle_get_ad_stats,
+    "search_ads": _handle_search_ads,
     # Admin email automation
     "send_admin_email": _handle_send_admin_email,
 }

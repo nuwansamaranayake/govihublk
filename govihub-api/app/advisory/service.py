@@ -1,6 +1,7 @@
 """GoviHub Advisory Service — RAG pipeline: embed → ANN search → LLM → store."""
 
 import math
+import re
 from typing import Optional
 from uuid import UUID
 
@@ -25,6 +26,52 @@ logger = structlog.get_logger()
 # an English fallback search.
 _SIMILARITY_THRESHOLD = 0.3
 
+# Threshold below which RAG chunks are considered irrelevant, triggering
+# a Gemini Flash general-knowledge fallback.
+_RAG_RELEVANCE_THRESHOLD = 0.35
+
+# ---------------------------------------------------------------------------
+# Crop-type detection — map question keywords to knowledge_chunks metadata
+# ---------------------------------------------------------------------------
+_CROP_KEYWORDS: dict[str, list[str]] = {
+    "turmeric":     ["turmeric", "කහ", "கஞ்சள்", "manjal"],
+    "ginger":       ["ginger", "ඉඟුරු", "இஞ்சி", "inguru"],
+    "black_pepper": ["pepper", "ගම්මිරිස්", "மிளகு", "gammiris", "black pepper"],
+    "cinnamon":     ["cinnamon", "කුරුඳු", "இலவங்கப்பட்டை", "kurundu"],
+    "cloves":       ["clove", "cloves", "කරාබු", "கிராம்பு", "karabu"],
+    "nutmeg":       ["nutmeg", "සාදික්කා", "ஜாதிக்காய்", "sadikka"],
+    "cardamom":     ["cardamom", "එනසාල්", "ஏலக்காய்", "ensal"],
+    "mixed_spices": ["mixed spice", "මිශ්‍ර කුළුබඩු", "கலவை மசாலா"],
+}
+
+
+def _detect_crop_type(question: str) -> Optional[str]:
+    """Return the crop_type metadata value if the question mentions a specific crop."""
+    q_lower = question.lower()
+    for crop_type, keywords in _CROP_KEYWORDS.items():
+        for kw in keywords:
+            if kw.lower() in q_lower:
+                return crop_type
+    return None
+
+
+# Phrases that indicate the RAG LLM couldn't answer — trigger Gemini fallback
+_CANT_ANSWER_PHRASES = [
+    "i'm sorry", "i am sorry", "do not contain", "does not contain",
+    "no information", "not contain sufficient", "cannot find",
+    "no relevant", "not available", "cannot answer",
+    "මට සමාවෙන්න", "තොරතුරු නොමැත", "ප්‍රමාණවත් තොරතුරු නොමැත",
+]
+
+
+def _llm_says_no_info(answer: str) -> bool:
+    """Return True if the RAG LLM response indicates it couldn't answer."""
+    a_lower = answer.lower()
+    return any(phrase in a_lower for phrase in _CANT_ANSWER_PHRASES)
+
+# Gemini Flash model for general agriculture fallback
+_GEMINI_FLASH_MODEL = "google/gemini-2.0-flash-001"
+
 # System prompt for the agricultural advisory LLM
 _SYSTEM_PROMPT_EN = (
     "You are GoviHub's agricultural advisor for Sri Lanka's dry zone farming communities. "
@@ -39,6 +86,24 @@ _SYSTEM_PROMPT_SI = (
     "ලබා දී ඇති යොමු ලේඛන භාවිතා කරමින් ගොවියාගේ ප්‍රශ්නයට නිවැරදිව සහ ප්‍රායෝගිකව "
     "පිළිතුරු දෙන්න. ලේඛනවල ප්‍රමාණවත් තොරතුරු නොමැති නම්솔직ව කියන්න. "
     "පිළිතුර කෙටි (වචන 400 ට අඩු) සහ ගොවීන්ට ගැලපෙන සරල භාෂාවෙන් ලියන්න."
+)
+
+# Gemini Flash fallback prompts — general agriculture knowledge (no RAG docs)
+_GEMINI_SYSTEM_EN = (
+    "You are GoviHub's agricultural advisor for Sri Lankan farmers. "
+    "Answer the farmer's question using your general knowledge of tropical agriculture, "
+    "Sri Lankan farming practices, spice cultivation, and crop management. "
+    "Be practical, concise (under 400 words), and use plain language. "
+    "Always prioritise safe, sustainable, and locally-appropriate recommendations. "
+    "If you are not confident about the answer, say so honestly."
+)
+
+_GEMINI_SYSTEM_SI = (
+    "ඔබ GoviHub හි ශ්‍රී ලංකාවේ ගොවීන් සඳහා කෘෂිකාර්මික උපදේශකයෙකු. "
+    "නිවර්තන කෘෂිකර්මය, ශ්‍රී ලාංකික ගොවිතැන් ක්‍රම, කුළුබඩු වගාව සහ බෝග කළමනාකරණය "
+    "පිළිබඳ ඔබේ සාමාන්‍ය දැනුම භාවිතයෙන් ගොවියාගේ ප්‍රශ්නයට පිළිතුරු දෙන්න. "
+    "ප්‍රායෝගික, කෙටි (වචන 400 ට අඩු) සහ සරල භාෂාවෙන් ලියන්න. "
+    "පිළිතුර ගැන විශ්වාස නැත්නම් අවංකව කියන්න."
 )
 
 
@@ -81,8 +146,22 @@ class AdvisoryService:
         # 1. Embed
         query_embedding = embedding_service.embed(question)
 
-        # 2. Primary language ANN search
-        chunks = await self._search_chunks(query_embedding, language, limit=5)
+        # 1b. Detect crop type from question for filtered search
+        detected_crop = _detect_crop_type(question)
+        if detected_crop:
+            logger.info("advisory_crop_detected", crop_type=detected_crop)
+
+        # 2. Primary language ANN search (with optional crop filter)
+        chunks = await self._search_chunks(
+            query_embedding, language, limit=5, crop_type=detected_crop
+        )
+
+        # 2b. If crop-filtered search returned too few results, try without filter
+        if detected_crop and (
+            not chunks or all(c["similarity"] < _SIMILARITY_THRESHOLD for c in chunks)
+        ):
+            logger.info("advisory_crop_filter_fallback", crop_type=detected_crop)
+            chunks = await self._search_chunks(query_embedding, language, limit=5)
 
         # 3. Fallback to English when Sinhala results are below threshold
         used_language = language
@@ -90,28 +169,61 @@ class AdvisoryService:
             not chunks or all(c["similarity"] < _SIMILARITY_THRESHOLD for c in chunks)
         ):
             logger.info("advisory_fallback_to_english", user_id=str(user_id))
-            chunks = await self._search_chunks(query_embedding, "en", limit=5)
+            chunks = await self._search_chunks(
+                query_embedding, "en", limit=5, crop_type=detected_crop
+            )
+            # If crop-filtered English also low, try unfiltered English
+            if detected_crop and (
+                not chunks or all(c["similarity"] < _SIMILARITY_THRESHOLD for c in chunks)
+            ):
+                chunks = await self._search_chunks(query_embedding, "en", limit=5)
             used_language = "en"
 
-        # 4. Build prompt
-        system_prompt = _SYSTEM_PROMPT_SI if language == "si" else _SYSTEM_PROMPT_EN
-        user_message = self._build_user_message(question, chunks, language)
+        # 4. Decide: RAG path or Gemini Flash fallback
+        best_score = max((c["similarity"] for c in chunks), default=0.0)
+        use_gemini_fallback = best_score < _RAG_RELEVANCE_THRESHOLD
 
-        # 5. Call LLM
-        try:
-            llm_resp = await self._llm.chat(
-                messages=[{"role": "user", "content": user_message}],
-                system=system_prompt,
-                temperature=0.3,
-                max_tokens=600,
+        if use_gemini_fallback:
+            logger.info(
+                "advisory_gemini_fallback",
+                user_id=str(user_id),
+                best_score=round(best_score, 4),
+                threshold=_RAG_RELEVANCE_THRESHOLD,
             )
-            answer_text = llm_resp.content
-        except Exception as exc:  # noqa: BLE001
-            logger.error("advisory_llm_failed", error=str(exc))
-            answer_text = (
-                "We encountered an issue generating a response. "
-                "Please try again in a moment."
+            answer_text, source_type, chunks = await self._gemini_answer(
+                question, language
             )
+        else:
+            source_type = "knowledge_base"
+            # Standard RAG path
+            system_prompt = _SYSTEM_PROMPT_SI if language == "si" else _SYSTEM_PROMPT_EN
+            user_message = self._build_user_message(question, chunks, language)
+
+            try:
+                llm_resp = await self._llm.chat(
+                    messages=[{"role": "user", "content": user_message}],
+                    system=system_prompt,
+                    temperature=0.3,
+                    max_tokens=600,
+                )
+                answer_text = llm_resp.content
+            except Exception as exc:  # noqa: BLE001
+                logger.error("advisory_llm_failed", error=str(exc))
+                answer_text = (
+                    "We encountered an issue generating a response. "
+                    "Please try again in a moment."
+                )
+
+            # 4b. Post-RAG fallback: if the LLM says "I don't know", re-route to Gemini
+            if _llm_says_no_info(answer_text):
+                logger.info(
+                    "advisory_gemini_fallback_post_rag",
+                    user_id=str(user_id),
+                    reason="llm_says_no_info",
+                )
+                answer_text, source_type, chunks = await self._gemini_answer(
+                    question, language
+                )
 
         # 6. Persist
         chunks_used = [
@@ -149,6 +261,7 @@ class AdvisoryService:
             question=record.question_text,
             answer=record.answer_text or "",
             sources=sources,
+            source_type=source_type,
             language=record.language,
             created_at=record.created_at,
         )
@@ -214,17 +327,50 @@ class AdvisoryService:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    async def _gemini_answer(
+        self,
+        question: str,
+        language: str,
+    ) -> tuple[str, str, list]:
+        """Call Gemini Flash for a general-knowledge answer.
+
+        Returns (answer_text, source_type, chunks).
+        """
+        gemini_system = _GEMINI_SYSTEM_SI if language == "si" else _GEMINI_SYSTEM_EN
+        gemini_client = OpenRouterClient(model=_GEMINI_FLASH_MODEL)
+        try:
+            llm_resp = await gemini_client.chat(
+                messages=[{"role": "user", "content": question}],
+                system=gemini_system,
+                temperature=0.4,
+                max_tokens=800,
+            )
+            return llm_resp.content, "ai_generated", []
+        except Exception as exc:  # noqa: BLE001
+            logger.error("advisory_gemini_failed", error=str(exc))
+            return (
+                "We encountered an issue generating a response. "
+                "Please try again in a moment."
+            ), "ai_generated", []
+
     async def _search_chunks(
         self,
         query_embedding: list[float],
         language: str,
         limit: int = 5,
+        crop_type: Optional[str] = None,
     ) -> list[dict]:
-        """Run pgvector ANN search and return top-N chunks with similarity scores."""
-        # Embed the vector literal directly in the SQL — asyncpg cannot prepare
-        # statements with bound parameters cast to custom types ($N::vector).
-        # The embedding is generated internally (list of floats), so this is safe.
+        """Run pgvector ANN search and return top-N chunks with similarity scores.
+
+        When *crop_type* is provided, only chunks matching that crop are searched.
+        """
         emb_literal = "'" + "[" + ",".join(str(x) for x in query_embedding) + "]" + "'::vector"
+
+        crop_filter = ""
+        params: dict = {"lang": language, "lim": limit}
+        if crop_type:
+            crop_filter = "AND metadata->>'crop_type' = :crop_type"
+            params["crop_type"] = crop_type
 
         sql = text(
             f"""
@@ -233,25 +379,27 @@ class AdvisoryService:
                 source,
                 title,
                 content,
+                metadata,
                 1 - (embedding <=> {emb_literal}) AS similarity
             FROM knowledge_chunks
             WHERE language = :lang
+              {crop_filter}
             ORDER BY embedding <=> {emb_literal}
             LIMIT :lim
             """
         )
 
         try:
-            result = await self.db.execute(
-                sql,
-                {"lang": language, "lim": limit},
-            )
+            result = await self.db.execute(sql, params)
             rows = result.mappings().all()
             return [dict(row) for row in rows]
         except Exception as exc:  # noqa: BLE001
-            logger.error("advisory_chunk_search_failed", error=str(exc), language=language)
-            # Roll back the aborted transaction so the session stays usable
-            # for the subsequent INSERT (flush) in ask_question.
+            logger.error(
+                "advisory_chunk_search_failed",
+                error=str(exc),
+                language=language,
+                crop_type=crop_type,
+            )
             await self.db.rollback()
             return []
 
@@ -298,11 +446,15 @@ class AdvisoryService:
                     )
                 )
 
+        # Determine source_type: if no chunks were used, it was a Gemini fallback
+        source_type = "ai_generated" if not sources else "knowledge_base"
+
         return AdvisoryResponse(
             id=record.id,
             question=record.question_text,
             answer=record.answer_text or "",
             sources=sources,
+            source_type=source_type,
             language=record.language,
             created_at=record.created_at,
         )

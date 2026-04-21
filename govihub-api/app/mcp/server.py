@@ -30,7 +30,7 @@ router = APIRouter()
 _SESSIONS: dict[str, dict[str, Any]] = {}
 
 MCP_PROTOCOL_VERSION = "2024-11-05"
-SERVER_INFO = {"name": "govihub-mcp", "version": "1.0.0"}
+SERVER_INFO = {"name": "govihub-spices-mcp", "version": "1.0.0"}
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +148,19 @@ async def mcp_sse(request: Request) -> StreamingResponse:
 
     session_id = str(uuid.uuid4())
     session_queue: asyncio.Queue = asyncio.Queue()
-    _SESSIONS[session_id] = {"queue": session_queue, "active": True}
+    _SESSIONS[session_id] = {"queue": session_queue, "active": True, "authenticated": True}
 
     logger.info("mcp_session_opened", session_id=session_id)
 
     async def event_stream() -> AsyncGenerator[str, None]:
         try:
             # First event: advertise the POST endpoint for this session
-            endpoint_url = f"/mcp/messages/{session_id}"
+            # Include token in endpoint URL for MCP clients
+            _token = request.query_params.get("token", "")
+            if _token:
+                endpoint_url = f"/mcp/messages/{session_id}?token={_token}"
+            else:
+                endpoint_url = f"/mcp/messages/{session_id}"
             yield f"event: endpoint\ndata: {endpoint_url}\n\n"
 
             # Stream queued server→client events
@@ -192,20 +197,22 @@ async def mcp_sse(request: Request) -> StreamingResponse:
 async def mcp_messages(session_id: str, request: Request) -> ORJSONResponse:
     """Receive JSON-RPC 2.0 messages from the MCP client."""
 
-    try:
-        await verify_mcp_token(request)
-    except MCPAuthError as exc:
-        return ORJSONResponse(
-            status_code=exc.status_code,
-            content={"error": exc.detail},
-        )
-
     session = _SESSIONS.get(session_id)
     if session is None:
         return ORJSONResponse(
             status_code=404,
             content={"error": f"Session {session_id} not found or expired"},
         )
+
+    # Skip token check if session was already authenticated via SSE handshake
+    if not session.get("authenticated"):
+        try:
+            await verify_mcp_token(request)
+        except MCPAuthError as exc:
+            return ORJSONResponse(
+                status_code=exc.status_code,
+                content={"error": exc.detail},
+            )
 
     try:
         body = await request.json()

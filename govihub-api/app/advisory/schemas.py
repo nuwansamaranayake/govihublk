@@ -36,6 +36,10 @@ class AdvisoryResponse(BaseModel):
     question: str
     answer: str
     sources: list[SourceReference] = Field(default_factory=list)
+    source_type: str = Field(
+        default="knowledge_base",
+        description="'knowledge_base' when answer is from RAG, 'ai_generated' when from Gemini fallback",
+    )
     language: str
     created_at: datetime
 
