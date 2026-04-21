@@ -9,17 +9,51 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/lib/auth";
 
+/* Backend returns snake_case — accept both shapes */
 interface StatsData {
-  totalUsers: number;
-  farmers: number;
-  buyers: number;
-  suppliers: number;
-  totalMatches: number;
-  activeMatches: number;
-  disputedMatches: number;
-  totalListings: number;
-  activeListings: number;
-  systemHealth: { db: string; api: string; ai: string };
+  totalUsers?: number;
+  farmers?: number;
+  buyers?: number;
+  suppliers?: number;
+  totalMatches?: number;
+  activeMatches?: number;
+  disputedMatches?: number;
+  totalListings?: number;
+  activeListings?: number;
+  systemHealth?: { db: string; api: string; ai: string };
+  /* snake_case (real API) */
+  total_users?: number;
+  total_farmers?: number;
+  total_buyers?: number;
+  total_suppliers?: number;
+  total_matches?: number;
+  confirmed_matches?: number;
+  disputed_matches?: number;
+  total_harvest_listings?: number;
+  active_harvest_listings?: number;
+  total_demand_postings?: number;
+  active_demand_postings?: number;
+  total_diagnoses?: number;
+  total_knowledge_chunks?: number;
+  total_advisory_questions?: number;
+  active_users_last_30d?: number;
+}
+
+/** Normalise backend snake_case to the shape our UI uses */
+function normalise(s: StatsData): StatsData {
+  return {
+    ...s,
+    totalUsers:       s.totalUsers       ?? s.total_users       ?? 0,
+    farmers:          s.farmers          ?? s.total_farmers     ?? 0,
+    buyers:           s.buyers           ?? s.total_buyers      ?? 0,
+    suppliers:        s.suppliers        ?? s.total_suppliers   ?? 0,
+    totalMatches:     s.totalMatches     ?? s.total_matches     ?? 0,
+    activeMatches:    s.activeMatches    ?? s.confirmed_matches ?? 0,
+    disputedMatches:  s.disputedMatches  ?? s.disputed_matches  ?? 0,
+    totalListings:    s.totalListings    ?? (s.total_harvest_listings ?? 0) + (s.total_demand_postings ?? 0),
+    activeListings:   s.activeListings   ?? (s.active_harvest_listings ?? 0) + (s.active_demand_postings ?? 0),
+    systemHealth:     s.systemHealth     ?? { db: "healthy", api: "healthy", ai: "healthy" },
+  };
 }
 
 interface ActivityItem {
@@ -30,33 +64,9 @@ interface ActivityItem {
   severity: "info"|"warning"|"error";
 }
 
-interface ChartBar {
-  label: string;
-  value: number;
-  max: number;
-}
-
-const MOCK_STATS: StatsData = {
-  totalUsers: 1248, farmers:834, buyers:312, suppliers:102,
-  totalMatches: 456, activeMatches:87, disputedMatches:5,
-  totalListings: 1034, activeListings:423,
-  systemHealth: { db:"healthy", api:"healthy", ai:"healthy" },
-};
-
-const MOCK_ACTIVITY: ActivityItem[] = [
-  { id:"1", type:"user", message:"New farmer registered: Kamal Perera (Kandy)", time:"5m ago", severity:"info" },
-  { id:"2", type:"match", message:"Match #1234 disputed by buyer", time:"12m ago", severity:"warning" },
-  { id:"3", type:"system", message:"AI diagnosis service response time elevated", time:"1h ago", severity:"warning" },
-  { id:"4", type:"match", message:"45 new matches created", time:"2h ago", severity:"info" },
-  { id:"5", type:"user", message:"Supplier account deactivated: spam report", time:"3h ago", severity:"error" },
-];
-
-const MOCK_CROP_BARS: ChartBar[] = [
-  { label:"Tomato", value:234, max:300 },
-  { label:"Cabbage", value:187, max:300 },
-  { label:"Carrot", value:156, max:300 },
-  { label:"Beans", value:143, max:300 },
-  { label:"Potato", value:98, max:300 },
+const SPICE_CROPS = [
+  "Black Pepper", "Turmeric", "Ginger", "Cinnamon",
+  "Cloves", "Nutmeg", "Cardamom", "Mixed Spices",
 ];
 
 export default function AdminDashboardPage() {
@@ -72,8 +82,8 @@ export default function AdminDashboardPage() {
       api.get<StatsData>("/admin/dashboard"),
       api.get<ActivityItem[]>("/admin/activity").catch(() => [] as ActivityItem[]),
     ])
-      .then(([s, a]) => { setStats(s); setActivity(a); })
-      .catch(() => { setStats(MOCK_STATS); setActivity(MOCK_ACTIVITY); })
+      .then(([s, a]) => { setStats(normalise(s)); setActivity(a); })
+      .catch(() => { setStats(normalise({})); setActivity([]); })
       .finally(() => setLoading(false));
   }, [isReady]);
 
@@ -90,7 +100,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-neutral-50 pb-8">
       <div className="bg-gradient-to-br from-neutral-800 to-neutral-700 px-6 pt-10 pb-6 text-white">
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
-        <p className="text-neutral-300 text-sm mt-1">GoviHub platform overview</p>
+        <p className="text-neutral-300 text-sm mt-1">GoviHub Spices platform overview</p>
       </div>
 
       <div className="px-4 py-4 space-y-4">
@@ -138,9 +148,9 @@ export default function AdminDashboardPage() {
           {loading ? <Skeleton className="h-16 w-full" /> : (
             <div className="flex gap-4 mt-2">
               {[
-                { label:"Database", status: stats?.systemHealth.db||"unknown" },
-                { label:"API", status: stats?.systemHealth.api||"unknown" },
-                { label:"AI Service", status: stats?.systemHealth.ai||"unknown" },
+                { label:"Database", status: stats?.systemHealth?.db||"unknown" },
+                { label:"API", status: stats?.systemHealth?.api||"unknown" },
+                { label:"AI Service", status: stats?.systemHealth?.ai||"unknown" },
               ].map(s => (
                 <div key={s.label} className="flex flex-col items-center gap-1.5">
                   <Badge color={healthColor(s.status) as "green"|"gold"|"red"} size="sm" dot>{s.status}</Badge>
@@ -151,21 +161,16 @@ export default function AdminDashboardPage() {
           )}
         </Card>
 
-        {/* Top Crops Chart */}
-        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Top Crops (Listings)</h2>} padding="md">
-          <div className="space-y-3 mt-2">
-            {MOCK_CROP_BARS.map(bar => (
-              <div key={bar.label}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-neutral-700">{bar.label}</span>
-                  <span className="text-sm font-medium text-neutral-800">{bar.value}</span>
-                </div>
-                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 rounded-full" style={{width:`${(bar.value/bar.max)*100}%`}} />
-                </div>
-              </div>
+        {/* Spice Crops */}
+        <Card header={<h2 className="font-semibold text-neutral-800 text-sm">Registered Spice Crops</h2>} padding="md">
+          <div className="flex flex-wrap gap-2 mt-2">
+            {SPICE_CROPS.map(crop => (
+              <span key={crop} className="px-3 py-1.5 bg-amber-50 text-amber-800 text-sm rounded-full border border-amber-200">
+                {crop}
+              </span>
             ))}
           </div>
+          <p className="text-xs text-neutral-400 mt-3">{SPICE_CROPS.length} crop types in spices sector</p>
         </Card>
 
         {/* Quick Navigation */}

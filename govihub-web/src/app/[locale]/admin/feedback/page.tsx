@@ -135,14 +135,29 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-LK", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = (d: string) => {
+    if (!d) return "";
+    const isoDate = d.split("T")[0];
+    const parts = isoDate.split("-");
+    if (parts.length !== 3) return d;
+    const [y, m, day] = parts;
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const monthStr = MONTHS[parseInt(m, 10) - 1];
+    const dayNum = parseInt(day, 10);
+    // Extract time from ISO string if present
+    const timePart = d.includes("T") ? d.split("T")[1] : "";
+    let timeStr = "";
+    if (timePart) {
+      const [hh, mm] = timePart.split(":");
+      if (hh && mm) {
+        const hour = parseInt(hh, 10);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const h12 = hour % 12 || 12;
+        timeStr = `, ${String(h12).padStart(2, "0")}:${mm} ${ampm}`;
+      }
+    }
+    return `${monthStr} ${dayNum}, ${y}${timeStr}`;
+  };
 
   if (loading) {
     return (

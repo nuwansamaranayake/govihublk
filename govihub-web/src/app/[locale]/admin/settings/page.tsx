@@ -21,19 +21,6 @@ interface HealthStatus {
   api: "healthy" | "unhealthy" | "unknown";
 }
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_SYSTEM: SystemInfo = {
-  app_env: "development",
-  api_version: "1.0.0",
-  node_count: 1247,
-};
-
-const MOCK_HEALTH: HealthStatus = {
-  database: "healthy",
-  redis: "healthy",
-  api: "healthy",
-};
-
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
   const t = useTranslations();
@@ -46,18 +33,29 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    // TODO: /admin/system-info and /admin/health may not exist. Keep mock fallback until implemented.
     async function fetchData() {
       try {
-        const [sys, h] = await Promise.all([
-          api.get<SystemInfo>("/admin/system-info"),
-          api.get<HealthStatus>("/admin/health"),
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const [healthRes, dashRes] = await Promise.all([
+          api.get<any>("/health").catch(() => null),
+          api.get<any>("/admin/dashboard").catch(() => null),
         ]);
-        setSystemInfo(sys);
-        setHealth(h);
+        // /health returns {status: "healthy", version, timestamp}
+        // If status is healthy, all systems are up (DB+Redis are checked by the health endpoint)
+        const allHealthy = healthRes?.status === "healthy" || healthRes?.status === "ok";
+        setHealth({
+          database: allHealthy ? "healthy" : healthRes ? "unhealthy" : "unknown",
+          redis: allHealthy ? "healthy" : healthRes ? "unhealthy" : "unknown",
+          api: allHealthy ? "healthy" : healthRes ? "unhealthy" : "unknown",
+        });
+        setSystemInfo({
+          app_env: healthRes?.environment || "production",
+          api_version: healthRes?.version || "1.0.0",
+          node_count: dashRes?.total_knowledge_chunks ?? 0,
+        });
       } catch {
-        setSystemInfo(MOCK_SYSTEM);
-        setHealth(MOCK_HEALTH);
+        setSystemInfo({ app_env: "unknown", api_version: "unavailable", node_count: 0 });
+        setHealth({ database: "unknown", redis: "unknown", api: "unknown" });
       } finally {
         setLoading(false);
       }
@@ -72,7 +70,7 @@ export default function AdminSettingsPage() {
       await api.post("/admin/cache/clear");
       setCacheMessage("Cache cleared successfully.");
     } catch {
-      setCacheMessage("Cache cleared (mock mode).");
+      setCacheMessage("Failed to clear cache.");
     } finally {
       setClearingCache(false);
     }

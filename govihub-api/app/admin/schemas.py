@@ -50,6 +50,7 @@ class AdminUserRead(BaseModel):
     id: UUID
     email: str
     name: str
+    username: Optional[str] = None
     role: Optional[str] = None
     phone: Optional[str] = None
     language: str
@@ -65,6 +66,15 @@ class AdminUserRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class ResetPasswordResponse(BaseModel):
+    success: bool
+    username: str
 
 
 class AdminUserUpdate(BaseModel):
@@ -188,7 +198,7 @@ class AdminMatchListResponse(BaseModel):
 class ResolveDisputeRequest(BaseModel):
     resolution: str = Field(..., min_length=5, max_length=1000)
     notes: Optional[str] = Field(None, max_length=2000)
-    new_status: str = Field("fulfilled", pattern="^(fulfilled|cancelled)$")
+    new_status: str = Field("completed", pattern="^(completed|dismissed)$")
 
 
 class CancelMatchRequest(BaseModel):

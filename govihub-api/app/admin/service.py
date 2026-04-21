@@ -101,19 +101,19 @@ class AdminService:
         )
         total_matches = total_matches_r.scalar_one()
 
-        confirmed_matches_r = await self.db.execute(
+        active_matches_r = await self.db.execute(
             select(func.count())
             .select_from(Match)
-            .where(Match.status == MatchStatus.confirmed)
+            .where(Match.status.in_([MatchStatus.accepted, MatchStatus.proposed]))
         )
-        confirmed_matches = confirmed_matches_r.scalar_one()
+        confirmed_matches = active_matches_r.scalar_one()
 
-        disputed_matches_r = await self.db.execute(
+        dismissed_matches_r = await self.db.execute(
             select(func.count())
             .select_from(Match)
-            .where(Match.status == MatchStatus.disputed)
+            .where(Match.status == MatchStatus.dismissed)
         )
-        disputed_matches = disputed_matches_r.scalar_one()
+        disputed_matches = dismissed_matches_r.scalar_one()
 
         # Diagnosis counts
         total_diag_r = await self.db.execute(
@@ -359,28 +359,101 @@ class AdminService:
             raise NotFoundError(detail=f"Match {match_id} not found")
         return match
 
+    async def get_match_detail_enriched(self, match_id: UUID) -> Dict[str, Any]:
+        """Fetch match details with farmer, buyer, and crop info."""
+        from app.listings.models import HarvestListing, DemandPosting
+        from app.users.models import User
+        from app.listings.models import CropTaxonomy
+        from sqlalchemy.orm import selectinload
+
+        result = await self.db.execute(
+            select(Match)
+            .options(
+                selectinload(Match.harvest).selectinload(HarvestListing.farmer),
+                selectinload(Match.harvest).selectinload(HarvestListing.crop),
+                selectinload(Match.demand).selectinload(DemandPosting.buyer),
+                selectinload(Match.demand).selectinload(DemandPosting.crop),
+            )
+            .where(Match.id == match_id)
+        )
+        match = result.scalar_one_or_none()
+        if not match:
+            raise NotFoundError(detail=f"Match {match_id} not found")
+
+        harvest = match.harvest
+        demand = match.demand
+        farmer = harvest.farmer if harvest else None
+        buyer = demand.buyer if demand else None
+        crop = harvest.crop if harvest else (demand.crop if demand else None)
+
+        return {
+            "id": str(match.id),
+            "score": match.score,
+            "score_breakdown": match.score_breakdown,
+            "status": match.status.value,
+            "agreed_price_per_kg": float(match.agreed_price_per_kg) if match.agreed_price_per_kg else None,
+            "agreed_quantity_kg": float(match.agreed_quantity_kg) if match.agreed_quantity_kg else None,
+            "notes": match.notes,
+            "confirmed_at": match.confirmed_at.isoformat() if match.confirmed_at else None,
+            "fulfilled_at": match.fulfilled_at.isoformat() if match.fulfilled_at else None,
+            "created_at": match.created_at.isoformat() if match.created_at else None,
+            "updated_at": match.updated_at.isoformat() if match.updated_at else None,
+            # Farmer info
+            "farmer_id": str(farmer.id) if farmer else None,
+            "farmer_name": farmer.name if farmer else "Unknown",
+            "farmer_phone": farmer.phone if farmer else None,
+            "farmer_district": farmer.district if farmer else None,
+            # Buyer info
+            "buyer_id": str(buyer.id) if buyer else None,
+            "buyer_name": buyer.name if buyer else "Unknown",
+            "buyer_phone": buyer.phone if buyer else None,
+            "buyer_district": buyer.district if buyer else None,
+            # Crop info
+            "crop_name": crop.name_en if crop else "Unknown",
+            "crop_name_si": crop.name_si if crop else None,
+            "crop_category": crop.category.value if crop and crop.category else None,
+            # Harvest details
+            "harvest_quantity_kg": float(harvest.quantity_kg) if harvest else None,
+            "harvest_price_per_kg": float(harvest.price_per_kg) if harvest and harvest.price_per_kg else None,
+            "harvest_quality_grade": harvest.quality_grade if harvest else None,
+            "harvest_date": harvest.harvest_date.isoformat() if harvest and harvest.harvest_date else None,
+            "harvest_district": farmer.district if farmer else None,
+            "harvest_description": harvest.description if harvest else None,
+            "harvest_is_organic": harvest.is_organic if harvest else False,
+            "harvest_status": harvest.status.value if harvest else None,
+            # Demand details
+            "demand_quantity_kg": float(demand.quantity_kg) if demand else None,
+            "demand_max_price_per_kg": float(demand.max_price_per_kg) if demand and demand.max_price_per_kg else None,
+            "demand_quality_grade": demand.quality_grade if demand else None,
+            "demand_needed_by": demand.needed_by.isoformat() if demand and demand.needed_by else None,
+            "demand_district": buyer.district if buyer else None,
+            "demand_description": demand.description if demand else None,
+            "demand_status": demand.status.value if demand else None,
+        }
+
     async def resolve_dispute(
         self,
         match_id: UUID,
         resolution: str,
         notes: Optional[str],
-        new_status: str = "fulfilled",
+        new_status: str = "completed",
     ) -> Match:
-        """Admin resolves a disputed match, transitioning it to fulfilled or cancelled."""
+        """Admin resolves a match, transitioning it to completed or dismissed."""
         match = await self.get_match_detail(match_id)
 
-        if match.status != MatchStatus.disputed:
+        terminal = {MatchStatus.completed, MatchStatus.dismissed}
+        if match.status in terminal:
             raise ValidationError(
-                detail=f"Match is not in 'disputed' status (current: {match.status.value})"
+                detail=f"Match is already in terminal status '{match.status.value}'"
             )
 
         match.status = MatchStatus(new_status)
-        combined_notes = f"[DISPUTE RESOLVED] {resolution}"
+        combined_notes = f"[ADMIN RESOLVED] {resolution}"
         if notes:
             combined_notes += f"\n{notes}"
         match.notes = combined_notes
 
-        if new_status == "fulfilled":
+        if new_status == "completed":
             match.fulfilled_at = datetime.now(timezone.utc)
 
         await self.db.flush()
@@ -392,19 +465,19 @@ class AdminService:
         return match
 
     async def cancel_match(self, match_id: UUID, reason: str) -> Match:
-        """Admin force-cancels a match."""
+        """Admin force-dismisses a match."""
         match = await self.get_match_detail(match_id)
 
-        terminal = {MatchStatus.fulfilled, MatchStatus.cancelled, MatchStatus.expired}
+        terminal = {MatchStatus.completed, MatchStatus.dismissed}
         if match.status in terminal:
             raise ValidationError(
-                detail=f"Cannot cancel a match with status '{match.status.value}'"
+                detail=f"Cannot dismiss a match with status '{match.status.value}'"
             )
 
-        match.status = MatchStatus.cancelled
-        match.notes = f"[ADMIN CANCELLED] {reason}"
+        match.status = MatchStatus.dismissed
+        match.notes = f"[ADMIN DISMISSED] {reason}"
         await self.db.flush()
-        logger.info("admin_match_cancelled", match_id=str(match_id))
+        logger.info("admin_match_dismissed", match_id=str(match_id))
         return match
 
     # ------------------------------------------------------------------
@@ -569,9 +642,9 @@ class AdminService:
         avg_score_val = avg_score_r.scalar_one()
         avg_match_score = float(avg_score_val) if avg_score_val is not None else 0.0
 
-        confirmed_count = matches_by_status.get("confirmed", 0) + matches_by_status.get("fulfilled", 0)
-        fulfilled_count = matches_by_status.get("fulfilled", 0)
-        disputed_count = matches_by_status.get("disputed", 0)
+        confirmed_count = matches_by_status.get("accepted", 0) + matches_by_status.get("completed", 0)
+        fulfilled_count = matches_by_status.get("completed", 0)
+        disputed_count = matches_by_status.get("dismissed", 0)
 
         confirmed_rate = round(confirmed_count / total_matches, 4) if total_matches else 0.0
         fulfillment_rate = round(fulfilled_count / total_matches, 4) if total_matches else 0.0
@@ -819,12 +892,12 @@ class AdminService:
         )
         pending_diagnoses = pending_diag_r.scalar_one()
 
-        disputed_r = await self.db.execute(
+        dismissed_r = await self.db.execute(
             select(func.count())
             .select_from(Match)
-            .where(Match.status == MatchStatus.disputed)
+            .where(Match.status == MatchStatus.dismissed)
         )
-        disputed_matches = disputed_r.scalar_one()
+        disputed_matches = dismissed_r.scalar_one()
 
         return {
             "database_ok": database_ok,

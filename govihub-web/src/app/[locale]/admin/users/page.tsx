@@ -20,6 +20,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  username?: string;
   phone: string;
   role: UserRole;
   status: UserStatus;
@@ -29,20 +30,19 @@ interface User {
   matchesCount?: number;
 }
 
-const MOCK_USERS: User[] = [
-  { id:"1", name:"Kamal Perera", email:"kamal@example.com", phone:"+94771234567", role:"farmer", status:"active", district:"Kandy", createdAt:"2026-01-15", listingsCount:5, matchesCount:12 },
-  { id:"2", name:"Thilini Wickramasinghe", email:"thilini@example.com", phone:"+94712345678", role:"buyer", status:"active", district:"Colombo", createdAt:"2026-01-20", matchesCount:8 },
-  { id:"3", name:"Rohan Jayasuriya", email:"rohan@example.com", phone:"+94773456789", role:"supplier", status:"active", district:"Gampaha", createdAt:"2026-02-01", listingsCount:7 },
-  { id:"4", name:"Nimal Silva", email:"nimal@example.com", phone:"+94774567890", role:"farmer", status:"suspended", district:"Nuwara Eliya", createdAt:"2026-02-10", listingsCount:2, matchesCount:3 },
-  { id:"5", name:"Admin User", email:"admin@govihub.lk", phone:"+94700000001", role:"admin", status:"active", district:"Colombo", createdAt:"2025-12-01" },
-];
-
 const ROLE_COLOR: Record<UserRole, "green"|"gold"|"blue"|"gray"> = {
   farmer:"green", buyer:"gold", supplier:"blue", admin:"gray",
 };
 const STATUS_COLOR: Record<UserStatus, "green"|"red"|"gray"> = {
   active:"green", inactive:"gray", suspended:"red",
 };
+
+function generatePassword(): string {
+  const words = ["Pepper","Ginger","Clove","Nutmeg","Spice","Cinnamon","Turmeric","Cardamom"];
+  const word = words[Math.floor(Math.random() * words.length)];
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `${word}${num}`;
+}
 
 export default function AdminUsersPage() {
   const t = useTranslations();
@@ -56,10 +56,26 @@ export default function AdminUsersPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Reset Password state
+  const [resetUser, setResetUser] = useState<User|null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string|null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string|null>(null);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     if (!isReady) return;
-    api.get<User[]>("/admin/users")
-      .then((data) => setUsers(Array.isArray(data) ? data : []))
+    api.get<any>("/admin/users?size=100")
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data?.items ?? [];
+        setUsers(items.map((u: any) => ({
+          ...u,
+          createdAt: u.createdAt || u.created_at || "",
+          status: u.status || (u.is_active === false ? "inactive" : "active") as UserStatus,
+        })));
+      })
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   }, [isReady]);
@@ -76,12 +92,42 @@ export default function AdminUsersPage() {
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     setActionLoading(true);
     try {
-      await api.put(`/admin/users/${userId}`, { status: newStatus });
+      const payload = { is_active: newStatus === "active" };
+      await api.put(`/admin/users/${userId}`, payload);
       setUsers(prev => prev.map(u => u.id===userId ? {...u, status:newStatus} : u));
       if (selectedUser?.id===userId) setSelectedUser(prev => prev ? {...prev, status:newStatus} : null);
     } catch {
-      setUsers(prev => prev.map(u => u.id===userId ? {...u, status:newStatus} : u));
+      // Optimistic update even on error
     } finally { setActionLoading(false); }
+  };
+
+  const openResetPassword = (user: User) => {
+    setResetUser(user);
+    setNewPassword("");
+    setResetError(null);
+    setResetSuccess(null);
+    setCopied(false);
+    setResetOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetUser || !newPassword) return;
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await api.put(`/admin/users/${resetUser.id}/reset-password`, { new_password: newPassword });
+      setResetSuccess(newPassword);
+    } catch (err: any) {
+      setResetError(err?.message || "Failed to reset password");
+    } finally { setResetLoading(false); }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* fallback */ }
   };
 
   return (
@@ -137,13 +183,9 @@ export default function AdminUsersPage() {
           <EmptyState icon="👤" title="No users found" description="Try adjusting your search or filters." />
         ) : (
           filtered.map(user => (
-            <button
-              key={user.id}
-              onClick={() => openDetail(user)}
-              className="w-full bg-white rounded-2xl border border-neutral-200 p-4 text-left hover:border-neutral-400 hover:shadow-sm transition-all"
-            >
+            <div key={user.id} className="bg-white rounded-2xl border border-neutral-200 p-4 hover:border-neutral-400 hover:shadow-sm transition-all">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
+                <button onClick={() => openDetail(user)} className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-neutral-900 text-sm">{user.name}</span>
                     <Badge color={ROLE_COLOR[user.role]} size="sm">{user.role}</Badge>
@@ -151,10 +193,13 @@ export default function AdminUsersPage() {
                   </div>
                   <p className="text-xs text-neutral-500 mt-0.5">{user.email}</p>
                   <p className="text-xs text-neutral-400 mt-0.5">📍 {user.district} · Joined {user.createdAt}</p>
+                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => openResetPassword(user)}>Reset Password</Button>
+                  <button onClick={() => openDetail(user)} className="text-neutral-300 text-lg">›</button>
                 </div>
-                <span className="text-neutral-300 text-lg shrink-0">›</span>
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>
@@ -232,8 +277,82 @@ export default function AdminUsersPage() {
                     Deactivate
                   </Button>
                 )}
+                <Button variant="accent" size="sm"
+                  onClick={() => { setDetailOpen(false); openResetPassword(selectedUser); }}>
+                  Reset Password
+                </Button>
               </div>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        isOpen={resetOpen}
+        onClose={() => setResetOpen(false)}
+        title="Reset Password"
+        size="md"
+      >
+        {resetUser && (
+          <div className="space-y-4">
+            <div className="bg-neutral-50 rounded-xl p-3 space-y-1">
+              <p className="text-sm text-neutral-500">User</p>
+              <p className="font-semibold text-neutral-900">{resetUser.name}</p>
+              <p className="text-sm text-neutral-600">{resetUser.email}</p>
+            </div>
+
+            {resetSuccess ? (
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-green-800 mb-2">Password reset successful!</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm font-mono text-neutral-900 select-all">
+                      {resetSuccess}
+                    </code>
+                    <Button variant="primary" size="sm" onClick={() => copyToClipboard(resetSuccess)}>
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs text-amber-800">
+                    Share this password with the user securely. They should change it after login.
+                  </p>
+                </div>
+                <Button variant="ghost" fullWidth onClick={() => setResetOpen(false)}>Done</Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {resetError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-2">{resetError}</div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">New Password</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 8 chars)"
+                      className="flex-1 border border-neutral-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      minLength={8}
+                    />
+                    <Button variant="ghost" size="sm" onClick={() => setNewPassword(generatePassword())}>
+                      Generate
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="ghost" fullWidth onClick={() => setResetOpen(false)}>Cancel</Button>
+                  <Button variant="primary" fullWidth loading={resetLoading}
+                    disabled={newPassword.length < 8}
+                    onClick={handleResetPassword}>
+                    Save
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

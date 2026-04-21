@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { cropName } from "@/lib/utils";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { cropName, formatDateSafe } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -25,8 +27,35 @@ interface Dispute {
   resolution?: string;
 }
 
-// ── Mock data (empty by default to show EmptyState) ─────────────────────────
-const MOCK_DISPUTES: Dispute[] = [];
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface MatchDetail {
+  id: string;
+  score: number;
+  score_breakdown: Record<string, number> | null;
+  status: string;
+  agreed_price_per_kg: number | null;
+  agreed_quantity_kg: number | null;
+  notes: string | null;
+  created_at: string | null;
+  farmer_name: string;
+  farmer_phone: string | null;
+  farmer_district: string | null;
+  buyer_name: string;
+  buyer_phone: string | null;
+  buyer_district: string | null;
+  crop_name: string;
+  crop_name_si: string | null;
+  crop_category: string | null;
+  harvest_quantity_kg: number | null;
+  harvest_price_per_kg: number | null;
+  harvest_quality_grade: string | null;
+  harvest_date: string | null;
+  harvest_is_organic: boolean;
+  demand_quantity_kg: number | null;
+  demand_max_price_per_kg: number | null;
+  demand_needed_by: string | null;
+  [key: string]: any;
+}
 
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<DisputeStatus, { label: string; color: "blue" | "gold" | "green" | "gray" | "red" }> = {
@@ -53,6 +82,11 @@ export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  // Detail modal
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [matchDetail, setMatchDetail] = useState<MatchDetail | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
@@ -86,7 +120,7 @@ export default function AdminDisputesPage() {
             }));
           setDisputes(disputesFromMatches);
         } catch {
-          setDisputes(MOCK_DISPUTES);
+          setDisputes([]);
         }
       } finally {
         setLoading(false);
@@ -110,7 +144,6 @@ export default function AdminDisputesPage() {
         )
       );
     } catch {
-      // Optimistic update even on API failure (mock mode)
       setDisputes((prev) =>
         prev.map((d) =>
           d.id === disputeId ? { ...d, status: statusMap[action] } : d
@@ -121,13 +154,29 @@ export default function AdminDisputesPage() {
     }
   };
 
+  const openDetail = async (dispute: Dispute) => {
+    setSelectedDispute(dispute);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setMatchDetail(null);
+    try {
+      // Use the real match_id (strip dispute- prefix if present)
+      const matchId = dispute.match_id.replace(/^dispute-/, "");
+      const detail = await api.get<MatchDetail>(`/admin/matches/${matchId}/enriched`);
+      setMatchDetail(detail);
+    } catch {
+      setMatchDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const filtered =
     statusFilter === "all"
       ? disputes
       : disputes.filter((d) => d.status === statusFilter);
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-LK", { month: "short", day: "numeric", year: "numeric" });
+  const formatDate = (d: string) => formatDateSafe(d);
 
   // ── Loading skeleton ─────────────────────────────────────────────────────
   if (loading) {
@@ -220,6 +269,12 @@ export default function AdminDisputesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openDetail(dispute)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                          >
+                            Details
+                          </button>
                           {dispute.status === "open" && (
                             <button
                               onClick={() => handleAction(dispute.id, "investigate")}
@@ -260,6 +315,151 @@ export default function AdminDisputesPage() {
           </div>
         )}
       </Card>
+
+      {/* Detail Modal */}
+      <Modal
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        title="Dispute Details"
+        size="lg"
+        footer={
+          <Button variant="secondary" fullWidth onClick={() => setDetailOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        {detailLoading ? (
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Dispute info */}
+            {selectedDispute && (
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-red-800">
+                      Dispute #{selectedDispute.id?.slice(0, 8)}
+                    </p>
+                    <Badge color={STATUS_CONFIG[selectedDispute.status]?.color || "gray"} size="sm" dot>
+                      {STATUS_CONFIG[selectedDispute.status]?.label}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-neutral-500">
+                    Reported: {formatDate(selectedDispute.reported_at)}
+                  </p>
+                </div>
+                {selectedDispute.reason && (
+                  <div className="mt-3 bg-white/60 rounded-lg p-2.5">
+                    <p className="text-xs font-medium text-red-700 mb-0.5">Reason</p>
+                    <p className="text-sm text-neutral-700">{selectedDispute.reason}</p>
+                  </div>
+                )}
+                {selectedDispute.resolution && (
+                  <div className="mt-2 bg-white/60 rounded-lg p-2.5">
+                    <p className="text-xs font-medium text-green-700 mb-0.5">Resolution</p>
+                    <p className="text-sm text-neutral-700">{selectedDispute.resolution}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Parties */}
+            {matchDetail ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider mb-1">Farmer (Seller)</p>
+                    <p className="text-sm font-semibold text-neutral-800">{matchDetail.farmer_name}</p>
+                    {matchDetail.farmer_district && (
+                      <p className="text-xs text-neutral-500 mt-0.5">📍 {matchDetail.farmer_district}</p>
+                    )}
+                    {matchDetail.farmer_phone && (
+                      <p className="text-xs text-neutral-500 mt-0.5">📞 {matchDetail.farmer_phone}</p>
+                    )}
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-1">Buyer</p>
+                    <p className="text-sm font-semibold text-neutral-800">{matchDetail.buyer_name}</p>
+                    {matchDetail.buyer_district && (
+                      <p className="text-xs text-neutral-500 mt-0.5">📍 {matchDetail.buyer_district}</p>
+                    )}
+                    {matchDetail.buyer_phone && (
+                      <p className="text-xs text-neutral-500 mt-0.5">📞 {matchDetail.buyer_phone}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Match info */}
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Related Match</p>
+                    <span className="text-lg font-bold text-blue-800">{Math.round((matchDetail.score || 0) * 100)}%</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-neutral-500">Crop: </span>
+                      <span className="font-medium">{matchDetail.crop_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-500">Status: </span>
+                      <span className="font-medium capitalize">{matchDetail.status}</span>
+                    </div>
+                    {matchDetail.harvest_quantity_kg && (
+                      <div>
+                        <span className="text-neutral-500">Supply: </span>
+                        <span className="font-medium">{matchDetail.harvest_quantity_kg} kg</span>
+                      </div>
+                    )}
+                    {matchDetail.demand_quantity_kg && (
+                      <div>
+                        <span className="text-neutral-500">Demand: </span>
+                        <span className="font-medium">{matchDetail.demand_quantity_kg} kg</span>
+                      </div>
+                    )}
+                    {matchDetail.harvest_price_per_kg && (
+                      <div>
+                        <span className="text-neutral-500">Ask Price: </span>
+                        <span className="font-medium text-green-700">Rs. {matchDetail.harvest_price_per_kg}/kg</span>
+                      </div>
+                    )}
+                    {matchDetail.demand_max_price_per_kg && (
+                      <div>
+                        <span className="text-neutral-500">Max Price: </span>
+                        <span className="font-medium text-amber-700">Rs. {matchDetail.demand_max_price_per_kg}/kg</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {matchDetail.notes && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-amber-700 mb-1">Admin Notes</p>
+                    <p className="text-sm text-neutral-700">{matchDetail.notes}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Fallback when match detail unavailable */
+              selectedDispute && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider mb-1">Farmer</p>
+                    <p className="text-sm font-semibold text-neutral-800">{selectedDispute.farmer_name}</p>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mb-1">Buyer</p>
+                    <p className="text-sm font-semibold text-neutral-800">{selectedDispute.buyer_name}</p>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

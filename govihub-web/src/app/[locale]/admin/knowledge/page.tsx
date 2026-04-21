@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { useAuth } from "@/lib/auth";
+import { useSector } from "@/hooks/useSector";
 
 type KnowledgeType = "crop_guide"|"pest_guide"|"market_info"|"weather"|"advisory"|"other";
 
@@ -34,20 +35,6 @@ interface KnowledgeStats {
   lastIngested: string;
 }
 
-const MOCK_CHUNKS: KnowledgeChunk[] = [
-  { id:"1", title:"Tomato Cultivation Guide", type:"crop_guide", content:"Tomatoes thrive in warm climates with temperatures between 20-30°C...", language:"en", source:"Dept. of Agriculture Sri Lanka", tokenCount:1245, createdAt:"2026-03-10" },
-  { id:"2", title:"Early Blight Disease Control", type:"pest_guide", content:"Early blight is caused by Alternaria solani. Apply copper fungicide...", language:"en", source:"Plant Protection Service", tokenCount:876, createdAt:"2026-03-08" },
-  { id:"3", title:"තක්කාලි වගා මාර්ගෝපදේශය", type:"crop_guide", content:"තක්කාලි 20-30°C අතර උෂ්ණත්වය හා හිරු එළිය අවශ්‍ය...", language:"si", source:"ගොවිජන සේවා දෙපාර්තමේන්තුව", tokenCount:1100, createdAt:"2026-03-07" },
-  { id:"4", title:"Market Price Analysis Q1 2026", type:"market_info", content:"Vegetable prices in Q1 2026 showed 12% increase for tomatoes...", language:"en", source:"GoviHub Analytics", tokenCount:654, createdAt:"2026-03-05" },
-];
-
-const MOCK_STATS: KnowledgeStats = {
-  totalChunks: 248,
-  byType: { crop_guide:98, pest_guide:67, market_info:34, weather:22, advisory:19, other:8 },
-  byLanguage: { en:162, si:68, ta:18 },
-  lastIngested: "2026-03-20 14:30",
-};
-
 const EMPTY_INGEST = { title:"", type:"crop_guide" as KnowledgeType, content:"", source:"", language:"en" as "en"|"si"|"ta" };
 type IngestForm = typeof EMPTY_INGEST;
 
@@ -61,6 +48,7 @@ const LANG_BADGE: Record<string, "green"|"gold"|"blue"> = { en:"green", si:"gold
 export default function AdminKnowledgePage() {
   const t = useTranslations();
   const { isReady } = useAuth();
+  const { knowledgePlaceholder } = useSector();
   const [chunks, setChunks] = useState<KnowledgeChunk[]>([]);
   const [stats, setStats] = useState<KnowledgeStats|null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,13 +59,12 @@ export default function AdminKnowledgePage() {
 
   useEffect(() => {
     if (!isReady) return;
-    // TODO: /admin/knowledge endpoint may not exist yet. Using mock data as fallback.
     Promise.all([
-      api.get<KnowledgeChunk[]>("/admin/knowledge"),
+      api.get<KnowledgeChunk[] | { items: KnowledgeChunk[] }>("/admin/knowledge"),
       api.get<KnowledgeStats>("/admin/knowledge/stats"),
     ])
-      .then(([c,s]) => { setChunks(c); setStats(s); })
-      .catch(() => { setChunks(MOCK_CHUNKS); setStats(MOCK_STATS); })
+      .then(([c,s]) => { setChunks(Array.isArray(c) ? c : (c?.items ?? [])); setStats(s); })
+      .catch(() => { setChunks([]); setStats(null); })
       .finally(() => setLoading(false));
   }, [isReady]);
 
@@ -86,8 +73,8 @@ export default function AdminKnowledgePage() {
     setIngesting(true);
     try {
       await api.post("/admin/knowledge/ingest", form);
-      const fresh = await api.get<KnowledgeChunk[]>("/admin/knowledge");
-      setChunks(fresh);
+      const fresh = await api.get<KnowledgeChunk[] | { items: KnowledgeChunk[] }>("/admin/knowledge");
+      setChunks(Array.isArray(fresh) ? fresh : (fresh?.items ?? []));
       setIngestOpen(false);
       setForm(EMPTY_INGEST);
     } catch {
@@ -107,7 +94,7 @@ export default function AdminKnowledgePage() {
   const f = (key: keyof IngestForm, val: string) => setForm(p => ({...p, [key]: val}));
 
   const filtered = chunks.filter(c =>
-    !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.source.toLowerCase().includes(search.toLowerCase())
+    !search || (c.title || "").toLowerCase().includes(search.toLowerCase()) || (c.source || "").toLowerCase().includes(search.toLowerCase()) || (c.content || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const tabs = [
@@ -144,7 +131,7 @@ export default function AdminKnowledgePage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="font-semibold text-neutral-900 text-sm">{chunk.title}</h3>
+                          <h3 className="font-semibold text-neutral-900 text-sm">{chunk.title || chunk.source || "Untitled"}</h3>
                           <Badge color="gray" size="sm">{TYPE_LABELS[chunk.type]}</Badge>
                           <Badge color={LANG_BADGE[chunk.language]||"gray"} size="sm">{chunk.language.toUpperCase()}</Badge>
                         </div>
@@ -224,7 +211,7 @@ export default function AdminKnowledgePage() {
         }
       >
         <form id="ingest-form" onSubmit={handleIngest} className="space-y-4">
-          <Input label="Title" required value={form.title} onChange={e => f("title", e.target.value)} placeholder="e.g. Tomato Cultivation Guide" />
+          <Input label="Title" required value={form.title} onChange={e => f("title", e.target.value)} placeholder={knowledgePlaceholder} />
           <div className="grid grid-cols-2 gap-3">
             <Select label="Type" value={form.type} onChange={e => f("type", e.target.value)}
               options={Object.entries(TYPE_LABELS).map(([v,l]) => ({value:v,label:l}))} />

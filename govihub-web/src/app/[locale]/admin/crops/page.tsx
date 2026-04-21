@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/lib/auth";
+import { useSector } from "@/hooks/useSector";
 
 type CropCategory = "vegetable"|"fruit"|"grain"|"spice"|"legume"|"leafy";
 
@@ -27,16 +28,34 @@ interface Crop {
   active: boolean;
 }
 
-const MOCK: Crop[] = [
-  { id:"1", name:"Tomato", nameSinhala:"තක්කාලි", nameTamil:"தக்காளி", category:"vegetable", season:"All year", avgYield:"15-20 t/ha", growingDays:75, active:true },
-  { id:"2", name:"Cabbage", nameSinhala:"ගෝවා", nameTamil:"முட்டைக்கோஸ்", category:"vegetable", season:"Oct-Mar", avgYield:"20-30 t/ha", growingDays:90, active:true },
-  { id:"3", name:"Carrot", nameSinhala:"කැරට්", nameTamil:"கேரட்", category:"vegetable", season:"Oct-Feb", avgYield:"20-25 t/ha", growingDays:80, active:true },
-  { id:"4", name:"Chilli", nameSinhala:"මිරිස්", nameTamil:"மிளகாய்", category:"spice", season:"Apr-Sep", avgYield:"8-12 t/ha", growingDays:90, active:true },
-  { id:"5", name:"Beans", nameSinhala:"බෝංචි", nameTamil:"பீன்ஸ்", category:"legume", season:"All year", avgYield:"10-15 t/ha", growingDays:60, active:true },
-];
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function normaliseCrop(raw: any): Crop {
+  const season = raw.season;
+  let seasonStr = "";
+  if (typeof season === "string") seasonStr = season;
+  else if (season && typeof season === "object") {
+    const parts: string[] = [];
+    if (season.maha) parts.push("Maha");
+    if (season.yala) parts.push("Yala");
+    seasonStr = parts.join(" & ") || "All year";
+  }
+  return {
+    id: raw.id,
+    name: raw.name ?? raw.name_en ?? "",
+    nameSinhala: raw.nameSinhala ?? raw.name_si ?? "",
+    nameTamil: raw.nameTamil ?? raw.name_ta ?? "",
+    category: raw.category ?? "spice",
+    season: seasonStr,
+    avgYield: raw.avgYield ?? (raw.avg_yield_kg ? `${raw.avg_yield_kg} kg/ha` : ""),
+    growingDays: raw.growingDays ?? raw.growing_days ?? 0,
+    active: raw.active ?? raw.is_active ?? true,
+  };
+}
+
 
 const CATEGORIES: CropCategory[] = ["vegetable","fruit","grain","spice","legume","leafy"];
-const EMPTY_FORM = { name:"", nameSinhala:"", nameTamil:"", category:"vegetable" as CropCategory, season:"", avgYield:"", growingDays:"", active:true };
+// Default category is set inside the component via useSector()
+const EMPTY_FORM = { name:"", nameSinhala:"", nameTamil:"", category:"spice" as CropCategory, season:"", avgYield:"", growingDays:"", active:true };
 type CropForm = typeof EMPTY_FORM;
 
 const CAT_COLOR: Record<CropCategory, "green"|"gold"|"blue"|"orange"|"purple"|"darkgreen"> = {
@@ -46,6 +65,7 @@ const CAT_COLOR: Record<CropCategory, "green"|"gold"|"blue"|"orange"|"purple"|"d
 export default function AdminCropsPage() {
   const t = useTranslations();
   const { isReady } = useAuth();
+  const { cropPlaceholder, cropPlaceholderSi, cropPlaceholderTa, defaultCropCategory } = useSector();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -56,9 +76,12 @@ export default function AdminCropsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    api.get<Crop[]>("/admin/crops")
-      .then(setCrops)
-      .catch(() => setCrops(MOCK))
+    api.get<any>("/admin/crops")
+      .then((data) => {
+        const raw = Array.isArray(data) ? data : (data?.items ?? []);
+        setCrops(raw.map(normaliseCrop));
+      })
+      .catch(() => setCrops([]))
       .finally(() => setLoading(false));
 
   useEffect(() => { if (isReady) load(); }, [isReady]);
@@ -173,10 +196,10 @@ export default function AdminCropsPage() {
         }
       >
         <form id="crop-form" onSubmit={handleSubmit} className="space-y-4">
-          <Input label="English Name" required value={form.name} onChange={e => f("name", e.target.value)} placeholder="e.g. Tomato" />
+          <Input label="English Name" required value={form.name} onChange={e => f("name", e.target.value)} placeholder={cropPlaceholder} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Sinhala Name" value={form.nameSinhala} onChange={e => f("nameSinhala", e.target.value)} placeholder="e.g. තක්කාලි" />
-            <Input label="Tamil Name" value={form.nameTamil} onChange={e => f("nameTamil", e.target.value)} placeholder="e.g. தக்காளி" />
+            <Input label="Sinhala Name" value={form.nameSinhala} onChange={e => f("nameSinhala", e.target.value)} placeholder={cropPlaceholderSi} />
+            <Input label="Tamil Name" value={form.nameTamil} onChange={e => f("nameTamil", e.target.value)} placeholder={cropPlaceholderTa} />
           </div>
           <Select label="Category" value={form.category} onChange={e => f("category", e.target.value)}
             options={CATEGORIES.map(c => ({value:c, label:c.charAt(0).toUpperCase()+c.slice(1)}))} />

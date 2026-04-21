@@ -32,12 +32,15 @@ from app.admin.schemas import (
     KnowledgeChunkRead,
     KnowledgeStats,
     MatchAnalytics,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     ResolveDisputeRequest,
     SystemHealth,
     UserAnalytics,
 )
 from app.admin.service import AdminService
-from app.dependencies import get_db, require_role
+from app.auth.password import hash_password
+from app.dependencies import get_db, get_redis, require_role
 
 logger = structlog.get_logger()
 
@@ -136,6 +139,25 @@ async def update_user(
 ):
     user = await service.update_user(user_id, body)
     return AdminUserRead.model_validate(user)
+
+
+@router.put(
+    "/users/{user_id}/reset-password",
+    response_model=ResetPasswordResponse,
+    summary="Reset a user's password (admin)",
+)
+async def reset_user_password(
+    user_id: UUID,
+    body: ResetPasswordRequest,
+    _admin=AdminRequired,
+    service: AdminService = Depends(_get_service),
+):
+    user = await service.get_user_detail(user_id)
+    user.password_hash = hash_password(body.new_password)
+    await service.db.commit()
+    await service.db.refresh(user)
+    logger.info("admin_reset_password", user_id=str(user_id), username=user.username)
+    return ResetPasswordResponse(success=True, username=user.username or user.email)
 
 
 @router.delete(
@@ -283,6 +305,18 @@ async def get_match(
     return AdminMatchRead.model_validate(match)
 
 
+@router.get(
+    "/matches/{match_id}/enriched",
+    summary="Get enriched match details with farmer, buyer, and crop info",
+)
+async def get_match_enriched(
+    match_id: UUID,
+    _admin=AdminRequired,
+    service: AdminService = Depends(_get_service),
+):
+    return await service.get_match_detail_enriched(match_id)
+
+
 @router.post(
     "/matches/{match_id}/resolve",
     response_model=AdminMatchRead,
@@ -318,6 +352,13 @@ async def cancel_match(
     return AdminMatchRead.model_validate(match)
 
 
+def _knowledge_to_dict(chunk):
+    """Convert KnowledgeChunk ORM to dict, working around SQLAlchemy .metadata conflict."""
+    d = {c.key: getattr(chunk, c.key) for c in chunk.__table__.columns if c.key != "metadata"}
+    d["metadata"] = chunk.__dict__.get("metadata", None)
+    return d
+
+
 # ---------------------------------------------------------------------------
 # Knowledge Base
 # ---------------------------------------------------------------------------
@@ -348,7 +389,7 @@ async def list_knowledge(
     )
     result = await service.list_knowledge_chunks(filters)
     return KnowledgeChunkListResponse(
-        items=[KnowledgeChunkRead.model_validate(c) for c in result["items"]],
+        items=[KnowledgeChunkRead.model_validate(_knowledge_to_dict(c)) for c in result["items"]],
         total=result["total"],
         page=result["page"],
         size=result["size"],
@@ -376,7 +417,7 @@ async def ingest_knowledge(
         tags=body.tags,
         metadata=body.metadata,
     )
-    return KnowledgeChunkRead.model_validate(chunk)
+    return KnowledgeChunkRead.model_validate(_knowledge_to_dict(chunk))
 
 
 @router.delete(
@@ -468,6 +509,24 @@ async def analytics_system(
 ):
     data = await service.get_system_health()
     return SystemHealth(**data)
+
+
+# ---------------------------------------------------------------------------
+# Cache Management
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/cache/clear",
+    summary="Clear all Redis cache",
+)
+async def clear_cache(
+    _admin=AdminRequired,
+):
+    redis = await get_redis()
+    await redis.flushdb()
+    logger.info("admin_cache_cleared")
+    return {"message": "Cache cleared successfully"}
 
 
 # ---------------------------------------------------------------------------
