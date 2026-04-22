@@ -1,19 +1,28 @@
 """GoviHub Beta Auth Router — Username/password registration, login, and password change."""
 
+import re
 import uuid
 from datetime import datetime, timezone
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.beta_schemas import BetaChangePasswordRequest, BetaLoginRequest, BetaRegisterRequest
+from app.auth.beta_schemas import (
+    BetaChangePasswordRequest,
+    BetaLoginRequest,
+    BetaRegisterRequest,
+    USERNAME_MAX,
+    USERNAME_MIN,
+    USERNAME_PATTERN,
+)
 from app.auth.password import hash_password, verify_password
 from app.auth.schemas import TokenResponse, UserBrief
 from app.auth.service import create_access_token, decode_access_token
 from app.config import settings
 from app.database import get_db
+from app.dependencies import get_redis
 from app.users.models import BuyerProfile, FarmerProfile, SupplierProfile, User, UserRole
 
 logger = structlog.get_logger()
@@ -174,3 +183,106 @@ async def beta_change_password(
     logger.info("beta_password_changed", user_id=str(current_user.id))
 
     return {"message": "Password changed successfully"}
+
+
+# ── Username availability / format check ──────────────────────────────────────
+
+_USERNAME_CHECK_LIMIT = 30  # requests per IP per minute
+_USERNAME_CHECK_WINDOW = 60  # seconds
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort real-client IP behind Traefik.
+
+    Traefik overwrites X-Real-IP with the direct client IP on every hop,
+    so it's the most trustworthy single-source header in our setup.
+    Falls back to the last token of X-Forwarded-For (what our own edge
+    proxy observed — not client-spoofable because Traefik appends) and
+    finally the socket peer.
+    """
+    xri = request.headers.get("x-real-ip")
+    if xri:
+        return xri.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.rsplit(",", 1)[-1].strip()
+    return request.client.host if request.client else "unknown"
+
+
+async def _check_rate_limit(request: Request, redis) -> None:
+    """Inline Redis counter: 30 username-check requests per IP per minute."""
+    ip = _client_ip(request)
+    key = f"rl:username_check:{ip}"
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, _USERNAME_CHECK_WINDOW)
+    if count > _USERNAME_CHECK_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many requests")
+
+
+async def _generate_username_suggestions(db: AsyncSession, base: str) -> list[str]:
+    """Return up to 3 unused variants of ``base`` by suffixing digits/underscores."""
+    candidates = [f"{base}_{n}" for n in (1, 86, 2026)] + [f"{base}{n}" for n in (1, 2)]
+    # Enforce the upper bound on candidates too.
+    candidates = [c[:USERNAME_MAX] for c in candidates]
+    result = await db.execute(select(User.username).where(User.username.in_(candidates)))
+    taken = {row[0] for row in result.all() if row[0]}
+    free = [c for c in candidates if c not in taken]
+    return free[:3]
+
+
+@router.get("/beta/username-check")
+async def beta_username_check(
+    request: Request,
+    u: str = Query(..., min_length=1, max_length=64),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """Real-time username availability + validity check.
+
+    Returns 200 with a structured body. The frontend reads ``valid`` +
+    ``available`` + ``code``. Never returns 4xx for validation failures —
+    that's the point of a "check" endpoint — but DOES return 429 when the
+    per-IP rate limit fires. See STEP 1.3 of CC_USERNAME_MANDATORY.md.
+    """
+    _check_beta_env()
+    await _check_rate_limit(request, redis)
+
+    raw = u.strip()
+
+    # Validity gates (mirror BetaRegisterRequest.validate_username rules).
+    if not raw:
+        return {"valid": False, "code": "REQUIRED", "available": None, "suggestions": []}
+    if len(raw) < USERNAME_MIN:
+        return {"valid": False, "code": "TOO_SHORT", "available": None, "suggestions": []}
+    if len(raw) > USERNAME_MAX:
+        return {"valid": False, "code": "TOO_LONG", "available": None, "suggestions": []}
+    if " " in raw:
+        return {"valid": False, "code": "HAS_SPACE", "available": None, "suggestions": []}
+    if not USERNAME_PATTERN.match(raw):
+        bad_chars = sorted({ch for ch in raw if not re.match(r"[a-zA-Z0-9_]", ch)})
+        return {
+            "valid": False,
+            "code": "INVALID_CHARS",
+            "available": None,
+            "suggestions": [],
+            "offending": "".join(bad_chars),
+        }
+
+    # Availability — case-insensitive lookup matches register/login behaviour.
+    normalized = raw.lower()
+    result = await db.execute(
+        select(User.id).where(func.lower(User.username) == normalized)
+    )
+    taken = result.scalar_one_or_none() is not None
+
+    suggestions: list[str] = []
+    if taken:
+        suggestions = await _generate_username_suggestions(db, normalized)
+
+    return {
+        "valid": True,
+        "code": "OK" if not taken else "TAKEN",
+        "available": not taken,
+        "suggestions": suggestions,
+    }

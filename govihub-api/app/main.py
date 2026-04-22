@@ -120,18 +120,43 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def log_validation_error(request: Request, exc: RequestValidationError):
+        from app.auth.beta_schemas import UsernameError
+
         body = None
         try:
             body = await request.body()
             body = body.decode("utf-8")[:500]
         except Exception:
             pass
+
         # Strip non-JSON-serializable context (e.g. raw ValueError instances
-        # emitted by custom field_validator callables in Pydantic v2).
-        safe_errors = [
-            {"loc": list(e.get("loc", [])), "msg": e.get("msg"), "type": e.get("type")}
-            for e in exc.errors()
-        ]
+        # emitted by custom field_validator callables in Pydantic v2). When
+        # the underlying error is a typed UsernameError, enrich the entry
+        # with {field, code, message, offending} so the frontend can map to
+        # a localised error string. Other entries keep their legacy shape.
+        safe_errors = []
+        for e in exc.errors():
+            ctx = e.get("ctx") or {}
+            inner = ctx.get("error")
+            if isinstance(inner, UsernameError):
+                safe_errors.append(
+                    {
+                        "loc": list(e.get("loc", [])),
+                        "field": "username",
+                        "code": inner.code,
+                        "message": str(inner),
+                        "offending": inner.offending,
+                        "type": e.get("type"),
+                    }
+                )
+            else:
+                safe_errors.append(
+                    {
+                        "loc": list(e.get("loc", [])),
+                        "msg": e.get("msg"),
+                        "type": e.get("type"),
+                    }
+                )
         _val_log.warning(
             "validation_error",
             path=str(request.url.path),
