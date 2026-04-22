@@ -108,7 +108,7 @@ export default function RegisterPage() {
           name: form.name.trim(),
           phone: form.phone.trim(),
           district: form.district,
-          preferred_language: form.language,
+          language: form.language,
         }
       );
       updateUser({ role: data.role as Role, name: data.name, isProfileComplete: true });
