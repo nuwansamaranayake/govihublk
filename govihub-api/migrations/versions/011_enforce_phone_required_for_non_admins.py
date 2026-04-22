@@ -31,8 +31,33 @@ def upgrade() -> None:
         """
     )
 
+    # Pre-check: fail the migration with a readable message if any non-admin
+    # user has NULL/empty phone. Without this, ADD CONSTRAINT CHECK below
+    # would raise a generic 'check_violation' that leaves the transaction
+    # in an awkward half-applied state when the DBA scrolls the log.
+    # Spotted by repo review finding #6.
+    op.execute(
+        """
+        DO $$
+        DECLARE
+            violation_count integer;
+        BEGIN
+            SELECT COUNT(*) INTO violation_count
+              FROM users
+             WHERE role <> 'admin'
+               AND (phone IS NULL OR phone = '');
+            IF violation_count > 0 THEN
+                RAISE EXCEPTION
+                    'Migration 011 precondition failed: % non-admin user(s) have NULL or empty phone. '
+                    'Normalise or remove these rows before re-running alembic upgrade.',
+                    violation_count;
+            END IF;
+        END
+        $$;
+        """
+    )
+
     # Non-admin users must have a non-empty phone; admins may remain NULL or any format.
-    # Fails loudly if any non-admin row has NULL phone at migration time (expected = 0).
     op.create_check_constraint(
         "ck_users_phone_required_for_non_admin",
         "users",
