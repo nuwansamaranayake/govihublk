@@ -102,12 +102,14 @@ async def change_role(
                 .where(HarvestListing.status.notin_(["cancelled", "fulfilled"]))
                 .values(status="cancelled")
             )
-            # Cancel active matches linked to farmer's harvest listings
+            # Dismiss active matches linked to farmer's harvest listings.
+            # NOTE: match_status after migration 007 is {proposed, accepted,
+            # completed, dismissed} — 'cancelled'/'fulfilled' no longer exist.
             await db.execute(
                 text("""
-                    UPDATE matches SET status = 'cancelled'
+                    UPDATE matches SET status = 'dismissed'
                     WHERE harvest_id IN (SELECT id FROM harvest_listings WHERE farmer_id = :uid)
-                    AND status NOT IN ('fulfilled', 'cancelled')
+                    AND status NOT IN ('completed', 'dismissed')
                 """),
                 {"uid": str(current_user.id)},
             )
@@ -119,12 +121,13 @@ async def change_role(
                 .where(DemandPosting.status.notin_(["cancelled", "closed"]))
                 .values(status="cancelled")
             )
-            # Cancel active matches linked to buyer's demand postings
+            # Dismiss active matches linked to buyer's demand postings.
+            # See note above re migration 007 enum change.
             await db.execute(
                 text("""
-                    UPDATE matches SET status = 'cancelled'
+                    UPDATE matches SET status = 'dismissed'
                     WHERE demand_id IN (SELECT id FROM demand_postings WHERE buyer_id = :uid)
-                    AND status NOT IN ('fulfilled', 'cancelled')
+                    AND status NOT IN ('completed', 'dismissed')
                 """),
                 {"uid": str(current_user.id)},
             )
