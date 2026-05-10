@@ -558,6 +558,9 @@ let listingsPage = 1;
 let currentListingTab = 'harvest';
 let confirmCallback = null;
 let allAdsCache = [];
+// Image file pending for the in-progress New Ad form. The backend create
+// endpoint expects a multipart upload, so we hold the File until save.
+let pendingAdImageFile = null;
 
 // =============================================
 // AUTH
@@ -1104,6 +1107,7 @@ function openCreateAd() {
   document.getElementById('ad-image-url').value = '';
   document.getElementById('ad-image-preview').style.display = 'none';
   document.getElementById('upload-zone').style.display = 'block';
+  pendingAdImageFile = null;
   document.getElementById('ad-starts-at').value = new Date().toISOString().split('T')[0];
   document.getElementById('ad-ends-at').value = '';
   document.getElementById('ad-role-farmer').checked = true;
@@ -1157,41 +1161,23 @@ async function handleImageDrop(event) {
 }
 
 async function uploadAdImage(file) {
-  document.getElementById('ad-image-uploading').style.display = 'block';
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    // Existing shared upload endpoint (app/listings/router.py: POST /uploads/image).
-    const res = await fetch(`${API}/uploads/image`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${currentToken}` },
-      body: fd
-    });
-    if (!res.ok) {
-      let detail = `HTTP ${res.status}`;
-      try { detail = (await res.json()).detail || detail; } catch {}
-      throw new Error(detail);
-    }
-    const data = await res.json();
-    document.getElementById('ad-image-url').value = data.url;
-    const preview = document.getElementById('ad-image-preview');
-    preview.src = data.url;
-    preview.style.display = 'block';
-    document.getElementById('upload-zone').style.display = 'none';
-  } catch (e) {
-    showToast('Upload failed: ' + e.message, 'error');
-  } finally {
-    document.getElementById('ad-image-uploading').style.display = 'none';
+  // Preview only — actual upload happens at saveAd time as part of the
+  // multipart create call (POST /admin/ads expects an image file in the body).
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Image too large (max 5MB)', 'error');
+    return;
   }
+  pendingAdImageFile = file;
+  const objectUrl = URL.createObjectURL(file);
+  document.getElementById('ad-image-url').value = objectUrl;
+  const preview = document.getElementById('ad-image-preview');
+  preview.src = objectUrl;
+  preview.style.display = 'block';
+  document.getElementById('upload-zone').style.display = 'none';
 }
 
 async function saveAd() {
   const id = document.getElementById('ad-id').value;
-  const imageUrl = document.getElementById('ad-image-url').value;
-  if (!imageUrl && !id) {
-    showToast('Please upload an image for the ad', 'error');
-    return;
-  }
   const title = document.getElementById('ad-title').value.trim();
   if (!title) {
     showToast('Ad title is required', 'error');
@@ -1203,27 +1189,68 @@ async function saveAd() {
   if (document.getElementById('ad-role-buyer').checked) target_roles.push('buyer');
   if (document.getElementById('ad-role-supplier').checked) target_roles.push('supplier');
 
-  const payload = {
-    title,
-    title_si: document.getElementById('ad-title-si').value.trim() || null,
-    description: document.getElementById('ad-description').value.trim() || null,
-    advertiser_name: document.getElementById('ad-advertiser-name').value.trim() || null,
-    advertiser_contact: document.getElementById('ad-advertiser-contact').value.trim() || null,
-    click_url: document.getElementById('ad-click-url').value.trim() || null,
-    display_order: parseInt(document.getElementById('ad-display-order').value, 10) || 0,
-    is_active: document.getElementById('ad-is-active').value === 'true',
-    target_roles,
-    starts_at: document.getElementById('ad-starts-at').value || null,
-    ends_at: document.getElementById('ad-ends-at').value || null,
-  };
-  if (imageUrl) payload.image_url = imageUrl;
+  const display_order = parseInt(document.getElementById('ad-display-order').value, 10) || 0;
+  const is_active = document.getElementById('ad-is-active').value === 'true';
+  const title_si = document.getElementById('ad-title-si').value.trim();
+  const description = document.getElementById('ad-description').value.trim();
+  const advertiser_name = document.getElementById('ad-advertiser-name').value.trim();
+  const advertiser_contact = document.getElementById('ad-advertiser-contact').value.trim();
+  const click_url = document.getElementById('ad-click-url').value.trim();
+  const starts_at = document.getElementById('ad-starts-at').value;
+  const ends_at = document.getElementById('ad-ends-at').value;
 
   try {
     if (id) {
+      // EDIT — JSON PATCH (no image change supported here; use the per-ad
+      // image upload endpoint separately if the image needs to be replaced).
+      const payload = {
+        title,
+        title_si: title_si || null,
+        description: description || null,
+        advertiser_name: advertiser_name || null,
+        advertiser_contact: advertiser_contact || null,
+        click_url: click_url || null,
+        display_order,
+        is_active,
+        target_roles,
+        starts_at: starts_at || null,
+        ends_at: ends_at || null,
+      };
       await apiFetch(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
       showToast('Ad updated successfully', 'success');
     } else {
-      await apiFetch('/admin/ads', { method: 'POST', body: JSON.stringify(payload) });
+      // CREATE — multipart with image file. Backend POST /admin/ads requires
+      // an actual file in the body, not a URL.
+      if (!pendingAdImageFile) {
+        showToast('Please upload an image for the ad', 'error');
+        return;
+      }
+      const fd = new FormData();
+      fd.append('image', pendingAdImageFile);
+      fd.append('title', title);
+      if (title_si) fd.append('title_si', title_si);
+      if (description) fd.append('description', description);
+      if (advertiser_name) fd.append('advertiser_name', advertiser_name);
+      if (advertiser_contact) fd.append('advertiser_contact', advertiser_contact);
+      if (click_url) fd.append('click_url', click_url);
+      fd.append('display_order', String(display_order));
+      fd.append('is_active', String(is_active));
+      // Backend parses these via json.loads; send as JSON strings.
+      fd.append('target_roles', JSON.stringify(target_roles));
+      if (starts_at) fd.append('starts_at', starts_at);
+      if (ends_at) fd.append('ends_at', ends_at);
+
+      const res = await fetch(`${API}/admin/ads`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${currentToken}` },
+        body: fd,
+      });
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try { detail = (await res.json()).detail || detail; } catch {}
+        throw new Error(detail);
+      }
+      pendingAdImageFile = null;
       showToast('Ad created successfully', 'success');
     }
     closeModal('create-ad');
