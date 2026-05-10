@@ -135,11 +135,19 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_match_stats",
-            "description": "Match counts and average score, optionally by status.",
+            "description": (
+                "Match counts and average score, optionally filtered by status "
+                "and/or by time period (today, week, month, all)."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "status": {"type": "string"},
+                    "period": {
+                        "type": "string",
+                        "enum": ["today", "week", "month", "all"],
+                        "description": "Time window relative to now (UTC).",
+                    },
                 },
             },
         },
@@ -322,15 +330,21 @@ async def _tool_listing_stats(db: AsyncSession, args: dict) -> dict:
 
 async def _tool_match_stats(db: AsyncSession, args: dict) -> dict:
     status_arg = args.get("status")
+    period = args.get("period", "all")
     q_count = select(func.count()).select_from(Match)
     q_avg = select(func.avg(Match.score)).select_from(Match)
     if status_arg:
         q_count = q_count.where(Match.status == status_arg)
         q_avg = q_avg.where(Match.status == status_arg)
+    if period in _PERIOD_TO_INTERVAL:
+        cutoff = func.now() - text(f"INTERVAL '{_PERIOD_TO_INTERVAL[period]}'")
+        q_count = q_count.where(Match.created_at >= cutoff)
+        q_avg = q_avg.where(Match.created_at >= cutoff)
     count = int((await db.execute(q_count)).scalar_one())
     avg = (await db.execute(q_avg)).scalar()
     return {
         "status": status_arg,
+        "period": period,
         "count": count,
         "average_score": float(avg) if avg is not None else None,
     }
