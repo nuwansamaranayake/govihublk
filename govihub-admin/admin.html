@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoviHub Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!--
+    Audit-driven deviations from the spec (intentional; Phase 0 + Phase 1 reality):
+      * Login URL → /api/v1/auth/beta/login (spec: /auth/login)
+      * User field `name` (spec: full_name)
+      * Pagination param `size` (spec: per_page)
+      * List/Ads responses use `data.items` (spec: data.users / data.listings / data.ads)
+      * Listing removal reasons match backend allowed set
+        (spam, duplicate, fraud, policy_violation, user_request, stale, other)
+      * Listings status filter values match per-tab backend enums; "Removed" toggles include_removed
+      * Suspend/Activate use PUT /admin/users/{id} with {is_active: bool}
+        (no /suspend or /activate endpoints exist)
+      * Reset password uses PUT /admin/users/{id}/reset-password-temp
+      * Update user uses PUT (spec: PATCH); payload uses `name` not `full_name`
+      * Ad image upload uses POST /api/v1/uploads/image (existing shared endpoint)
+      * Ad toggle uses PATCH /admin/ads/{id} with {is_active: !current}
+      * Ads filter is client-side (active/paused/expired derived from is_active+ends_at)
+      * KPI strip uses parallel direct count calls — saves 1 LLM call per page load
+  -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #F1F5F9; color: #0F172A; display: flex; height: 100vh; overflow: hidden; }
+
+    /* Layout */
+    #login-screen { position: fixed; inset: 0; background: #F1F5F9; display: flex; align-items: center; justify-content: center; z-index: 100; }
+    #app { display: flex; width: 100%; height: 100vh; }
+    #sidebar { width: 220px; background: #0F172A; display: flex; flex-direction: column; flex-shrink: 0; }
+    #main-content { flex: 1; overflow-y: auto; }
+    .view { padding: 28px; }
+
+    /* Sidebar nav */
+    .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 20px; color: #94A3B8; cursor: pointer; font-size: 14px; border-left: 3px solid transparent; transition: all 0.15s; }
+    .nav-item:hover { color: #E2E8F0; background: rgba(255,255,255,0.05); }
+    .nav-item.active { color: #FFFFFF; border-left-color: #2D6A2E; background: rgba(45,106,46,0.15); }
+    .nav-badge { margin-left: auto; font-size: 10px; padding: 2px 6px; background: #E8A838; color: #0F172A; border-radius: 4px; font-weight: 600; }
+
+    /* Cards */
+    .card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .kpi-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px; }
+    .kpi-label { font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .kpi-value { font-size: 28px; font-weight: 600; color: #0F172A; }
+    .kpi-sub { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+
+    /* Page headers */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 600; }
+
+    /* Tables */
+    .table-container { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+    .table-toolbar { padding: 16px 20px; display: flex; gap: 10px; border-bottom: 1px solid #E2E8F0; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #F8FAFC; padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #E2E8F0; }
+    td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F8FAFC; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-active { background: #DCFCE7; color: #16A34A; }
+    .badge-suspended { background: #FEE2E2; color: #DC2626; }
+    .badge-farmer { background: #DCFCE7; color: #15803D; }
+    .badge-buyer { background: #DBEAFE; color: #1D4ED8; }
+    .badge-supplier { background: #FEF3C7; color: #B45309; }
+    .badge-admin { background: #F3E8FF; color: #7E22CE; }
+    .badge-removed { background: #FEE2E2; color: #DC2626; }
+    .badge-open, .badge-ready, .badge-planned { background: #DCFCE7; color: #16A34A; }
+    .badge-matched, .badge-confirmed, .badge-reviewing { background: #DBEAFE; color: #1D4ED8; }
+    .badge-fulfilled { background: #F3E8FF; color: #7E22CE; }
+    .badge-cancelled, .badge-expired, .badge-closed, .badge-discontinued { background: #F1F5F9; color: #64748B; }
+    .badge-out_of_stock { background: #FEF3C7; color: #B45309; }
+    .badge-ad-active { background: #DCFCE7; color: #16A34A; }
+    .badge-ad-paused { background: #FEF3C7; color: #B45309; }
+    .badge-ad-expired { background: #F1F5F9; color: #64748B; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 7px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'Inter', sans-serif; }
+    .btn-primary { background: #2D6A2E; color: #FFFFFF; }
+    .btn-primary:hover { background: #245525; }
+    .btn-secondary { background: #F1F5F9; color: #0F172A; border: 1px solid #E2E8F0; }
+    .btn-secondary:hover { background: #E2E8F0; }
+    .btn-danger { background: #FEE2E2; color: #DC2626; }
+    .btn-danger:hover { background: #FECACA; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-icon { padding: 6px; border-radius: 6px; }
+    .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+    input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="number"], input[type="url"], select, textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid #D1D5DB; border-radius: 7px; font-size: 14px; font-family: 'Inter', sans-serif; color: #0F172A; background: #FFFFFF; outline: none; transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #2D6A2E; box-shadow: 0 0 0 3px rgba(45,106,46,0.12); }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* Modal */
+    #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal { background: #FFFFFF; border-radius: 12px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+    .modal-lg { max-width: 680px; }
+    .modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 17px; font-weight: 600; }
+    .modal-body { padding: 20px 24px; }
+    .modal-footer { padding: 0 24px 20px; display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748B; padding: 4px; }
+
+    /* Ads grid */
+    .ads-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+    .ad-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+    .ad-card-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #F1F5F9; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 13px; }
+    .ad-card-body { padding: 14px 16px; }
+    .ad-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .ad-card-meta { font-size: 12px; color: #64748B; margin-bottom: 10px; }
+    .ad-card-stats { display: flex; gap: 16px; font-size: 12px; color: #64748B; margin-bottom: 12px; }
+    .ad-card-actions { display: flex; gap: 8px; }
+
+    /* Image upload */
+    .upload-zone { border: 2px dashed #D1D5DB; border-radius: 8px; padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; color: #64748B; font-size: 14px; }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: #2D6A2E; background: #F0FDF4; color: #2D6A2E; }
+    .upload-preview { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; margin-top: 12px; display: none; }
+
+    /* Pagination */
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid #E2E8F0; gap: 8px; font-size: 13px; color: #64748B; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 24px; right: 24px; z-index: 1000; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; min-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    #toast.success { background: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }
+    #toast.error { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+    #toast.info { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
+
+    /* AI query */
+    .ai-input-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .ai-input-row input { flex: 1; font-size: 15px; padding: 12px 16px; }
+    .ai-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .ai-chip { padding: 7px 14px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 13px; color: #64748B; cursor: pointer; background: #FFFFFF; transition: all 0.15s; font-family: 'Inter', sans-serif; }
+    .ai-chip:hover { border-color: #2D6A2E; color: #2D6A2E; background: #F0FDF4; }
+    .qa-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+    .qa-question { font-size: 13px; color: #64748B; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9; }
+    .qa-answer { font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+    .thinking { display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; margin-bottom: 14px; font-size: 13px; color: #64748B; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #2D6A2E; animation: bop 1.2s ease-in-out infinite; display: inline-block; }
+    .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+    @keyframes bop{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+
+    /* Tabs */
+    .tab-bar { display: flex; gap: 0; border-bottom: 1px solid #E2E8F0; margin-bottom: 20px; }
+    .tab { padding: 11px 20px; font-size: 14px; font-weight: 500; cursor: pointer; color: #64748B; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .tab.active { color: #2D6A2E; border-bottom-color: #2D6A2E; }
+
+    /* Password reveal */
+    .pw-reveal { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 16px; text-align: center; }
+    .pw-value { font-size: 24px; font-weight: 600; letter-spacing: 0.08em; color: #15803D; font-family: monospace; margin: 8px 0; }
+    .pw-warning { font-size: 12px; color: #DC2626; }
+
+    /* Search + filters toolbar */
+    .search-input { flex: 1; min-width: 200px; }
+    .filter-select { width: auto; }
+
+    /* Login card */
+    .login-card { background: #FFFFFF; border-radius: 14px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .logo-circle { width: 44px; height: 44px; border-radius: 50%; background: #2D6A2E; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 20px; }
+    .login-title { font-size: 22px; font-weight: 600; }
+    .login-sub { font-size: 14px; color: #64748B; margin-top: 2px; }
+    .login-error { background: #FEE2E2; color: #DC2626; border-radius: 7px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+  </style>
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-circle">🌿</div>
+        <div>
+          <div class="login-title">GoviHub Admin</div>
+          <div class="login-sub">Sign in to continue</div>
+        </div>
+      </div>
+      <div id="login-error" class="login-error"></div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="admin username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;" onclick="doLogin()">
+        Sign in
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" style="display:none">
+    <aside id="sidebar">
+      <div class="sidebar-logo">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="logo-circle" style="width:36px;height:36px;font-size:16px;">🌿</div>
+          <div>
+            <div style="color:#FFFFFF;font-size:14px;font-weight:600;">GoviHub</div>
+            <div style="color:#E8A838;font-size:10px;letter-spacing:0.1em;">ADMIN</div>
+          </div>
+        </div>
+      </div>
+      <nav style="padding:16px 0;flex:1;">
+        <div class="nav-item active" id="nav-ai" onclick="showView('ai')">
+          ✦ AI Intelligence <span class="nav-badge">AI</span>
+        </div>
+        <div class="nav-item" id="nav-users" onclick="showView('users')">👥 Users</div>
+        <div class="nav-item" id="nav-listings" onclick="showView('listings')">📋 Listings</div>
+        <div class="nav-item" id="nav-ads" onclick="showView('ads')">📢 Ads</div>
+      </nav>
+      <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:12px;color:#475569;margin-bottom:4px;">Signed in as</div>
+        <div style="font-size:13px;color:#94A3B8;" id="sidebar-user">—</div>
+        <button class="btn btn-sm" style="margin-top:10px;color:#94A3B8;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);width:100%;justify-content:center;" onclick="doLogout()">Sign out</button>
+      </div>
+    </aside>
+
+    <main id="main-content">
+      <!-- AI VIEW -->
+      <div id="view-ai" class="view">
+        <div class="page-header">
+          <div class="page-title">Platform Intelligence</div>
+          <div style="font-size:13px;color:#64748B;" id="ai-status">● Connected</div>
+        </div>
+        <div class="kpi-grid" id="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">Total users</div><div class="kpi-value">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Harvest listings</div><div class="kpi-value">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Total matches</div><div class="kpi-value">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Active ads</div><div class="kpi-value">—</div></div>
+        </div>
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-size:15px;font-weight:500;margin-bottom:14px;">Ask anything</div>
+          <div class="ai-input-row">
+            <input type="text" id="ai-input" placeholder="e.g. How many matches were processed last month?"
+                   onkeydown="if(event.key==='Enter') submitAIQuery()" />
+            <button class="btn btn-primary" onclick="submitAIQuery()" id="ai-btn">Ask</button>
+          </div>
+          <div class="ai-chips" id="ai-chips"></div>
+        </div>
+        <div id="ai-results"></div>
+      </div>
+
+      <!-- USERS VIEW -->
+      <div id="view-users" class="view" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Users</div>
+          <div style="font-size:13px;color:#64748B;" id="users-count">Loading...</div>
+        </div>
+        <div class="table-container">
+          <div class="table-toolbar">
+            <input type="text" class="search-input" id="users-search" placeholder="Search name, email, phone..." />
+            <select class="filter-select" id="users-role-filter" onchange="loadUsers()">
+              <option value="">All roles</option>
+              <option value="farmer">Farmer</option>
+              <option value="buyer">Buyer</option>
+              <option value="supplier">Supplier</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select class="filter-select" id="users-status-filter" onchange="loadUsers()">
+              <option value="">All status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div id="users-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>District</th>
+                  <th>Joined</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="users-pagination"></div>
+        </div>
+      </div>
+
+      <!-- LISTINGS VIEW -->
+      <div id="view-listings" class="view" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Listings</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active" id="tab-harvest" onclick="switchListingTab('harvest')">Harvest</div>
+          <div class="tab" id="tab-demand" onclick="switchListingTab('demand')">Demand</div>
+          <div class="tab" id="tab-supply" onclick="switchListingTab('supply')">Supply</div>
+        </div>
+        <div class="table-container">
+          <div class="table-toolbar">
+            <input type="text" class="search-input" id="listings-search" placeholder="Search..." />
+            <select class="filter-select" id="listings-status-filter" onchange="loadListings()">
+              <option value="">All status</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;color:#64748B;">
+              <input type="checkbox" id="listings-include-removed" onchange="loadListings()" style="width:auto;" /> Show removed
+            </label>
+          </div>
+          <table>
+            <thead id="listings-thead"></thead>
+            <tbody id="listings-tbody"></tbody>
+          </table>
+          <div class="pagination" id="listings-pagination"></div>
+        </div>
+      </div>
+
+      <!-- ADS VIEW -->
+      <div id="view-ads" class="view" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Advertisements</div>
+          <button class="btn btn-primary" onclick="openCreateAd()">+ New ad</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+          <select id="ads-status-filter" onchange="renderAdsGrid()" style="width:auto;">
+            <option value="">All ads</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+        <div class="ads-grid" id="ads-grid"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="modal-overlay" style="display:none">
+    <div id="modal-edit-user" class="modal" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">Edit user</div>
+        <button class="modal-close" onclick="closeModal('edit-user')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-id" />
+        <div class="form-group">
+          <label>Full name</label>
+          <input type="text" id="edit-user-name" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" id="edit-user-phone" placeholder="+94771234567" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Role</label>
+            <select id="edit-user-role">
+              <option value="farmer">Farmer</option>
+              <option value="buyer">Buyer</option>
+              <option value="supplier">Supplier</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>District</label>
+            <input type="text" id="edit-user-district" />
+          </div>
+        </div>
+        <div style="font-size:12px;color:#94A3B8;">Email address cannot be changed.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-user')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveUserEdit()">Save changes</button>
+      </div>
+    </div>
+
+    <div id="modal-reset-pw" class="modal" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">Reset password</div>
+        <button class="modal-close" onclick="closeModal('reset-pw')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reset-pw-user-id" />
+        <div id="reset-pw-step1">
+          <p style="font-size:14px;color:#374151;margin-bottom:16px;">
+            Reset password for <strong id="reset-pw-username"></strong>? A temporary password will be generated.
+            The user will need to log in and change it.
+          </p>
+        </div>
+        <div id="reset-pw-step2" style="display:none;">
+          <div class="pw-reveal">
+            <div style="font-size:13px;color:#374151;margin-bottom:8px;">Temporary password for <strong id="reset-pw-name-display"></strong>:</div>
+            <div class="pw-value" id="reset-pw-value">—</div>
+            <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="copyTempPw()">Copy password</button>
+          </div>
+          <div class="pw-warning" style="margin-top:12px;text-align:center;">⚠ This password will not be shown again. Copy it now.</div>
+        </div>
+      </div>
+      <div class="modal-footer" id="reset-pw-footer">
+        <button class="btn btn-secondary" onclick="closeModal('reset-pw')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmResetPassword()">Generate password</button>
+      </div>
+    </div>
+
+    <div id="modal-confirm-action" class="modal" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title" id="confirm-title">Confirm action</div>
+        <button class="modal-close" onclick="closeModal('confirm-action')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px;color:#374151;" id="confirm-message"></p>
+        <div id="confirm-delete-check" style="display:none;margin-top:14px;">
+          <label style="font-size:13px;color:#DC2626;font-weight:500;">Type DELETE to confirm permanent deletion:</label>
+          <input type="text" id="confirm-delete-input" style="margin-top:8px;border-color:#DC2626;" placeholder="DELETE" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirm-action')">Cancel</button>
+        <button class="btn btn-danger" id="confirm-action-btn" onclick="executeConfirmedAction()">Confirm</button>
+      </div>
+    </div>
+
+    <div id="modal-remove-listing" class="modal" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title">Remove listing</div>
+        <button class="modal-close" onclick="closeModal('remove-listing')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="remove-listing-id" />
+        <input type="hidden" id="remove-listing-type" />
+        <p style="font-size:14px;color:#374151;margin-bottom:16px;">
+          This will hide the listing from users and create an audit record. You can restore it later by querying the database.
+        </p>
+        <div class="form-group">
+          <label>Reason for removal</label>
+          <select id="remove-reason">
+            <option value="">Select a reason</option>
+            <option value="spam">Spam</option>
+            <option value="duplicate">Duplicate</option>
+            <option value="fraud">Fraud</option>
+            <option value="policy_violation">Policy violation</option>
+            <option value="user_request">User request</option>
+            <option value="stale">Stale</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="remove-notes" placeholder="Additional notes for audit trail..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('remove-listing')">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmRemoveListing()">Remove listing</button>
+      </div>
+    </div>
+
+    <div id="modal-create-ad" class="modal modal-lg" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title" id="ad-modal-title">New advertisement</div>
+        <button class="modal-close" onclick="closeModal('create-ad')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ad-id" value="" />
+        <div class="form-group">
+          <label>Ad image (required)</label>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('ad-image-input').click()"
+               ondragover="event.preventDefault();this.classList.add('drag-over')"
+               ondragleave="this.classList.remove('drag-over')"
+               ondrop="handleImageDrop(event)">
+            📷 Click to upload or drag and drop<br/>
+            <span style="font-size:12px;">JPEG, PNG, WebP — max 5MB — recommended 1200×628px</span>
+          </div>
+          <input type="file" id="ad-image-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleImageSelect(event)" />
+          <img id="ad-image-preview" class="upload-preview" />
+          <input type="hidden" id="ad-image-url" />
+          <div id="ad-image-uploading" style="display:none;font-size:12px;color:#64748B;margin-top:6px;">Uploading...</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Title (English)</label><input type="text" id="ad-title" placeholder="Ad headline" /></div>
+          <div class="form-group"><label>Title (Sinhala) — optional</label><input type="text" id="ad-title-si" placeholder="සිංහල" /></div>
+        </div>
+
+        <div class="form-group"><label>Description — optional</label><textarea id="ad-description" placeholder="Short description..."></textarea></div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Advertiser name</label><input type="text" id="ad-advertiser-name" placeholder="Company or person" /></div>
+          <div class="form-group"><label>Advertiser contact</label><input type="text" id="ad-advertiser-contact" placeholder="Phone or email" /></div>
+        </div>
+
+        <div class="form-group"><label>Click URL — optional</label><input type="url" id="ad-click-url" placeholder="https://example.com" /></div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Start date</label><input type="date" id="ad-starts-at" /></div>
+          <div class="form-group"><label>End date — optional</label><input type="date" id="ad-ends-at" /></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Display order (lower = first)</label><input type="number" id="ad-display-order" value="0" min="0" /></div>
+          <div class="form-group"><label>Status</label><select id="ad-is-active"><option value="true">Active</option><option value="false">Paused</option></select></div>
+        </div>
+
+        <div class="form-group">
+          <label>Show to roles</label>
+          <div style="display:flex;gap:16px;margin-top:4px;">
+            <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ad-role-farmer" checked /> Farmers</label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ad-role-buyer" checked /> Buyers</label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ad-role-supplier" checked /> Suppliers</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('create-ad')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAd()">Save ad</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" style="display:none"></div>
+
+<script>
+// =============================================
+// CONSTANTS
+// =============================================
+const API = 'https://spices.govihublk.com/api/v1';
+
+const AI_CHIPS = [
+  "How many farmers signed up this week?",
+  "Which spice has the most harvest listings?",
+  "How many unmatched harvest listings exist?",
+  "Which districts have the most farmers?",
+  "How many buyers are on the platform?",
+  "Show ad performance — top by impressions",
+  "What is the user breakdown by role?"
+];
+
+const LISTING_STATUSES = {
+  harvest: ['planned','ready','matched','fulfilled','expired','cancelled'],
+  demand:  ['open','reviewing','confirmed','fulfilled','closed','expired','cancelled'],
+  supply:  ['active','out_of_stock','discontinued']
+};
+
+let currentToken = sessionStorage.getItem('gh_admin_token');
+let currentUser = null;
+let usersPage = 1;
+let listingsPage = 1;
+let currentListingTab = 'harvest';
+let confirmCallback = null;
+let allAdsCache = [];
+
+// =============================================
+// AUTH
+// =============================================
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (!username || !password) {
+    errEl.textContent = 'Username and password are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/auth/beta/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.detail || 'Invalid credentials.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const token = data.access_token;
+    const me = data.user;
+    if (me.role !== 'admin') {
+      errEl.textContent = 'This panel is for admin users only.';
+      errEl.style.display = 'block';
+      return;
+    }
+    sessionStorage.setItem('gh_admin_token', token);
+    currentToken = token;
+    currentUser = me;
+    bootApp();
+  } catch (e) {
+    errEl.textContent = 'Connection error. Check your network.';
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('gh_admin_token');
+  currentToken = null;
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// =============================================
+// API
+// =============================================
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${currentToken}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    doLogout();
+    throw new Error('Session expired. Please sign in again.');
+  }
+  // 204 No Content
+  if (res.status === 204) return null;
+  let data;
+  try { data = await res.json(); } catch { data = {}; }
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
+
+// =============================================
+// BOOT
+// =============================================
+function bootApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebar-user').textContent = currentUser.name || currentUser.email;
+  renderChips();
+  loadKPIs();
+  showView('ai');
+  // Init listings tab headers so the table is well-formed even before opening the view.
+  switchListingTab('harvest');
+}
+
+function showView(view) {
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`view-${view}`).style.display = 'block';
+  document.getElementById(`nav-${view}`).classList.add('active');
+  if (view === 'users') loadUsers();
+  if (view === 'listings') loadListings();
+  if (view === 'ads') loadAds();
+}
+
+// =============================================
+// AI INTELLIGENCE
+// =============================================
+function renderChips() {
+  const el = document.getElementById('ai-chips');
+  el.innerHTML = AI_CHIPS.map(q =>
+    `<button class="ai-chip" onclick='submitAIQuery(${JSON.stringify(q)})'>${escapeHtml(q)}</button>`
+  ).join('');
+}
+
+async function loadKPIs() {
+  // Direct parallel counts — cheaper and faster than asking the LLM.
+  try {
+    const [users, harvest, matches, ads] = await Promise.all([
+      apiFetch('/admin/users?page=1&size=1').catch(() => null),
+      apiFetch('/admin/listings/harvest?page=1&size=1').catch(() => null),
+      apiFetch('/admin/matches?page=1&size=1').catch(() => null),
+      apiFetch('/admin/ads').catch(() => null),
+    ]);
+    const adsActive = Array.isArray(ads?.items) ? ads.items.filter(a => a.is_active).length : (ads?.total || '—');
+    const labels = ['Total users', 'Harvest listings', 'Total matches', 'Active ads'];
+    const vals = [
+      users?.total ?? '—',
+      harvest?.total ?? '—',
+      matches?.total ?? '—',
+      adsActive
+    ];
+    document.getElementById('kpi-grid').innerHTML = vals.map((v, i) => `
+      <div class="kpi-card">
+        <div class="kpi-label">${labels[i]}</div>
+        <div class="kpi-value">${v}</div>
+      </div>
+    `).join('');
+  } catch (e) { /* non-fatal */ }
+}
+
+async function submitAIQuery(preset) {
+  const input = document.getElementById('ai-input');
+  const q = preset || input.value.trim();
+  if (!q) return;
+  if (!preset) input.value = '';
+  document.getElementById('ai-chips').style.display = 'none';
+
+  const results = document.getElementById('ai-results');
+  const thinkingId = 'th-' + Date.now();
+  results.insertAdjacentHTML('afterbegin', `
+    <div class="thinking" id="${thinkingId}">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span style="font-size:13px;color:#64748B;margin-left:6px;">Querying platform data...</span>
+    </div>
+  `);
+  document.getElementById('ai-btn').disabled = true;
+
+  try {
+    const res = await apiFetch('/admin/ai/query', {
+      method: 'POST',
+      body: JSON.stringify({ query: q })
+    });
+    document.getElementById(thinkingId)?.remove();
+    const card = document.createElement('div');
+    card.className = 'qa-card';
+    card.innerHTML = `
+      <div class="qa-question">🔍 ${escapeHtml(q)}</div>
+      <div class="qa-answer">${escapeHtml(res.answer)}</div>
+    `;
+    results.insertBefore(card, results.firstChild);
+  } catch (e) {
+    document.getElementById(thinkingId)?.remove();
+    showToast(e.message, 'error');
+  } finally {
+    document.getElementById('ai-btn').disabled = false;
+  }
+}
+
+// =============================================
+// USERS
+// =============================================
+async function loadUsers() {
+  const search = document.getElementById('users-search').value.trim();
+  const role = document.getElementById('users-role-filter').value;
+  const status = document.getElementById('users-status-filter').value;
+
+  const params = new URLSearchParams({ page: usersPage, size: 20 });
+  if (search) params.set('search', search);
+  if (role) params.set('role', role);
+  if (status === 'active') params.set('is_active', 'true');
+  if (status === 'suspended') params.set('is_active', 'false');
+
+  try {
+    const data = await apiFetch(`/admin/users?${params}`);
+    renderUsersTable(data);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function renderUsersTable(data) {
+  document.getElementById('users-count').textContent = `${data.total} users`;
+  const tbody = document.getElementById('users-tbody');
+  if (!data.items || data.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">No users found</td></tr>';
+    document.getElementById('users-pagination').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = data.items.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#475569;flex-shrink:0;">
+            ${initials(u.name)}
+          </div>
+          <div>
+            <div style="font-weight:500;font-size:14px;">${escapeHtml(u.name || '—')}</div>
+            <div style="font-size:12px;color:#94A3B8;">${escapeHtml(u.email)}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:13px;">${u.phone || '—'}</td>
+      <td><span class="badge badge-${u.role || 'admin'}">${u.role || '—'}</span></td>
+      <td><span class="badge badge-${u.is_active ? 'active' : 'suspended'}">${u.is_active ? 'Active' : 'Suspended'}</span></td>
+      <td style="font-size:13px;">${u.district || '—'}</td>
+      <td style="font-size:13px;">${formatDate(u.created_at)}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-secondary" onclick='openEditUser(${JSON.stringify(u)})'>Edit</button>
+          <button class="btn btn-sm btn-secondary" onclick='openResetPassword("${u.id}", ${JSON.stringify(u.name || u.email)})'>Reset PW</button>
+          <button class="btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-secondary'}"
+                  onclick='openToggleActive("${u.id}", ${JSON.stringify(u.name || u.email)}, ${u.is_active})'>
+            ${u.is_active ? 'Suspend' : 'Activate'}
+          </button>
+          <button class="btn btn-sm btn-danger" onclick='openDeleteUser("${u.id}", ${JSON.stringify(u.name || u.email)})'>Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  renderPagination('users', data.page, data.pages, p => { usersPage = p; loadUsers(); });
+}
+
+function openEditUser(u) {
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('edit-user-name').value = u.name || '';
+  document.getElementById('edit-user-phone').value = u.phone || '';
+  document.getElementById('edit-user-role').value = u.role || 'farmer';
+  document.getElementById('edit-user-district').value = u.district || '';
+  openModal('edit-user');
+}
+
+async function saveUserEdit() {
+  const id = document.getElementById('edit-user-id').value;
+  const data = {
+    name: document.getElementById('edit-user-name').value.trim(),
+    phone: document.getElementById('edit-user-phone').value.trim() || null,
+    role: document.getElementById('edit-user-role').value,
+    district: document.getElementById('edit-user-district').value.trim() || null
+  };
+  try {
+    await apiFetch(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    closeModal('edit-user');
+    showToast('User updated', 'success');
+    loadUsers();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function openResetPassword(userId, name) {
+  document.getElementById('reset-pw-user-id').value = userId;
+  document.getElementById('reset-pw-username').textContent = name;
+  document.getElementById('reset-pw-step1').style.display = 'block';
+  document.getElementById('reset-pw-step2').style.display = 'none';
+  document.getElementById('reset-pw-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal('reset-pw')">Cancel</button>
+    <button class="btn btn-primary" onclick="confirmResetPassword()">Generate password</button>
+  `;
+  openModal('reset-pw');
+}
+
+async function confirmResetPassword() {
+  const id = document.getElementById('reset-pw-user-id').value;
+  const name = document.getElementById('reset-pw-username').textContent;
+  try {
+    const res = await apiFetch(`/admin/users/${id}/reset-password-temp`, { method: 'PUT' });
+    document.getElementById('reset-pw-step1').style.display = 'none';
+    document.getElementById('reset-pw-step2').style.display = 'block';
+    document.getElementById('reset-pw-name-display').textContent = name;
+    document.getElementById('reset-pw-value').textContent = res.temp_password;
+    document.getElementById('reset-pw-footer').innerHTML = `
+      <button class="btn btn-primary" onclick="closeModal('reset-pw')">Done</button>
+    `;
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function copyTempPw() {
+  const pw = document.getElementById('reset-pw-value').textContent;
+  navigator.clipboard.writeText(pw).then(() => showToast('Password copied', 'success'));
+}
+
+function openToggleActive(userId, name, isActive) {
+  const verb = isActive ? 'Suspend' : 'Activate';
+  openConfirmModal(
+    `${verb} user`,
+    `${verb} ${name}? ${isActive ? 'They will not be able to log in until reactivated.' : 'They will be able to log in again.'}`,
+    false,
+    async () => {
+      try {
+        await apiFetch(`/admin/users/${userId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ is_active: !isActive })
+        });
+        showToast(`${name} has been ${isActive ? 'suspended' : 'activated'}`, 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+  );
+}
+
+function openDeleteUser(userId, name) {
+  openConfirmModal(
+    'Delete user',
+    `Permanently soft-delete ${name}? They will be marked deleted and unable to log in. Cannot be undone via the panel.`,
+    true,
+    async () => {
+      try {
+        await apiFetch(`/admin/users/${userId}`, { method: 'DELETE' });
+        showToast(`${name} has been deleted`, 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+  );
+}
+
+// =============================================
+// LISTINGS
+// =============================================
+function switchListingTab(tab) {
+  currentListingTab = tab;
+  listingsPage = 1;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+
+  const heads = {
+    harvest: '<tr><th>Farmer</th><th>Crop</th><th>Qty (kg)</th><th>Price/kg</th><th>Status</th><th>Listed</th><th>Action</th></tr>',
+    demand:  '<tr><th>Buyer</th><th>Crop</th><th>Qty needed</th><th>Max price</th><th>Status</th><th>Posted</th><th>Action</th></tr>',
+    supply:  '<tr><th>Supplier</th><th>Category</th><th>Item</th><th>Price</th><th>Status</th><th>Posted</th><th>Action</th></tr>'
+  };
+  document.getElementById('listings-thead').innerHTML = heads[tab];
+
+  // Refresh status filter options for this tab
+  const sel = document.getElementById('listings-status-filter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All status</option>' +
+    LISTING_STATUSES[tab].map(s => `<option value="${s}">${s.replace(/_/g,' ')}</option>`).join('');
+  if (LISTING_STATUSES[tab].includes(cur)) sel.value = cur;
+
+  loadListings();
+}
+
+async function loadListings() {
+  const search = document.getElementById('listings-search').value.trim();
+  const status = document.getElementById('listings-status-filter').value;
+  const includeRemoved = document.getElementById('listings-include-removed').checked;
+
+  const params = new URLSearchParams({ page: listingsPage, size: 20 });
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  if (includeRemoved) params.set('include_removed', 'true');
+
+  try {
+    const data = await apiFetch(`/admin/listings/${currentListingTab}?${params}`);
+    renderListingsTable(data);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function renderListingsTable(data) {
+  const tbody = document.getElementById('listings-tbody');
+  if (!data.items || data.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">No listings found</td></tr>';
+    document.getElementById('listings-pagination').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = data.items.map(l => {
+    const isRemoved = !!l.removed_at;
+    const actor = l.farmer_name || l.buyer_name || l.supplier_name || '—';
+    const actorEmail = l.farmer_email || l.buyer_email || l.supplier_email || '';
+    let middleCols;
+    if (currentListingTab === 'supply') {
+      middleCols = `
+        <td style="font-size:13px;">${escapeHtml(l.category || '—')}</td>
+        <td style="font-size:13px;">${escapeHtml(l.name || '—')}</td>
+        <td style="font-size:13px;">Rs ${l.price ?? '—'}</td>
+      `;
+    } else if (currentListingTab === 'demand') {
+      middleCols = `
+        <td style="font-size:13px;">${escapeHtml(l.crop_name || '—')}</td>
+        <td style="font-size:13px;">${l.quantity_kg ?? '—'}</td>
+        <td style="font-size:13px;">Rs ${l.max_price_per_kg ?? '—'}</td>
+      `;
+    } else {
+      middleCols = `
+        <td style="font-size:13px;">${escapeHtml(l.crop_name || '—')}</td>
+        <td style="font-size:13px;">${l.quantity_kg ?? '—'}</td>
+        <td style="font-size:13px;">Rs ${l.price_per_kg ?? '—'}</td>
+      `;
+    }
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:500;font-size:14px;">${escapeHtml(actor)}</div>
+          <div style="font-size:12px;color:#94A3B8;">${escapeHtml(actorEmail)}</div>
+        </td>
+        ${middleCols}
+        <td>
+          ${isRemoved ? '<span class="badge badge-removed">REMOVED</span>'
+                     : `<span class="badge badge-${l.status}">${l.status || '—'}</span>`}
+        </td>
+        <td style="font-size:13px;">${formatDate(l.created_at)}</td>
+        <td>
+          <button class="btn btn-sm btn-danger"
+                  ${isRemoved ? 'disabled' : ''}
+                  onclick="${isRemoved ? '' : `openRemoveListing('${l.id}')`}">
+            Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  renderPagination('listings', data.page, data.pages, p => { listingsPage = p; loadListings(); });
+}
+
+function openRemoveListing(id) {
+  document.getElementById('remove-listing-id').value = id;
+  document.getElementById('remove-listing-type').value = currentListingTab;
+  document.getElementById('remove-reason').value = '';
+  document.getElementById('remove-notes').value = '';
+  openModal('remove-listing');
+}
+
+async function confirmRemoveListing() {
+  const id = document.getElementById('remove-listing-id').value;
+  const type = document.getElementById('remove-listing-type').value;
+  const reason = document.getElementById('remove-reason').value;
+  const notes = document.getElementById('remove-notes').value.trim();
+
+  if (!reason) {
+    showToast('Select a reason for removal', 'error');
+    return;
+  }
+
+  try {
+    await apiFetch(`/admin/listings/${type}/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason, notes: notes || null })
+    });
+    closeModal('remove-listing');
+    showToast('Listing removed', 'success');
+    loadListings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// =============================================
+// ADS
+// =============================================
+async function loadAds() {
+  try {
+    const data = await apiFetch('/admin/ads?page=1&limit=200');
+    allAdsCache = Array.isArray(data) ? data : (data.items || []);
+    renderAdsGrid();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function classifyAd(ad) {
+  if (!ad.is_active) return 'paused';
+  if (ad.ends_at && new Date(ad.ends_at) < new Date()) return 'expired';
+  return 'active';
+}
+
+function renderAdsGrid() {
+  const filter = document.getElementById('ads-status-filter').value;
+  const ads = filter ? allAdsCache.filter(a => classifyAd(a) === filter) : allAdsCache;
+  const grid = document.getElementById('ads-grid');
+
+  if (!ads || ads.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94A3B8;">No ads. Click "New ad" to create one.</div>';
+    return;
+  }
+
+  grid.innerHTML = ads.map(ad => {
+    const status = classifyAd(ad);
+    const ctr = ad.impression_count > 0 ? ((ad.click_count / ad.impression_count) * 100).toFixed(1) : '0.0';
+    const endDate = ad.ends_at ? formatDate(ad.ends_at) : 'No end date';
+    return `
+      <div class="ad-card">
+        <div class="ad-card-img" style="overflow:hidden;position:relative;">
+          ${ad.image_url
+            ? `<img src="${escapeHtml(ad.image_url)}" alt="${escapeHtml(ad.title)}" style="width:100%;height:100%;object-fit:cover;" />`
+            : `<div style="display:flex;align-items:center;justify-content:center;height:160px;background:#F1F5F9;color:#94A3B8;font-size:13px;">No image</div>`}
+        </div>
+        <div class="ad-card-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div class="ad-card-title">${escapeHtml(ad.title)}</div>
+            <span class="badge badge-ad-${status}">${status}</span>
+          </div>
+          <div class="ad-card-meta">${escapeHtml(ad.advertiser_name || 'No advertiser')}</div>
+          <div class="ad-card-stats">
+            <span>👁 ${(ad.impression_count || 0).toLocaleString()}</span>
+            <span>🔗 ${(ad.click_count || 0).toLocaleString()}</span>
+            <span>${ctr}% CTR</span>
+          </div>
+          <div style="font-size:11px;color:#94A3B8;margin-bottom:12px;">${formatDate(ad.starts_at)} → ${endDate}</div>
+          <div class="ad-card-actions">
+            <button class="btn btn-sm btn-secondary" onclick='openEditAd(${JSON.stringify(ad)})'>Edit</button>
+            <button class="btn btn-sm ${ad.is_active ? 'btn-secondary' : 'btn-primary'}" onclick="toggleAd('${ad.id}', ${ad.is_active})">
+              ${ad.is_active ? 'Pause' : 'Activate'}
+            </button>
+            <button class="btn btn-sm btn-danger" onclick='deleteAd("${ad.id}", ${JSON.stringify(ad.title)})'>Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openCreateAd() {
+  document.getElementById('ad-modal-title').textContent = 'New advertisement';
+  document.getElementById('ad-id').value = '';
+  document.getElementById('ad-title').value = '';
+  document.getElementById('ad-title-si').value = '';
+  document.getElementById('ad-description').value = '';
+  document.getElementById('ad-advertiser-name').value = '';
+  document.getElementById('ad-advertiser-contact').value = '';
+  document.getElementById('ad-click-url').value = '';
+  document.getElementById('ad-display-order').value = '0';
+  document.getElementById('ad-is-active').value = 'true';
+  document.getElementById('ad-image-url').value = '';
+  document.getElementById('ad-image-preview').style.display = 'none';
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('ad-starts-at').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ad-ends-at').value = '';
+  document.getElementById('ad-role-farmer').checked = true;
+  document.getElementById('ad-role-buyer').checked = true;
+  document.getElementById('ad-role-supplier').checked = true;
+  openModal('create-ad');
+}
+
+function openEditAd(ad) {
+  document.getElementById('ad-modal-title').textContent = 'Edit advertisement';
+  document.getElementById('ad-id').value = ad.id;
+  document.getElementById('ad-title').value = ad.title || '';
+  document.getElementById('ad-title-si').value = ad.title_si || '';
+  document.getElementById('ad-description').value = ad.description || '';
+  document.getElementById('ad-advertiser-name').value = ad.advertiser_name || '';
+  document.getElementById('ad-advertiser-contact').value = ad.advertiser_contact || '';
+  document.getElementById('ad-click-url').value = ad.click_url || '';
+  document.getElementById('ad-display-order').value = ad.display_order ?? 0;
+  document.getElementById('ad-is-active').value = String(!!ad.is_active);
+  document.getElementById('ad-image-url').value = ad.image_url || '';
+  document.getElementById('ad-starts-at').value = ad.starts_at ? ad.starts_at.split('T')[0] : '';
+  document.getElementById('ad-ends-at').value = ad.ends_at ? ad.ends_at.split('T')[0] : '';
+
+  const roles = ad.target_roles || ['farmer', 'buyer', 'supplier'];
+  document.getElementById('ad-role-farmer').checked = roles.includes('farmer');
+  document.getElementById('ad-role-buyer').checked = roles.includes('buyer');
+  document.getElementById('ad-role-supplier').checked = roles.includes('supplier');
+
+  if (ad.image_url) {
+    const preview = document.getElementById('ad-image-preview');
+    preview.src = ad.image_url;
+    preview.style.display = 'block';
+    document.getElementById('upload-zone').style.display = 'none';
+  } else {
+    document.getElementById('ad-image-preview').style.display = 'none';
+    document.getElementById('upload-zone').style.display = 'block';
+  }
+  openModal('create-ad');
+}
+
+async function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (file) await uploadAdImage(file);
+}
+
+async function handleImageDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) await uploadAdImage(file);
+}
+
+async function uploadAdImage(file) {
+  document.getElementById('ad-image-uploading').style.display = 'block';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    // Existing shared upload endpoint (app/listings/router.py: POST /uploads/image).
+    const res = await fetch(`${API}/uploads/image`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${currentToken}` },
+      body: fd
+    });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    const data = await res.json();
+    document.getElementById('ad-image-url').value = data.url;
+    const preview = document.getElementById('ad-image-preview');
+    preview.src = data.url;
+    preview.style.display = 'block';
+    document.getElementById('upload-zone').style.display = 'none';
+  } catch (e) {
+    showToast('Upload failed: ' + e.message, 'error');
+  } finally {
+    document.getElementById('ad-image-uploading').style.display = 'none';
+  }
+}
+
+async function saveAd() {
+  const id = document.getElementById('ad-id').value;
+  const imageUrl = document.getElementById('ad-image-url').value;
+  if (!imageUrl && !id) {
+    showToast('Please upload an image for the ad', 'error');
+    return;
+  }
+  const title = document.getElementById('ad-title').value.trim();
+  if (!title) {
+    showToast('Ad title is required', 'error');
+    return;
+  }
+
+  const target_roles = [];
+  if (document.getElementById('ad-role-farmer').checked) target_roles.push('farmer');
+  if (document.getElementById('ad-role-buyer').checked) target_roles.push('buyer');
+  if (document.getElementById('ad-role-supplier').checked) target_roles.push('supplier');
+
+  const payload = {
+    title,
+    title_si: document.getElementById('ad-title-si').value.trim() || null,
+    description: document.getElementById('ad-description').value.trim() || null,
+    advertiser_name: document.getElementById('ad-advertiser-name').value.trim() || null,
+    advertiser_contact: document.getElementById('ad-advertiser-contact').value.trim() || null,
+    click_url: document.getElementById('ad-click-url').value.trim() || null,
+    display_order: parseInt(document.getElementById('ad-display-order').value, 10) || 0,
+    is_active: document.getElementById('ad-is-active').value === 'true',
+    target_roles,
+    starts_at: document.getElementById('ad-starts-at').value || null,
+    ends_at: document.getElementById('ad-ends-at').value || null,
+  };
+  if (imageUrl) payload.image_url = imageUrl;
+
+  try {
+    if (id) {
+      await apiFetch(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      showToast('Ad updated', 'success');
+    } else {
+      await apiFetch('/admin/ads', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Ad created', 'success');
+    }
+    closeModal('create-ad');
+    loadAds();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function toggleAd(id, isActive) {
+  try {
+    await apiFetch(`/admin/ads/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: !isActive })
+    });
+    showToast(isActive ? 'Ad paused' : 'Ad activated', 'success');
+    loadAds();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function deleteAd(id, title) {
+  openConfirmModal(
+    'Delete ad',
+    `Delete "${title}"? This cannot be undone.`,
+    false,
+    async () => {
+      try {
+        await apiFetch(`/admin/ads/${id}`, { method: 'DELETE' });
+        showToast('Ad deleted', 'success');
+        loadAds();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+  );
+}
+
+// =============================================
+// MODAL HELPERS
+// =============================================
+function openModal(name) {
+  document.querySelectorAll('#modal-overlay .modal').forEach(m => m.style.display = 'none');
+  document.getElementById(`modal-${name}`).style.display = 'block';
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal(name) {
+  document.getElementById('modal-overlay').style.display = 'none';
+  if (name) document.getElementById(`modal-${name}`).style.display = 'none';
+}
+
+function openConfirmModal(title, message, requireDeleteWord, callback) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  const deleteCheck = document.getElementById('confirm-delete-check');
+  const deleteInput = document.getElementById('confirm-delete-input');
+  if (requireDeleteWord) {
+    deleteCheck.style.display = 'block';
+    deleteInput.value = '';
+  } else {
+    deleteCheck.style.display = 'none';
+  }
+  confirmCallback = { callback, requireDeleteWord };
+  openModal('confirm-action');
+}
+
+function executeConfirmedAction() {
+  if (!confirmCallback) return;
+  if (confirmCallback.requireDeleteWord) {
+    const val = document.getElementById('confirm-delete-input').value;
+    if (val !== 'DELETE') { showToast('Type DELETE to confirm', 'error'); return; }
+  }
+  const cb = confirmCallback.callback;
+  closeModal('confirm-action');
+  confirmCallback = null;
+  cb();
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.style.display = 'none';
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  }
+});
+
+// =============================================
+// UTILS
+// =============================================
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = type;
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 3500);
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.split(/\s+/).filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function renderPagination(prefix, current, total, callback) {
+  const el = document.getElementById(`${prefix}-pagination`);
+  if (!total || total <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="btn btn-sm btn-secondary" ${current <= 1 ? 'disabled' : ''} data-page="${current - 1}">← Previous</button>
+    <span>Page ${current} of ${total}</span>
+    <button class="btn btn-sm btn-secondary" ${current >= total ? 'disabled' : ''} data-page="${current + 1}">Next →</button>
+  `;
+  el.querySelectorAll('button[data-page]').forEach(b => {
+    b.addEventListener('click', () => {
+      if (!b.disabled) callback(parseInt(b.dataset.page, 10));
+    });
+  });
+}
+
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// Wire debounced search inputs after DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  const us = document.getElementById('users-search');
+  if (us) us.addEventListener('input', debounce(() => { usersPage = 1; loadUsers(); }, 300));
+  const ls = document.getElementById('listings-search');
+  if (ls) ls.addEventListener('input', debounce(() => { listingsPage = 1; loadListings(); }, 300));
+});
+
+// =============================================
+// INIT — auto-resume session if a token is in storage
+// =============================================
+if (currentToken) {
+  fetch(`${API}/users/me`, { headers: { 'Authorization': `Bearer ${currentToken}` } })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('expired')))
+    .then(me => {
+      if (me.role === 'admin') {
+        currentUser = me;
+        bootApp();
+      } else {
+        sessionStorage.removeItem('gh_admin_token');
+      }
+    })
+    .catch(() => sessionStorage.removeItem('gh_admin_token'));
+}
+</script>
+</body>
+</html>
