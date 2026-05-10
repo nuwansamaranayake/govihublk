@@ -911,6 +911,13 @@ function switchListingTab(tab) {
   };
   document.getElementById('listings-thead').innerHTML = heads[tab];
 
+  // Clear the tbody immediately so a click on a stale row from the previous
+  // tab cannot trigger a remove with the new tab's currentListingTab value
+  // and the old tab's listing id (caught by Playwright suite as a 404).
+  document.getElementById('listings-tbody').innerHTML =
+    '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">Loading...</td></tr>';
+  document.getElementById('listings-pagination').innerHTML = '';
+
   // Refresh status filter options for this tab
   const sel = document.getElementById('listings-status-filter');
   const cur = sel.value;

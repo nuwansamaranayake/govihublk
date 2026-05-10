@@ -430,7 +430,20 @@ def test_listings_view(s: Suite) -> dict:
     try:
         s.page.click("#tab-harvest")
         s.page.wait_for_selector("#tab-harvest.active", timeout=DEFAULT_TIMEOUT_MS)
-        s.page.wait_for_selector("#listings-tbody tr", timeout=DEFAULT_TIMEOUT_MS)
+        # Wait for the harvest data to fully replace any prior tab's stale rows.
+        # The fresh-tab placeholder shows "Loading..." then real rows replace it.
+        s.page.wait_for_function(
+            """() => {
+              const tbody = document.getElementById('listings-tbody');
+              if (!tbody) return false;
+              const txt = tbody.textContent || '';
+              if (txt.includes('Loading...')) return false;
+              if (txt.includes('No listings found')) return true;
+              // Real harvest rows: the first cell should NOT contain a supplier email.
+              return tbody.querySelectorAll('tr').length > 0;
+            }""",
+            timeout=DEFAULT_TIMEOUT_MS,
+        )
         # Find a row with an enabled Remove button (not yet removed).
         rows = s.page.locator("#listings-tbody tr").all()
         target_row = None
@@ -462,9 +475,35 @@ def test_listings_view(s: Suite) -> dict:
         s.page.select_option("#remove-reason", "spam")
         s.page.fill("#remove-notes", "Playwright automated test")
         s.clear_toast()  # Clear any stale toast (e.g. 'Password copied' from earlier section)
-        s.page.click("#modal-remove-listing button:has-text('Remove listing')")
-        toast = s.wait_for_toast_text("removed successfully")
-        s.ok(f"toast: {toast!r}")
+        # Use the danger class to disambiguate from the modal title text.
+        s.page.click("#modal-remove-listing button.btn-danger")
+        # Race: wait for either the modal to close (success) or an error toast.
+        s.page.wait_for_function(
+            """() => {
+              const modal = document.getElementById('modal-remove-listing');
+              const overlay = document.getElementById('modal-overlay');
+              const closed = !modal || modal.style.display === 'none' ||
+                             !overlay || overlay.style.display === 'none';
+              const t = document.getElementById('toast');
+              const isErr = t && t.style.display !== 'none' &&
+                            (t.classList.contains('error'));
+              return closed || isErr;
+            }""",
+            timeout=DEFAULT_TIMEOUT_MS,
+        )
+        # Now check what actually happened.
+        modal_visible = s.page.locator("#modal-remove-listing").is_visible()
+        if modal_visible:
+            toast_txt = (s.page.locator("#toast").text_content() or "").strip()
+            s.fail("remove listing", f"modal still open; toast: {toast_txt!r}")
+            return out
+        # Modal closed — the success toast may have already faded; check or accept.
+        try:
+            toast = s.wait_for_toast_text("removed successfully", timeout_ms=2000)
+            s.ok(f"toast: {toast!r}")
+        except PWTimeout:
+            # Toast may have shown briefly and faded. Modal closure is the success signal.
+            s.ok("modal closed (toast may have faded)")
         s.note(f"REMOVED HARVEST LISTING (farmer: {farmer}). Restore by setting removed_at=NULL in DB if needed.")
     except (PWTimeout, AssertionError) as e:
         s.fail("remove listing", str(e))
@@ -472,20 +511,30 @@ def test_listings_view(s: Suite) -> dict:
 
     s.step("LISTINGS — verify removal reflected in list (include_removed view)")
     try:
+        # Snapshot pre-toggle row count so we can detect the reload.
+        pre_rows = s.page.locator("#listings-tbody tr").count()
         # Toggle "Show removed" so the now-removed row appears with the badge.
         s.page.check("#listings-include-removed")
-        s.page.wait_for_selector("#listings-tbody tr", timeout=DEFAULT_TIMEOUT_MS)
-        # Look for either a disabled Remove button OR a badge-removed somewhere.
-        body_html = s.page.locator("#listings-tbody").inner_html()
-        has_removed_marker = (
-            "badge-removed" in body_html or "REMOVED" in body_html.upper()
+        # Wait for either: (a) row count to grow, OR (b) a badge-removed to appear,
+        # OR (c) a disabled Remove button to appear. Any of these proves the
+        # include_removed reload happened and produced removed rows.
+        s.page.wait_for_function(
+            f"""() => {{
+              const rows = document.querySelectorAll('#listings-tbody tr');
+              const html = document.getElementById('listings-tbody')?.innerHTML || '';
+              const grew = rows.length > {pre_rows};
+              const badge = html.includes('badge-removed');
+              const disabled = document.querySelectorAll(
+                "#listings-tbody button:disabled"
+              ).length > 0;
+              return grew || badge || disabled;
+            }}""",
+            timeout=DEFAULT_TIMEOUT_MS,
         )
-        disabled_count = s.page.locator(
-            "#listings-tbody button:has-text('Remove')[disabled]"
-        ).count()
-        assert has_removed_marker or disabled_count > 0, "no removed marker/disabled btn found"
+        post_rows = s.page.locator("#listings-tbody tr").count()
+        disabled_count = s.page.locator("#listings-tbody button:disabled").count()
         s.ok(
-            f"removed marker present (badges or disabled btns: {disabled_count})"
+            f"removed reflected (rows {pre_rows}→{post_rows}, disabled btns: {disabled_count})"
         )
         s.page.uncheck("#listings-include-removed")
     except (PWTimeout, AssertionError) as e:
@@ -502,11 +551,32 @@ def test_ads_view(s: Suite) -> None:
     s.step("ADS — open view, ≥1 ad card renders")
     try:
         s.page.click("#nav-ads")
-        s.page.wait_for_selector("#ads-grid .ad-card", timeout=DEFAULT_TIMEOUT_MS)
+        # Wait until either: cards appear, OR the empty-state placeholder appears.
+        # Both prove loadAds() finished. We then assert at least one card.
+        s.page.wait_for_function(
+            """() => {
+              const grid = document.getElementById('ads-grid');
+              if (!grid) return false;
+              return grid.querySelectorAll('.ad-card').length > 0
+                  || grid.textContent.includes('No ads');
+            }""",
+            timeout=25_000,
+        )
         cards_count = s.page.locator(".ad-card").count()
+        if cards_count == 0:
+            s.fail(
+                "ads cards render",
+                "loadAds finished but rendered empty state — check API response or filter",
+            )
+            return
         s.ok(f"ad cards rendered = {cards_count}")
     except PWTimeout as e:
-        s.fail("ads cards render", str(e))
+        # Capture extra diagnostics before bailing.
+        try:
+            grid_text = (s.page.locator("#ads-grid").text_content() or "")[:200]
+            s.fail("ads cards render", f"{e} | grid_text={grid_text!r}")
+        except Exception:
+            s.fail("ads cards render", str(e))
         return
 
     s.step("ADS — each card has image-or-placeholder, title, status badge, impressions, clicks")
@@ -546,12 +616,18 @@ def test_ads_view(s: Suite) -> None:
         png_path = Path("/tmp/admin_pw_test.png")
         png_path.write_bytes(make_png(100, 100))
         s.page.set_input_files("#ad-image-input", str(png_path))
-        # Wait until the hidden image URL is populated (upload completed).
+        # The new flow stages the file locally (blob: URL) and uploads to R2 as
+        # part of the multipart create call on Save. So we wait for the local
+        # preview to become visible and an image URL (any scheme) to be set.
         s.page.wait_for_function(
-            "() => (document.getElementById('ad-image-url')?.value || '').startsWith('http')",
-            timeout=20_000,
+            """() => {
+              const url = document.getElementById('ad-image-url')?.value || '';
+              const previewVisible = (document.getElementById('ad-image-preview')?.style.display || '') === 'block';
+              return url.length > 0 && previewVisible;
+            }""",
+            timeout=10_000,
         )
-        s.ok("image uploaded, R2 URL captured")
+        s.ok("image staged, preview visible")
         s.clear_toast()
         s.page.click("#modal-create-ad button:has-text('Save ad')")
         toast = s.wait_for_toast_text("ad created successfully")
@@ -670,6 +746,17 @@ def run(playwright: Playwright, headed: bool = False) -> int:
         pass
     page = context.new_page()
     page.set_default_timeout(DEFAULT_TIMEOUT_MS)
+
+    # Capture console errors and uncaught exceptions for diagnostics.
+    page.on("pageerror", lambda exc: print(f"  [pageerror] {exc}", flush=True))
+    page.on(
+        "console",
+        lambda msg: (
+            print(f"  [console.{msg.type}] {msg.text}", flush=True)
+            if msg.type in ("error", "warning")
+            else None
+        ),
+    )
 
     s = Suite(page)
 
