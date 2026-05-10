@@ -932,6 +932,11 @@ async function loadListings() {
   const search = document.getElementById('listings-search').value.trim();
   const status = document.getElementById('listings-status-filter').value;
   const includeRemoved = document.getElementById('listings-include-removed').checked;
+  // Capture the tab at call-time. If the user switches tabs during the
+  // fetch, the slower response would otherwise overwrite the new tab's
+  // data, leaving rows whose IDs don't match the current tab and
+  // producing 404s on subsequent moderation actions.
+  const requestedTab = currentListingTab;
 
   const params = new URLSearchParams({ page: listingsPage, size: 20 });
   if (search) params.set('search', search);
@@ -939,9 +944,11 @@ async function loadListings() {
   if (includeRemoved) params.set('include_removed', 'true');
 
   try {
-    const data = await apiFetch(`/admin/listings/${currentListingTab}?${params}`);
+    const data = await apiFetch(`/admin/listings/${requestedTab}?${params}`);
+    if (requestedTab !== currentListingTab) return;  // stale response
     renderListingsTable(data);
   } catch (e) {
+    if (requestedTab !== currentListingTab) return;
     showToast(e.message, 'error');
   }
 }

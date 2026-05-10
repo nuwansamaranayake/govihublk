@@ -683,10 +683,10 @@ def test_ads_view(s: Suite) -> None:
             s.page.fill("#confirm-delete-input", "DELETE")
             s.page.click("#modal-confirm-action button:has-text('Confirm')")
         except PWTimeout:
-            # No DELETE confirmation step — just continue: ad was already deleted.
+            # No DELETE confirmation step — ad was already deleted by first Confirm.
             s.ok("ad delete confirmed in single step (no DELETE word required)")
-        # In either case: wait for delete success toast, then card disappears.
-        s.page.wait_for_selector("#toast.success", timeout=DEFAULT_TIMEOUT_MS)
+        # The toast may fade by the time we poll (3.5s auto-hide). The card
+        # disappearing from the grid is the true success signal — assert that.
         s.page.wait_for_function(
             f"() => !Array.from(document.querySelectorAll('.ad-card-title'))"
             f".some(t => t.textContent.includes({test_ad_title!r}))",
@@ -754,6 +754,23 @@ def run(playwright: Playwright, headed: bool = False) -> int:
         lambda msg: (
             print(f"  [console.{msg.type}] {msg.text}", flush=True)
             if msg.type in ("error", "warning")
+            else None
+        ),
+    )
+    # Log DELETE requests against the listings/ads endpoints for diagnostics.
+    page.on(
+        "request",
+        lambda req: (
+            print(f"  [req.{req.method}] {req.url}", flush=True)
+            if req.method in ("DELETE",) and "/admin/" in req.url
+            else None
+        ),
+    )
+    page.on(
+        "response",
+        lambda res: (
+            print(f"  [resp.{res.status}] {res.request.method} {res.url}", flush=True)
+            if "/admin/listings/" in res.url and res.request.method == "DELETE"
             else None
         ),
     )
