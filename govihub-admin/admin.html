@@ -533,13 +533,16 @@
 const API = 'https://spices.govihublk.com/api/v1';
 
 const AI_CHIPS = [
+  "How many matches were processed last month?",
   "How many farmers signed up this week?",
   "Which spice has the most harvest listings?",
+  "Show ad performance for the last 7 days",
   "How many unmatched harvest listings exist?",
+  "What is the match acceptance rate?",
   "Which districts have the most farmers?",
   "How many buyers are on the platform?",
-  "Show ad performance — top by impressions",
-  "What is the user breakdown by role?"
+  "Show new user registrations by role",
+  "What crops have active demand postings?"
 ];
 
 const LISTING_STATUSES = {
@@ -1014,7 +1017,7 @@ async function confirmRemoveListing() {
       body: JSON.stringify({ reason, notes: notes || null })
     });
     closeModal('remove-listing');
-    showToast('Listing removed', 'success');
+    showToast('Listing removed successfully', 'success');
     loadListings();
   } catch (e) {
     showToast(e.message, 'error');
@@ -1217,10 +1220,10 @@ async function saveAd() {
   try {
     if (id) {
       await apiFetch(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-      showToast('Ad updated', 'success');
+      showToast('Ad updated successfully', 'success');
     } else {
       await apiFetch('/admin/ads', { method: 'POST', body: JSON.stringify(payload) });
-      showToast('Ad created', 'success');
+      showToast('Ad created successfully', 'success');
     }
     closeModal('create-ad');
     loadAds();
