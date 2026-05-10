@@ -1,10 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { PhoneInput, isValidE164Phone } from "@/components/ui/PhoneInput";
+
+// ── Username real-time check ──────────────────────────────────────────────
+// Mirrors the codes emitted by GET /api/v1/auth/beta/username-check.
+type UsernameStatus =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "invalid"; code: "REQUIRED" | "TOO_SHORT" | "TOO_LONG" | "HAS_SPACE" | "INVALID_CHARS"; offending?: string }
+  | { kind: "taken"; suggestions: string[] }
+  | { kind: "available" };
+
+function useUsernameStatus(value: string, apiUrl: string): UsernameStatus {
+  const [status, setStatus] = useState<UsernameStatus>({ kind: "idle" });
+
+  useEffect(() => {
+    if (!value) {
+      setStatus({ kind: "idle" });
+      return;
+    }
+    setStatus({ kind: "checking" });
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${apiUrl}/auth/beta/username-check?u=${encodeURIComponent(value)}`,
+          { signal: ctrl.signal }
+        );
+        // 429 → stay idle. User can still submit; server-side registration
+        // validation will catch anything real.
+        if (res.status === 429) {
+          console.warn("username-check rate limit hit; skipping real-time feedback");
+          setStatus({ kind: "idle" });
+          return;
+        }
+        if (!res.ok) {
+          setStatus({ kind: "idle" });
+          return;
+        }
+        const data = await res.json();
+        if (!data.valid) {
+          setStatus({ kind: "invalid", code: data.code, offending: data.offending });
+        } else if (data.available) {
+          setStatus({ kind: "available" });
+        } else {
+          setStatus({ kind: "taken", suggestions: data.suggestions || [] });
+        }
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        // Network failure — fail silent, submit-time validation catches it.
+        setStatus({ kind: "idle" });
+      }
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [value, apiUrl]);
+
+  return status;
+}
 
 const DISTRICTS = [
   "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
@@ -67,12 +126,19 @@ export default function BetaLoginPage() {
   // Register state
   const [regName, setRegName] = useState("");
   const [regUsername, setRegUsername] = useState("");
+  const [regUsernameError, setRegUsernameError] = useState<string | null>(null);
   const [regPassword, setRegPassword] = useState("");
   const [showRegPw, setShowRegPw] = useState(false);
   const [regRole, setRegRole] = useState("farmer");
   const [regDistrict, setRegDistrict] = useState("");
   const [regLanguage, setRegLanguage] = useState<"si" | "en">("si");
   const [regPhone, setRegPhone] = useState("");
+
+  // Real-time username availability / validity (debounced 400ms).
+  // Re-runs automatically when regUsername changes — including when a
+  // suggestion button calls setRegUsername(s) below, which flips status
+  // back to 'available' without the user touching the field.
+  const usernameStatus = useUsernameStatus(regUsername.trim(), API_URL);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,9 +180,15 @@ export default function BetaLoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setRegUsernameError(null);
+    // Username-specific errors surface inline below the field; everything
+    // else (required fields, password, district, phone) still uses the
+    // cross-field banner.
     if (!regName.trim()) { setError(t('requiredFields')); return; }
-    if (!regUsername.trim()) { setError(t('requiredFields')); return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(regUsername.trim())) { setError(t('usernameHint')); return; }
+    if (!regUsername.trim()) {
+      setRegUsernameError(t('username_error_required'));
+      return;
+    }
     if (regPassword.length < 6) { setError(t('passwordHint')); return; }
     if (!regDistrict) { setError(t('selectDistrict')); return; }
     if (!isValidE164Phone(regPhone)) { setError(t('phone_invalid')); return; }
@@ -138,7 +210,18 @@ export default function BetaLoginPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Registration failed (${res.status})`);
+        // New typed shape: detail[0] = {field, code, message, offending}
+        const first = Array.isArray(err?.detail) ? err.detail[0] : null;
+        if (first?.field === 'username' && typeof first?.code === 'string') {
+          const codeKey = `username_error_${first.code.toLowerCase()}`;
+          setRegUsernameError(t(codeKey));
+          throw new Error('__handled__');
+        }
+        // Fallback: legacy {loc, msg, type} or a string detail
+        const msg = typeof err.detail === 'string'
+          ? err.detail
+          : first?.msg || `Registration failed (${res.status})`;
+        throw new Error(msg);
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
@@ -153,7 +236,10 @@ export default function BetaLoginPage() {
       // Full page navigation to reset all React state
       window.location.href = `/${locale}/${role}/dashboard`;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Registration failed");
+      // '__handled__' means we already surfaced a username-specific inline
+      // error and the banner must stay clean.
+      const msg = e instanceof Error ? e.message : "Registration failed";
+      if (msg !== '__handled__') setError(msg);
     } finally {
       setLoading(false);
     }
@@ -281,12 +367,62 @@ export default function BetaLoginPage() {
               <input
                 type="text"
                 value={regUsername}
-                onChange={(e) => setRegUsername(e.target.value)}
+                onChange={(e) => {
+                  setRegUsername(e.target.value);
+                  // Clear any stale submit-time error the moment the user types again
+                  if (regUsernameError) setRegUsernameError(null);
+                }}
                 placeholder={t('usernamePlaceholder')}
                 autoComplete="username"
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
               />
-              <p className="text-xs text-neutral-400 mt-1">{t('usernameHint')}</p>
+              {/* Persistent helper text (T1) */}
+              <p className="text-xs text-neutral-500 mt-1">{t('username_rules')}</p>
+
+              {/* Real-time status (T2–T6) */}
+              {regUsernameError && (
+                <p className="text-xs text-red-600 mt-1" role="alert">
+                  {regUsernameError}
+                </p>
+              )}
+              {!regUsernameError && usernameStatus.kind === 'checking' && (
+                <p className="text-xs text-neutral-400 mt-1">{t('username_checking')}</p>
+              )}
+              {!regUsernameError && usernameStatus.kind === 'invalid' && (
+                <p className="text-xs text-red-600 mt-1" role="alert">
+                  {t(`username_error_${usernameStatus.code.toLowerCase()}`)}
+                  {usernameStatus.code === 'INVALID_CHARS' && usernameStatus.offending ? (
+                    <span className="ml-1 text-neutral-600">
+                      ({usernameStatus.offending.split('').join(' ')})
+                    </span>
+                  ) : null}
+                </p>
+              )}
+              {!regUsernameError && usernameStatus.kind === 'taken' && (
+                <div className="text-xs text-red-600 mt-1" role="alert">
+                  <p>{t('username_error_taken')}</p>
+                  {usernameStatus.suggestions.length > 0 && (
+                    <p className="mt-1 text-neutral-600">
+                      {t('username_suggestions')}:
+                      {usernameStatus.suggestions.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setRegUsername(s)}
+                          className="text-green-700 underline mx-1"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </p>
+                  )}
+                </div>
+              )}
+              {!regUsernameError && usernameStatus.kind === 'available' && (
+                <p className="text-xs text-green-700 mt-1">
+                  ✓ {t('username_available')}
+                </p>
+              )}
             </div>
 
             {/* Password */}

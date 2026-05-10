@@ -148,7 +148,17 @@
     "phone_invalid": "Please enter a valid phone number with country code.",
     "complete_your_profile": "Complete your profile",
     "save_and_continue": "Save and continue",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "username_rules": "Use English letters, numbers, and underscore (_). No spaces or symbols. 3 to 20 characters.",
+    "username_checking": "Checking availability...",
+    "username_available": "Available",
+    "username_suggestions": "Try one of these",
+    "username_error_required": "Username is required",
+    "username_error_too_short": "Too short. Use at least 3 characters",
+    "username_error_too_long": "Too long. Maximum 20 characters",
+    "username_error_has_space": "No spaces allowed. Use underscore (_) instead",
+    "username_error_invalid_chars": "Remove symbols. Use only letters, numbers, and underscore (_)",
+    "username_error_taken": "This username is already taken"
   },
   "roles": {
     "farmer": "Farmer",
