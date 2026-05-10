@@ -62,6 +62,7 @@ class AdminUserRead(BaseModel):
     is_verified: bool
     avatar_url: Optional[str] = None
     last_login_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -75,6 +76,17 @@ class ResetPasswordRequest(BaseModel):
 class ResetPasswordResponse(BaseModel):
     success: bool
     username: str
+
+
+class ResetPasswordTempResponse(BaseModel):
+    """Returned by /users/{id}/reset-password-temp.
+
+    The temp_password is shown to the admin once. The server does NOT log it
+    (CRITICAL RULE #8) and there is no way to retrieve it after the response.
+    """
+    success: bool = True
+    username: str
+    temp_password: str
 
 
 class AdminUserUpdate(BaseModel):
@@ -326,3 +338,70 @@ class BroadcastNotificationRequest(BaseModel):
 class BroadcastNotificationResponse(BaseModel):
     queued: int
     message: str
+
+
+# ---------------------------------------------------------------------------
+# Listing moderation (Phase 1.4)
+# ---------------------------------------------------------------------------
+
+
+class AdminListingListFilter(BaseModel):
+    search: Optional[str] = None
+    crop_id: Optional[UUID] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    include_removed: bool = False
+    page: int = Field(1, ge=1)
+    size: int = Field(20, ge=1, le=100)
+
+
+class AdminListingListResponse(BaseModel):
+    """Generic paginated wrapper for harvest/demand/supply listing rows.
+
+    `items` are pre-serialised dicts (one shape per kind) so the admin grid can
+    render any kind without the API needing one Pydantic class per shape. The
+    serialisers in app.admin.listing_ops produce the canonical fields.
+    """
+    items: List[Dict[str, Any]]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
+class ListingRemovalRequest(BaseModel):
+    reason: str = Field(
+        ...,
+        pattern="^(spam|duplicate|fraud|policy_violation|user_request|stale|other)$",
+        description="Canonical removal reason category.",
+    )
+    notes: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Free-text notes appended to the removal_reason record.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# AI Intelligence (Phase 1.6)
+# ---------------------------------------------------------------------------
+
+
+class AIQueryRequest(BaseModel):
+    query: str = Field(
+        ...,
+        min_length=3,
+        max_length=500,
+        description="Natural-language admin question.",
+    )
+
+
+class AIQueryToolCall(BaseModel):
+    name: str
+    args: Dict[str, Any]
+
+
+class AIQueryResponse(BaseModel):
+    answer: str
+    tool_calls: List[AIQueryToolCall]
+    iterations: int

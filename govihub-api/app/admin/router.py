@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.schemas import (
+    AdminListingListFilter,
+    AdminListingListResponse,
     AdminMatchListFilter,
     AdminMatchListResponse,
     AdminMatchRead,
@@ -16,6 +18,8 @@ from app.admin.schemas import (
     AdminUserListResponse,
     AdminUserRead,
     AdminUserUpdate,
+    AIQueryRequest,
+    AIQueryResponse,
     BroadcastNotificationRequest,
     BroadcastNotificationResponse,
     CancelMatchRequest,
@@ -31,16 +35,22 @@ from app.admin.schemas import (
     KnowledgeIngestRequest,
     KnowledgeChunkRead,
     KnowledgeStats,
+    ListingRemovalRequest,
     MatchAnalytics,
     ResetPasswordRequest,
     ResetPasswordResponse,
+    ResetPasswordTempResponse,
     ResolveDisputeRequest,
     SystemHealth,
     UserAnalytics,
 )
 from app.admin.service import AdminService
+from app.admin import ai_query as ai_query_mod
+from app.admin import listing_ops
+from app.admin import user_ops
 from app.auth.password import hash_password
-from app.dependencies import get_db, get_redis, require_role
+from app.dependencies import get_current_user, get_db, get_redis, require_role
+from app.users.models import User
 
 logger = structlog.get_logger()
 
@@ -552,3 +562,234 @@ async def broadcast_notification(
         data=body.data,
     )
     return BroadcastNotificationResponse(**result)
+
+
+# ---------------------------------------------------------------------------
+# User Management — Phase 1.3 addition: auto-generated temp password
+# ---------------------------------------------------------------------------
+
+
+@router.put(
+    "/users/{user_id}/reset-password-temp",
+    response_model=ResetPasswordTempResponse,
+    summary="Reset a user's password to a freshly generated temp value",
+)
+async def reset_user_password_temp(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    """Generate a temp password server-side, store its hash, return plaintext once.
+
+    The plaintext is shown to the admin in the panel and never persisted or
+    logged. The targeted user must change it on next login (enforced by the
+    existing /auth/beta/change-password flow).
+    """
+    user, temp_pw = await user_ops.reset_user_password_temp(db, user_id)
+    await db.commit()
+    return ResetPasswordTempResponse(
+        username=user.username or user.email,
+        temp_password=temp_pw,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Listing Moderation — Phase 1.4
+# ---------------------------------------------------------------------------
+
+
+def _listing_filters(
+    search: Optional[str],
+    crop_id: Optional[UUID],
+    category: Optional[str],
+    status: Optional[str],
+    include_removed: bool,
+    page: int,
+    size: int,
+) -> AdminListingListFilter:
+    return AdminListingListFilter(
+        search=search,
+        crop_id=crop_id,
+        category=category,
+        status=status,
+        include_removed=include_removed,
+        page=page,
+        size=size,
+    )
+
+
+@router.get(
+    "/listings/harvest",
+    response_model=AdminListingListResponse,
+    summary="List harvest listings (admin moderation view)",
+)
+async def admin_list_harvest(
+    search: Optional[str] = Query(None),
+    crop_id: Optional[UUID] = Query(None),
+    status: Optional[str] = Query(None),
+    include_removed: bool = Query(False),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    result = await listing_ops.list_harvest_listings(
+        db,
+        search=search,
+        crop_id=crop_id,
+        status=status,
+        include_removed=include_removed,
+        page=page,
+        size=size,
+    )
+    return AdminListingListResponse(**result)
+
+
+@router.delete(
+    "/listings/harvest/{listing_id}",
+    response_model=dict,
+    summary="Remove a harvest listing (audit-trailed soft removal)",
+)
+async def admin_remove_harvest(
+    listing_id: UUID,
+    body: ListingRemovalRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+    current=Depends(get_current_user),
+):
+    require_role("admin")  # belt-and-braces; AdminRequired already gated above
+    result = await listing_ops.remove_harvest_listing(
+        db,
+        listing_id=listing_id,
+        reason=body.reason,
+        notes=body.notes,
+        admin_id=current.id,
+    )
+    await db.commit()
+    return result
+
+
+@router.get(
+    "/listings/demand",
+    response_model=AdminListingListResponse,
+    summary="List demand postings (admin moderation view)",
+)
+async def admin_list_demand(
+    search: Optional[str] = Query(None),
+    crop_id: Optional[UUID] = Query(None),
+    status: Optional[str] = Query(None),
+    include_removed: bool = Query(False),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    result = await listing_ops.list_demand_postings(
+        db,
+        search=search,
+        crop_id=crop_id,
+        status=status,
+        include_removed=include_removed,
+        page=page,
+        size=size,
+    )
+    return AdminListingListResponse(**result)
+
+
+@router.delete(
+    "/listings/demand/{posting_id}",
+    response_model=dict,
+    summary="Remove a demand posting (audit-trailed soft removal)",
+)
+async def admin_remove_demand(
+    posting_id: UUID,
+    body: ListingRemovalRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+    current=Depends(get_current_user),
+):
+    result = await listing_ops.remove_demand_posting(
+        db,
+        posting_id=posting_id,
+        reason=body.reason,
+        notes=body.notes,
+        admin_id=current.id,
+    )
+    await db.commit()
+    return result
+
+
+@router.get(
+    "/listings/supply",
+    response_model=AdminListingListResponse,
+    summary="List supply listings (admin moderation view)",
+)
+async def admin_list_supply(
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    include_removed: bool = Query(False),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    result = await listing_ops.list_supply_listings(
+        db,
+        search=search,
+        category=category,
+        status=status,
+        include_removed=include_removed,
+        page=page,
+        size=size,
+    )
+    return AdminListingListResponse(**result)
+
+
+@router.delete(
+    "/listings/supply/{listing_id}",
+    response_model=dict,
+    summary="Remove a supply listing (audit-trailed soft removal)",
+)
+async def admin_remove_supply(
+    listing_id: UUID,
+    body: ListingRemovalRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+    current=Depends(get_current_user),
+):
+    result = await listing_ops.remove_supply_listing(
+        db,
+        listing_id=listing_id,
+        reason=body.reason,
+        notes=body.notes,
+        admin_id=current.id,
+    )
+    await db.commit()
+    return result
+
+
+# ---------------------------------------------------------------------------
+# AI Intelligence — Phase 1.6
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/ai/query",
+    response_model=AIQueryResponse,
+    summary="Ask the admin intelligence assistant a natural-language question",
+)
+async def admin_ai_query(
+    body: AIQueryRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+    current=Depends(get_current_user),
+):
+    redis = await get_redis()
+    result = await ai_query_mod.answer_admin_query(
+        db=db,
+        redis=redis,
+        admin_id=current.id,
+        query=body.query,
+    )
+    return AIQueryResponse(**result)

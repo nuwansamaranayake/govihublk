@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "anthropic/claude-sonnet-4-20250514"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    # Admin AI Intelligence (separate, cheaper tool-capable model). Empty
+    # falls back to OPENROUTER_MODEL.
+    ADMIN_AI_MODEL: str = ""
 
     # External APIs
     OPENWEATHER_API_KEY: str = ""

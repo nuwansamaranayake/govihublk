@@ -43,6 +43,8 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Soft-delete timestamp set by admin DELETE /admin/users/{id}; see migration 012.
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     # Relationships
     farmer_profile: Mapped[Optional["FarmerProfile"]] = relationship(

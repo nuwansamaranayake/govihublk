@@ -225,9 +225,17 @@ class AdminService:
         return user
 
     async def delete_user(self, user_id: UUID) -> None:
-        """Soft-delete a user by deactivating their account."""
+        """Soft-delete a user.
+
+        Sets is_active=False AND stamps deleted_at. The two are kept distinct
+        so that "deactivated by user themselves" (is_active=False, deleted_at
+        NULL) remains separable from "removed by admin" (deleted_at set).
+        Admin list/AI queries filter on deleted_at IS NULL by default.
+        """
         user = await self.get_user_detail(user_id)
         user.is_active = False
+        if user.deleted_at is None:
+            user.deleted_at = datetime.now(timezone.utc)
         await self.db.flush()
         logger.info("admin_user_deactivated", user_id=str(user_id))
 

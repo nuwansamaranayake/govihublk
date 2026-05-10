@@ -89,6 +89,13 @@ class HarvestListing(Base):
     delivery_radius_km: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
 
+    # Admin moderation (set by admin panel; see migration 012)
+    removal_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    removed_by: Mapped[Optional["UUID"]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     farmer: Mapped["app.users.models.User"] = relationship(foreign_keys=[farmer_id])
     crop: Mapped["CropTaxonomy"] = relationship(foreign_keys=[crop_id])
@@ -129,6 +136,13 @@ class DemandPosting(Base):
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     recurrence_pattern: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     sector: Mapped[Optional[str]] = mapped_column(String(50), default="general", server_default="general", index=True)
+
+    # Admin moderation (set by admin panel; see migration 012)
+    removal_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    removed_by: Mapped[Optional["UUID"]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     buyer: Mapped["app.users.models.User"] = relationship(foreign_keys=[buyer_id])

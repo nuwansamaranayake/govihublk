@@ -1,11 +1,11 @@
 """GoviHub Marketplace Model — SupplyListing."""
 
 import enum
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from geoalchemy2 import Geography
-from sqlalchemy import Boolean, Date, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -54,6 +54,13 @@ class SupplyListing(Base):
         default=SupplyStatus.active,
         server_default="active",
     )
+
+    # Admin moderation (set by admin panel; see migration 012)
+    removal_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    removed_by: Mapped[Optional["UUID"]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     supplier: Mapped["app.users.models.User"] = relationship(foreign_keys=[supplier_id])
 
