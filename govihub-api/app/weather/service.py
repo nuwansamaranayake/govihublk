@@ -446,17 +446,33 @@ def evaluate_crop_alerts(
 ) -> list[dict]:
     """
     Evaluate weather forecast against crop profiles to generate alerts.
-    If crop_types is None, evaluate all profiles.
+
+    crop_types semantics:
+      * None or empty list  -> NO alerts (returns []).
+        Farmers who have not registered any crops should not see alerts
+        for crops they do not grow. The frontend dashboard already shows a
+        "Select your crops" CTA when crop_alerts is empty.
+      * Non-empty list      -> evaluate only those crops.
+
+    Earlier behaviour treated None as "evaluate every profile", which made
+    the dashboard show the first 4 spice crops (black_pepper, cinnamon,
+    turmeric, ginger) for every farmer regardless of registration. That
+    was reported as a bug and is what this signature change fixes. If a
+    future caller genuinely wants "all profiles", it must pass them
+    explicitly via list(CROP_WEATHER_PROFILES.keys()).
+
     growth_stages: optional dict mapping crop_type -> current growth stage.
     Returns alerts with bilingual messages.
     """
-    alerts = []
+    alerts: list[dict] = []
+    if not crop_types:
+        return alerts
     daily = forecast.get("daily", [])
     hourly = forecast.get("hourly_today", [])
     if not daily:
         return alerts
 
-    types_to_check = crop_types or list(CROP_WEATHER_PROFILES.keys())
+    types_to_check = crop_types
     growth_stages = growth_stages or {}
 
     # Get current soil temp from hourly if available
