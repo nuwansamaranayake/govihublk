@@ -191,8 +191,18 @@
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-password" placeholder="password" autocomplete="current-password"
-               onkeydown="if(event.key==='Enter') doLogin()" />
+        <div style="position:relative;">
+          <input type="password" id="login-password" placeholder="password" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter') doLogin()"
+                 style="padding-right:44px;" />
+          <button type="button" id="login-pw-toggle"
+                  aria-label="Show password"
+                  aria-pressed="false"
+                  onclick="toggleLoginPasswordVisibility()"
+                  style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:6px 8px;color:#64748B;border-radius:6px;">
+            👁
+          </button>
+        </div>
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;" onclick="doLogin()">
         Sign in
@@ -629,6 +639,20 @@ function doLogout() {
   currentUser = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+}
+
+function toggleLoginPasswordVisibility() {
+  const input = document.getElementById('login-password');
+  const btn = document.getElementById('login-pw-toggle');
+  if (!input || !btn) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  // Closed-eye when password is visible (next click hides), eye when hidden.
+  btn.textContent = showing ? '👁' : '🙈';
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+  // Keep focus on the input so typing continues seamlessly.
+  input.focus();
 }
 
 // =============================================
