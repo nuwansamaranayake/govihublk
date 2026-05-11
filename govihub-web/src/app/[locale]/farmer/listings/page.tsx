@@ -64,6 +64,11 @@ export default function FarmerListingsPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Image upload state — images uploaded immediately and tracked as URLs.
+  // The listing-create payload includes these under `images`.
+  const [images, setImages] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const MAX_IMAGES = 5;
 
   const load = () => {
     setLoading(true);
@@ -90,11 +95,63 @@ export default function FarmerListingsPage() {
     }
   }, [isReady]);
 
-  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setError(null); setShowModal(true); };
+  const openCreate = () => {
+    setEditId(null);
+    setForm(EMPTY_FORM);
+    setImages([]);
+    setError(null);
+    setShowModal(true);
+  };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
     setForm({ crop_id: l.crop?.id || l.crop_id || '', variety:l.variety || '', quantity_kg:String(l.quantity_kg), price_per_kg:String(l.price_per_kg), min_price_per_kg:String(l.min_price_per_kg || ''), available_from:l.available_from?.split('T')[0] || '', available_until:l.available_until?.split('T')[0] || '', description:l.description || '', quality_grade:l.quality_grade || 'A', is_organic:l.is_organic || false, delivery_available:l.delivery_available || false });
+    // Hydrate existing images. Backend stores either an array of URL strings
+    // or an array of {url}-shaped objects; normalise both.
+    const existing: string[] = Array.isArray(l.images)
+      ? l.images
+          .map((it: any) => (typeof it === "string" ? it : it?.url))
+          .filter((u: any): u is string => typeof u === "string" && u.length > 0)
+      : [];
+    setImages(existing);
+    setError(null);
     setShowModal(true);
+  };
+
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";  // allow re-selecting the same file later
+    if (files.length === 0) return;
+    if (images.length + files.length > MAX_IMAGES) {
+      setError(`Up to ${MAX_IMAGES} images per listing.`);
+      return;
+    }
+    setError(null);
+    setUploadingImages(true);
+    try {
+      for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`"${file.name}" is larger than 10 MB.`);
+          continue;
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await api.upload<{ url: string; folder: string }>(
+          "/uploads/image?folder=harvests",
+          fd,
+        );
+        if (res?.url) {
+          setImages(prev => [...prev, res.url]);
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || "Image upload failed");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const removeImage = (url: string) => {
+    setImages(prev => prev.filter(u => u !== url));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,6 +162,14 @@ export default function FarmerListingsPage() {
       const payload: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(form)) {
         if (v !== "" && v !== undefined) payload[k] = v;
+      }
+      // Include uploaded image URLs. Backend stores `images` as JSONB on
+      // harvest_listings; we send a list of public URL strings.
+      if (images.length > 0) {
+        payload.images = images;
+      } else if (editId) {
+        // On edit, explicitly null out when the admin removed all images.
+        payload.images = null;
       }
       if (editId) {
         await api.put(`/listings/harvest/${editId}`, payload);
@@ -238,11 +303,49 @@ export default function FarmerListingsPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-neutral-700 mb-1.5">{t("farmer.photos")}</p>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-green-400 transition-colors">
-              <span className="text-3xl mb-2" aria-hidden="true">📸</span>
-              <span className="text-sm text-neutral-500">{t("common.tapToAddPhotos")}</span>
-              <input type="file" accept="image/*" multiple className="sr-only" />
-            </label>
+
+            {/* Thumbnails of already-uploaded images */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {images.map((url) => (
+                  <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-200 bg-neutral-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(url)}
+                      aria-label="Remove image"
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload zone, hidden when at the cap so the cap is visually clear */}
+            {images.length < MAX_IMAGES && (
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-green-400 transition-colors">
+                <span className="text-3xl mb-2" aria-hidden="true">📸</span>
+                <span className="text-sm text-neutral-500">
+                  {uploadingImages
+                    ? "Uploading..."
+                    : t("common.tapToAddPhotos")}
+                </span>
+                <span className="text-xs text-neutral-400 mt-1">
+                  {images.length}/{MAX_IMAGES} • JPEG, PNG, WebP — max 10 MB each
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="sr-only"
+                  disabled={uploadingImages}
+                  onChange={handleImageSelect}
+                />
+              </label>
+            )}
           </div>
         </form>
       </Modal>
