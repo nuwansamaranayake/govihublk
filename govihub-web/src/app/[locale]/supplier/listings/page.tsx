@@ -27,6 +27,10 @@ interface Listing {
   delivery_available: boolean;
   delivery_radius_km?: number;
   stock_quantity?: number;
+  // Photos are stored in supply_listings.images (JSONB) and exposed by the
+  // API as `photos` per SupplyListingRead.
+  photos?: any;
+  images?: any;
   created_at?: string;
 }
 
@@ -51,6 +55,11 @@ export default function SupplierListingsPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Photo upload state — photos uploaded immediately and tracked as URLs.
+  // Submitted under SupplyListingCreate.photos (Optional[list[str]]).
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const MAX_PHOTOS = 5;
 
   const load = () => {
     setLoading(true);
@@ -69,12 +78,67 @@ export default function SupplierListingsPage() {
 
   useEffect(() => { if (isReady) load(); }, [isReady]);
 
-  const openCreate = () => { setEditId(null); setForm(EMPTY_FORM); setError(null); setShowModal(true); };
+  const openCreate = () => {
+    setEditId(null);
+    setForm(EMPTY_FORM);
+    setPhotos([]);
+    setError(null);
+    setShowModal(true);
+  };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
     setForm({ name:l.name||"", category:l.category, description:l.description||"", price:String(l.price||""), unit:l.unit||"kg", stock_quantity:String(l.stock_quantity||""), delivery_available:l.delivery_available||false });
+    // Hydrate existing photos. API exposes `photos` per schema; some older
+    // rows may surface them under `images` (the DB column). Accept either,
+    // and normalise string[] vs {url}[] shapes.
+    const raw: any[] = Array.isArray(l.photos)
+      ? l.photos
+      : Array.isArray(l.images)
+        ? l.images
+        : [];
+    const existing: string[] = raw
+      .map((it: any) => (typeof it === "string" ? it : it?.url))
+      .filter((u: any): u is string => typeof u === "string" && u.length > 0);
+    setPhotos(existing);
     setError(null);
     setShowModal(true);
+  };
+
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";  // allow re-selecting the same file later
+    if (files.length === 0) return;
+    if (photos.length + files.length > MAX_PHOTOS) {
+      setError(`Up to ${MAX_PHOTOS} photos per listing.`);
+      return;
+    }
+    setError(null);
+    setUploadingPhotos(true);
+    try {
+      for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`"${file.name}" is larger than 10 MB.`);
+          continue;
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await api.upload<{ url: string; folder: string }>(
+          "/uploads/image?folder=supply",
+          fd,
+        );
+        if (res?.url) {
+          setPhotos(prev => [...prev, res.url]);
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || "Photo upload failed");
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const removePhoto = (url: string) => {
+    setPhotos(prev => prev.filter(u => u !== url));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,6 +153,14 @@ export default function SupplierListingsPage() {
       // delivery_radius_km required when delivery_available is true
       if (payload.delivery_available && !payload.delivery_radius_km) {
         payload.delivery_radius_km = 50; // default 50km radius
+      }
+      // Include uploaded photo URLs. SupplyListingCreate.photos is
+      // Optional[list[str]] and persists into supply_listings.images (JSONB).
+      if (photos.length > 0) {
+        payload.photos = photos;
+      } else if (editId) {
+        // On edit, explicitly null out when the supplier removed all photos.
+        payload.photos = null;
       }
       if (editId) await api.put(`/marketplace/listings/${editId}`, payload);
       else await api.post("/marketplace/listings", payload);
@@ -201,6 +273,52 @@ export default function SupplierListingsPage() {
           </div>
           <Input label="Stock Quantity" type="number" min="0" value={form.stock_quantity}
             onChange={e => f("stock_quantity", e.target.value)} placeholder="e.g. 100" />
+
+          <div>
+            <p className="text-sm font-medium text-neutral-700 mb-1.5">Photos</p>
+
+            {/* Thumbnails of already-uploaded photos */}
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {photos.map((url) => (
+                  <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-200 bg-neutral-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(url)}
+                      aria-label="Remove photo"
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload zone (hidden once we've hit the cap so the cap is visually clear) */}
+            {photos.length < MAX_PHOTOS && (
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-blue-400 transition-colors">
+                <span className="text-3xl mb-2" aria-hidden="true">📸</span>
+                <span className="text-sm text-neutral-500">
+                  {uploadingPhotos ? "Uploading..." : t("common.tapToAddPhotos")}
+                </span>
+                <span className="text-xs text-neutral-400 mt-1">
+                  {photos.length}/{MAX_PHOTOS} • JPEG, PNG, WebP — max 10 MB each
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="sr-only"
+                  disabled={uploadingPhotos}
+                  onChange={handlePhotoSelect}
+                />
+              </label>
+            )}
+          </div>
+
           <label className="flex items-center gap-3 cursor-pointer">
             <div role="switch" aria-checked={form.delivery_available} onClick={() => f("delivery_available", !form.delivery_available)}
               className={`relative w-11 h-6 rounded-full transition-colors ${form.delivery_available?"bg-blue-500":"bg-neutral-300"}`}>
