@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = "govihub"
     R2_PUBLIC_URL: str = "https://media.govihublk.com"
+    # Optional: a Cloudflare account-scoped API token with R2 read permission.
+    # When set, the storage service auto-discovers the bucket's managed
+    # public domain (pub-<hash>.r2.dev) and uses it instead of R2_PUBLIC_URL.
+    CLOUDFLARE_API_TOKEN: str = ""
 
     # FCM (Firebase Cloud Messaging)
     FCM_CREDENTIALS_PATH: str = "/app/fcm-credentials.json"

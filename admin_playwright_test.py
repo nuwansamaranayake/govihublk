@@ -632,6 +632,35 @@ def test_ads_view(s: Suite) -> None:
         s.page.click("#modal-create-ad button:has-text('Save ad')")
         toast = s.wait_for_toast_text("ad created successfully")
         s.ok(f"toast: {toast!r}")
+
+        # CRITICAL: verify the persisted image_url is publicly loadable.
+        # Without this check a misconfigured R2_PUBLIC_URL silently produces
+        # broken <img src> in production — exactly the regression we hit.
+        try:
+            ad_image_url = s.page.evaluate(
+                f"""() => {{
+                  const card = Array.from(document.querySelectorAll('.ad-card'))
+                    .find(c => c.querySelector('.ad-card-title')?.textContent.includes({test_ad_title!r}));
+                  return card?.querySelector('img')?.src || null;
+                }}"""
+            )
+            assert ad_image_url, "new ad card has no <img> src"
+            # Use the page's own fetch so CORS/scheme behave like a real browser.
+            head_status = s.page.evaluate(
+                f"""async () => {{
+                  try {{
+                    const r = await fetch({ad_image_url!r}, {{method:'HEAD',mode:'no-cors'}});
+                    // no-cors gives opaque response; status is 0 on opaque success.
+                    // Fall back to GET if HEAD opaque is ambiguous.
+                    const r2 = await fetch({ad_image_url!r}, {{method:'GET'}});
+                    return r2.status;
+                  }} catch (e) {{ return -1; }}
+                }}"""
+            )
+            assert head_status == 200, f"image_url is not publicly readable: HTTP {head_status} {ad_image_url}"
+            s.ok(f"image_url is publicly readable (HTTP 200): {ad_image_url}")
+        except AssertionError as e:
+            s.fail("ad image_url public access", str(e))
         # Wait for modal to close + new card to appear.
         s.page.wait_for_selector("#modal-create-ad", state="hidden", timeout=DEFAULT_TIMEOUT_MS)
         s.page.wait_for_function(
