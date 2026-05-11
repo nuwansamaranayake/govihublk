@@ -148,6 +148,23 @@ async def remove_harvest_listing(
     return _serialize_harvest(listing, None, None)
 
 
+def _normalise_images(raw: Any) -> list[str]:
+    """JSONB images columns may hold string[] or [{url}]. Normalise to URL list."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        out: list[str] = []
+        for item in raw:
+            if isinstance(item, str) and item:
+                out.append(item)
+            elif isinstance(item, dict):
+                u = item.get("url")
+                if isinstance(u, str) and u:
+                    out.append(u)
+        return out
+    return []
+
+
 def _serialize_harvest(
     hl: HarvestListing,
     farmer: Optional[User],
@@ -159,15 +176,25 @@ def _serialize_harvest(
         "farmer_id": str(hl.farmer_id),
         "farmer_name": farmer.name if farmer else None,
         "farmer_email": farmer.email if farmer else None,
+        "farmer_phone": farmer.phone if farmer else None,
+        "farmer_district": farmer.district if farmer else None,
         "crop_id": str(hl.crop_id) if hl.crop_id else None,
         "crop_name": crop.name_en if crop else None,
+        "crop_name_si": crop.name_si if crop else None,
         "variety": hl.variety,
         "quantity_kg": float(hl.quantity_kg) if hl.quantity_kg is not None else None,
         "price_per_kg": float(hl.price_per_kg) if hl.price_per_kg is not None else None,
+        "min_price_per_kg": float(hl.min_price_per_kg) if hl.min_price_per_kg is not None else None,
         "quality_grade": hl.quality_grade,
         "harvest_date": hl.harvest_date.isoformat() if hl.harvest_date else None,
+        "available_from": hl.available_from.isoformat() if hl.available_from else None,
+        "available_until": hl.available_until.isoformat() if hl.available_until else None,
+        "description": hl.description,
+        "images": _normalise_images(hl.images),
         "status": hl.status.value if hasattr(hl.status, "value") else str(hl.status),
         "is_organic": hl.is_organic,
+        "delivery_available": hl.delivery_available,
+        "delivery_radius_km": hl.delivery_radius_km,
         "created_at": hl.created_at.isoformat() if hl.created_at else None,
         "removal_reason": hl.removal_reason,
         "removed_by": str(hl.removed_by) if hl.removed_by else None,
@@ -263,14 +290,21 @@ def _serialize_demand(
         "buyer_id": str(dp.buyer_id),
         "buyer_name": buyer.name if buyer else None,
         "buyer_email": buyer.email if buyer else None,
+        "buyer_phone": buyer.phone if buyer else None,
+        "buyer_district": buyer.district if buyer else None,
         "crop_id": str(dp.crop_id) if dp.crop_id else None,
         "crop_name": crop.name_en if crop else None,
+        "crop_name_si": crop.name_si if crop else None,
         "variety": dp.variety,
         "quantity_kg": float(dp.quantity_kg) if dp.quantity_kg is not None else None,
         "max_price_per_kg": float(dp.max_price_per_kg)
         if dp.max_price_per_kg is not None
         else None,
+        "quality_grade": dp.quality_grade,
         "needed_by": dp.needed_by.isoformat() if dp.needed_by else None,
+        "radius_km": dp.radius_km,
+        "is_recurring": dp.is_recurring,
+        "description": dp.description,
         "status": dp.status.value if hasattr(dp.status, "value") else str(dp.status),
         "created_at": dp.created_at.isoformat() if dp.created_at else None,
         "removal_reason": dp.removal_reason,
@@ -364,12 +398,18 @@ def _serialize_supply(
         "supplier_id": str(sl.supplier_id),
         "supplier_name": supplier.name if supplier else None,
         "supplier_email": supplier.email if supplier else None,
+        "supplier_phone": supplier.phone if supplier else None,
+        "supplier_district": supplier.district if supplier else None,
         "name": sl.name,
         "name_si": sl.name_si,
+        "description": sl.description,
         "category": sl.category.value if hasattr(sl.category, "value") else str(sl.category),
         "price": float(sl.price) if sl.price is not None else None,
         "unit": sl.unit,
         "stock_quantity": sl.stock_quantity,
+        "images": _normalise_images(sl.images),
+        "delivery_available": sl.delivery_available,
+        "delivery_radius_km": sl.delivery_radius_km,
         "status": sl.status.value if hasattr(sl.status, "value") else str(sl.status),
         "created_at": sl.created_at.isoformat() if sl.created_at else None,
         "removal_reason": sl.removal_reason,

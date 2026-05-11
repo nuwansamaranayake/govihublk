@@ -427,6 +427,19 @@
       </div>
     </div>
 
+    <div id="modal-view-listing" class="modal modal-lg" style="display:none;">
+      <div class="modal-header">
+        <div class="modal-title" id="view-listing-title">Listing details</div>
+        <button class="modal-close" onclick="closeModal('view-listing')">✕</button>
+      </div>
+      <div class="modal-body" id="view-listing-body">
+        <!-- populated by populateViewListing() -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('view-listing')">Close</button>
+      </div>
+    </div>
+
     <div id="modal-remove-listing" class="modal" style="display:none;">
       <div class="modal-header">
         <div class="modal-title">Remove listing</div>
@@ -559,6 +572,9 @@ let listingsPage = 1;
 let currentListingTab = 'harvest';
 let confirmCallback = null;
 let allAdsCache = [];
+// Stash the most recent page of listings keyed by id so the View modal
+// can render full details without HTML-embedding the JSON in onclick.
+let listingsById = {};
 // Image file pending for the in-progress New Ad form. The backend create
 // endpoint expects a multipart upload, so we hold the File until save.
 let pendingAdImageFile = null;
@@ -956,6 +972,13 @@ async function loadListings() {
 
 function renderListingsTable(data) {
   const tbody = document.getElementById('listings-tbody');
+  // Refresh the by-id cache so View can find any visible row.
+  listingsById = {};
+  if (Array.isArray(data.items)) {
+    for (const l of data.items) {
+      if (l && l.id) listingsById[l.id] = l;
+    }
+  }
   if (!data.items || data.items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">No listings found</td></tr>';
     document.getElementById('listings-pagination').innerHTML = '';
@@ -998,11 +1021,17 @@ function renderListingsTable(data) {
         </td>
         <td style="font-size:13px;">${formatDate(l.created_at)}</td>
         <td>
-          <button class="btn btn-sm btn-danger"
-                  ${isRemoved ? 'disabled' : ''}
-                  onclick="${isRemoved ? '' : `openRemoveListing('${l.id}')`}">
-            Remove
-          </button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-secondary"
+                    onclick="openViewListing('${l.id}')">
+              View
+            </button>
+            <button class="btn btn-sm btn-danger"
+                    ${isRemoved ? 'disabled' : ''}
+                    onclick="${isRemoved ? '' : `openRemoveListing('${l.id}')`}">
+              Remove
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -1040,6 +1069,150 @@ async function confirmRemoveListing() {
   } catch (e) {
     showToast(e.message, 'error');
   }
+}
+
+function openViewListing(id) {
+  const l = listingsById[id];
+  if (!l) {
+    showToast('Listing not found in current page', 'error');
+    return;
+  }
+  populateViewListing(l);
+  openModal('view-listing');
+}
+
+function _row(label, value) {
+  if (value === null || value === undefined || value === '') return '';
+  return `
+    <div style="display:grid;grid-template-columns:160px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+      <div style="font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(label)}</div>
+      <div style="font-size:14px;color:#0F172A;word-break:break-word;">${value}</div>
+    </div>`;
+}
+
+function populateViewListing(l) {
+  const kind = l.kind || currentListingTab;
+  const isRemoved = !!l.removed_at;
+
+  // Title varies by kind.
+  const titleMap = {
+    harvest: `Harvest listing — ${l.crop_name || l.variety || ''}`.trim(),
+    demand:  `Demand posting — ${l.crop_name || l.variety || ''}`.trim(),
+    supply:  `Supply listing — ${l.name || ''}`.trim(),
+  };
+  document.getElementById('view-listing-title').textContent =
+    titleMap[kind] || 'Listing details';
+
+  // Status row: real status + removed badge if applicable.
+  const statusBadge = `<span class="badge badge-${l.status || 'cancelled'}">${escapeHtml(l.status || '—')}</span>` +
+    (isRemoved ? ' <span class="badge badge-removed" style="margin-left:6px;">REMOVED</span>' : '');
+
+  // Owner section (farmer / buyer / supplier).
+  let owner = '';
+  if (kind === 'harvest') {
+    owner = _row('Farmer', escapeHtml(l.farmer_name || '—')) +
+            _row('Email',  escapeHtml(l.farmer_email || '—')) +
+            _row('Phone',  escapeHtml(l.farmer_phone || '—')) +
+            _row('District', escapeHtml(l.farmer_district || '—'));
+  } else if (kind === 'demand') {
+    owner = _row('Buyer', escapeHtml(l.buyer_name || '—')) +
+            _row('Email', escapeHtml(l.buyer_email || '—')) +
+            _row('Phone', escapeHtml(l.buyer_phone || '—')) +
+            _row('District', escapeHtml(l.buyer_district || '—'));
+  } else if (kind === 'supply') {
+    owner = _row('Supplier', escapeHtml(l.supplier_name || '—')) +
+            _row('Email', escapeHtml(l.supplier_email || '—')) +
+            _row('Phone', escapeHtml(l.supplier_phone || '—')) +
+            _row('District', escapeHtml(l.supplier_district || '—'));
+  }
+
+  // Crop + quantity + price section (varies).
+  let details = '';
+  if (kind === 'harvest') {
+    details =
+      _row('Crop',            escapeHtml((l.crop_name || '—') + (l.crop_name_si ? ` (${l.crop_name_si})` : ''))) +
+      _row('Variety',         escapeHtml(l.variety || '—')) +
+      _row('Quantity',        `${l.quantity_kg ?? '—'} kg`) +
+      _row('Price / kg',      `Rs ${l.price_per_kg ?? '—'}`) +
+      _row('Min Price / kg',  l.min_price_per_kg != null ? `Rs ${l.min_price_per_kg}` : '—') +
+      _row('Quality grade',   escapeHtml(l.quality_grade || '—')) +
+      _row('Harvest date',    formatDate(l.harvest_date)) +
+      _row('Available from',  formatDate(l.available_from)) +
+      _row('Available until', formatDate(l.available_until)) +
+      _row('Organic',         l.is_organic ? 'Yes' : 'No') +
+      _row('Delivery',        l.delivery_available
+        ? `Yes (within ${l.delivery_radius_km ?? '—'} km)` : 'No');
+  } else if (kind === 'demand') {
+    details =
+      _row('Crop',            escapeHtml((l.crop_name || '—') + (l.crop_name_si ? ` (${l.crop_name_si})` : ''))) +
+      _row('Variety',         escapeHtml(l.variety || '—')) +
+      _row('Quantity needed', `${l.quantity_kg ?? '—'} kg`) +
+      _row('Max price / kg',  l.max_price_per_kg != null ? `Rs ${l.max_price_per_kg}` : '—') +
+      _row('Quality grade',   escapeHtml(l.quality_grade || '—')) +
+      _row('Needed by',       formatDate(l.needed_by)) +
+      _row('Radius',          l.radius_km != null ? `${l.radius_km} km` : '—') +
+      _row('Recurring',       l.is_recurring ? 'Yes' : 'No');
+  } else if (kind === 'supply') {
+    details =
+      _row('Product (EN)',    escapeHtml(l.name || '—')) +
+      _row('Product (SI)',    escapeHtml(l.name_si || '—')) +
+      _row('Category',        escapeHtml(l.category || '—')) +
+      _row('Price',           l.price != null ? `Rs ${l.price} / ${escapeHtml(l.unit || 'unit')}` : '—') +
+      _row('Stock',           l.stock_quantity != null ? String(l.stock_quantity) : '—') +
+      _row('Delivery',        l.delivery_available
+        ? `Yes (within ${l.delivery_radius_km ?? '—'} km)` : 'No');
+  }
+
+  // Description.
+  const description = l.description
+    ? `<div style="margin-top:14px;">
+         <div style="font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Description</div>
+         <div style="font-size:14px;color:#0F172A;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-wrap;">${escapeHtml(l.description)}</div>
+       </div>`
+    : '';
+
+  // Images grid.
+  const images = Array.isArray(l.images) ? l.images : [];
+  const imagesHtml = images.length > 0
+    ? `<div style="margin-top:18px;">
+         <div style="font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Images (${images.length})</div>
+         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+           ${images.map(u => `
+             <a href="${escapeHtml(u)}" target="_blank" rel="noopener" style="display:block;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid #E2E8F0;background:#F1F5F9;">
+               <img src="${escapeHtml(u)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy"
+                    onerror="this.parentElement.innerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:11px;color:#94A3B8;text-align:center;padding:6px;&quot;>Image failed to load</div>'" />
+             </a>
+           `).join('')}
+         </div>
+       </div>`
+    : (kind === 'demand'
+        ? '' // demand postings don't have images
+        : `<div style="margin-top:18px;font-size:13px;color:#94A3B8;">No images uploaded.</div>`);
+
+  // Removal info (if applicable).
+  const removal = isRemoved
+    ? `<div style="margin-top:18px;padding:12px;border-radius:10px;background:#FEE2E2;border:1px solid #FECACA;">
+         <div style="font-size:12px;color:#DC2626;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Removed</div>
+         <div style="font-size:13px;color:#7F1D1D;">
+           ${_row('Reason', escapeHtml(l.removal_reason || '—'))}
+           ${_row('Removed at', l.removed_at ? new Date(l.removed_at).toLocaleString('en-GB') : '—')}
+           ${_row('Removed by', escapeHtml(l.removed_by || '—'))}
+         </div>
+       </div>`
+    : '';
+
+  document.getElementById('view-listing-body').innerHTML = `
+    <div style="margin-bottom:10px;">${statusBadge}</div>
+    ${owner}
+    <div style="height:10px;"></div>
+    ${details}
+    ${description}
+    ${imagesHtml}
+    <div style="margin-top:18px;font-size:11px;color:#94A3B8;">
+      ID ${escapeHtml(l.id)} • Created ${formatDate(l.created_at)}
+    </div>
+    ${removal}
+  `;
 }
 
 // =============================================
