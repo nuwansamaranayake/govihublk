@@ -470,16 +470,17 @@
       <div class="modal-body">
         <input type="hidden" id="ad-id" value="" />
         <div class="form-group">
-          <label>Ad image (required)</label>
+          <label id="ad-image-label">Ad image (required)</label>
+          <img id="ad-image-preview" class="upload-preview" />
           <div class="upload-zone" id="upload-zone" onclick="document.getElementById('ad-image-input').click()"
                ondragover="event.preventDefault();this.classList.add('drag-over')"
                ondragleave="this.classList.remove('drag-over')"
                ondrop="handleImageDrop(event)">
-            📷 Click to upload or drag and drop<br/>
-            <span style="font-size:12px;">JPEG, PNG, WebP — max 5MB — recommended 1200×628px</span>
+            <span id="upload-zone-text">📷 Click to upload or drag and drop<br/>
+              <span style="font-size:12px;">JPEG, PNG, WebP — max 5MB — recommended 1200×628px</span>
+            </span>
           </div>
           <input type="file" id="ad-image-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleImageSelect(event)" />
-          <img id="ad-image-preview" class="upload-preview" />
           <input type="hidden" id="ad-image-url" />
           <div id="ad-image-uploading" style="display:none;font-size:12px;color:#64748B;margin-top:6px;">Uploading...</div>
         </div>
@@ -1121,6 +1122,9 @@ function openCreateAd() {
   document.getElementById('ad-image-url').value = '';
   document.getElementById('ad-image-preview').style.display = 'none';
   document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('ad-image-label').textContent = 'Ad image (required)';
+  document.getElementById('upload-zone-text').innerHTML =
+    '📷 Click to upload or drag and drop<br/><span style="font-size:12px;">JPEG, PNG, WebP — max 5MB — recommended 1200×628px</span>';
   pendingAdImageFile = null;
   document.getElementById('ad-starts-at').value = new Date().toISOString().split('T')[0];
   document.getElementById('ad-ends-at').value = '';
@@ -1150,15 +1154,19 @@ function openEditAd(ad) {
   document.getElementById('ad-role-buyer').checked = roles.includes('buyer');
   document.getElementById('ad-role-supplier').checked = roles.includes('supplier');
 
+  // Edit mode: show current image as preview but keep the upload zone
+  // visible (with "Replace" wording) so the admin can swap the image.
+  document.getElementById('ad-image-label').textContent = 'Ad image (optional — replace current)';
+  document.getElementById('upload-zone-text').innerHTML =
+    '📷 Click to replace image (optional)<br/><span style="font-size:12px;">JPEG, PNG, WebP — max 5MB — recommended 1200×628px</span>';
   if (ad.image_url) {
     const preview = document.getElementById('ad-image-preview');
     preview.src = ad.image_url;
     preview.style.display = 'block';
-    document.getElementById('upload-zone').style.display = 'none';
   } else {
     document.getElementById('ad-image-preview').style.display = 'none';
-    document.getElementById('upload-zone').style.display = 'block';
   }
+  document.getElementById('upload-zone').style.display = 'block';
   openModal('create-ad');
 }
 
@@ -1215,8 +1223,8 @@ async function saveAd() {
 
   try {
     if (id) {
-      // EDIT — JSON PATCH (no image change supported here; use the per-ad
-      // image upload endpoint separately if the image needs to be replaced).
+      // EDIT — JSON PATCH for the editable fields, then (if the admin
+      // selected a new image) a multipart POST to replace the image.
       const payload = {
         title,
         title_si: title_si || null,
@@ -1231,6 +1239,22 @@ async function saveAd() {
         ends_at: ends_at || null,
       };
       await apiFetch(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+
+      if (pendingAdImageFile) {
+        const fd = new FormData();
+        fd.append('image', pendingAdImageFile);
+        const imgRes = await fetch(`${API}/admin/ads/${id}/image`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentToken}` },
+          body: fd,
+        });
+        if (!imgRes.ok) {
+          let detail = `image upload HTTP ${imgRes.status}`;
+          try { detail = (await imgRes.json()).detail || detail; } catch {}
+          throw new Error(detail);
+        }
+        pendingAdImageFile = null;
+      }
       showToast('Ad updated successfully', 'success');
     } else {
       // CREATE — multipart with image file. Backend POST /admin/ads requires
