@@ -14,6 +14,7 @@ class DiagnosisBrief(BaseModel):
     disease_name: Optional[str] = None
     confidence: Optional[float] = None
     image_url: str
+    status: str
     created_at: datetime
 
     model_config = {"from_attributes": True}

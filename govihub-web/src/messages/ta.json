@@ -238,6 +238,11 @@
     "quantity": "[TA] Quantity",
     "price": "[TA] Agreed Price"
   },
+  "diagnosis": {
+    "analysisFailed": "பகுப்பாய்வு தோல்வியடைந்தது",
+    "retryHint": "இன்னும் தெளிவான புகைப்படத்துடன் மீண்டும் முயற்சிக்கவும்",
+    "noDiseaseDetected": "நோய் கண்டறியப்படவில்லை"
+  },
   "more": {
     "changeRole": "பங்கை மாற்றுங்கள்",
     "changeRoleTitle": "உங்கள் பங்கை மாற்றுங்கள்",

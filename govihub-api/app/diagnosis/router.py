@@ -59,6 +59,7 @@ def _to_brief(record) -> DiagnosisBrief:
         disease_name=record.disease_name,
         confidence=record.confidence,
         image_url=record.image_url,
+        status=record.status.value,
         created_at=record.created_at,
     )
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,16 +30,18 @@ interface DiagnosisResult {
 
 interface HistoryItem {
   id: string;
-  imageUrl: string;
-  disease: string;
-  confidence: number;
-  date: string;
+  disease_name: string | null;
+  confidence: number | null;
+  image_url: string;
+  status: string;
+  created_at: string;
 }
 
 // CROP_OPTIONS is now sector-aware, set inside the component via useSector()
 
 export default function CropDiagnosisPage() {
   const t = useTranslations();
+  const locale = useLocale();
   const { isReady } = useAuth();
   const { diagnosisOptions: CROP_OPTIONS } = useSector();
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -355,19 +357,38 @@ export default function CropDiagnosisPage() {
             ) : history.length === 0 ? (
               <EmptyState icon="📂" title={t("diagnosis.noHistory")} description={t("diagnosis.noHistoryDesc")} />
             ) : (
-              history.map(item => (
-                <Card key={item.id} padding="md">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-neutral-900 text-sm">{item.disease || "විශ්ලේෂණය අසාර්ථකයි / Analysis failed"}</h3>
-                      <p className="text-xs text-neutral-400 mt-0.5">{item.date}</p>
+              history.map(item => {
+                // Only a genuinely failed record shows the failure text (and never a
+                // confidence %). Everything else shows the real disease name; a
+                // completed record with no name means the AI found no disease.
+                const failed = item.status === "failed";
+                const name = item.disease_name?.trim();
+                const title = failed
+                  ? t("diagnosis.analysisFailed")
+                  : name
+                  ? name.length > 60 ? `${name.slice(0, 60)}…` : name
+                  : t("diagnosis.noDiseaseDetected");
+                return (
+                  <Card key={item.id} padding="md">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-neutral-900 text-sm">{title}</h3>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString(locale) : ""}
+                        </p>
+                        {failed && (
+                          <p className="text-xs text-amber-600 mt-1">{t("diagnosis.retryHint")}</p>
+                        )}
+                      </div>
+                      {!failed && (
+                        <div className={`text-lg font-bold flex-shrink-0 ${confidenceColor(item.confidence)}`}>
+                          {confidencePct(item.confidence) != null ? `${confidencePct(item.confidence)}%` : "—"}
+                        </div>
+                      )}
                     </div>
-                    <div className={`text-lg font-bold ${confidenceColor(item.confidence)}`}>
-                      {confidencePct(item.confidence) != null ? `${confidencePct(item.confidence)}%` : "—"}
-                    </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             )}
           </div>
         )}
