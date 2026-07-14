@@ -161,3 +161,22 @@ class NotificationPreferenceUpdate(BaseModel):
     price_alerts: Optional[bool] = None
     quiet_hours_start: Optional[str] = None
     quiet_hours_end: Optional[str] = None
+
+
+class RoleChangeResponse(BaseModel):
+    """Success payload for PUT /users/me/role — fresh tokens carry the new role claim."""
+
+    ok: bool = True
+    role: str
+    listings_deactivated: int
+    access_token: str
+    refresh_token: str
+
+
+class RoleChangeEligibility(BaseModel):
+    """State for GET /users/me/role-change-eligibility — lets the modal pre-check before confirm."""
+
+    eligible: bool
+    active_matches: int = 0
+    cooldown_ends_at: Optional[datetime] = None
+    reason: Optional[str] = None

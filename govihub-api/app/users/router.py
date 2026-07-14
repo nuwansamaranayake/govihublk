@@ -1,16 +1,17 @@
 """GoviHub Users Router — Registration, profile CRUD, preferences."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_active_user, get_current_user, get_db, require_complete_profile, require_role
-from app.exceptions import ValidationError
-from app.users.models import BuyerProfile, FarmerProfile, SupplierProfile, User, UserRole
+from app.exceptions import GoviHubException, ValidationError
+from app.users.models import BuyerProfile, FarmerProfile, RoleChange, SupplierProfile, User, UserRole
 from app.users.schemas import (
     BuyerProfileUpdate,
     CompleteProfileRequest,
@@ -18,6 +19,8 @@ from app.users.schemas import (
     FCMTokenUpdate,
     FarmerProfileUpdate,
     NotificationPreferenceUpdate,
+    RoleChangeEligibility,
+    RoleChangeResponse,
     SupplierProfileUpdate,
     UserLocationUpdate,
     UserPublic,
@@ -29,6 +32,44 @@ from app.users.service import UserService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Self-service role-change policy (see ROLE_CHANGE_AUDIT.md).
+ROLE_CHANGE_COOLDOWN_DAYS = 30
+# Real match_status enum after migration 007 is {proposed, accepted, completed,
+# dismissed}. Non-terminal = active. ('confirmed'/'disputed' do not exist here.)
+_ACTIVE_MATCH_STATUSES = ("proposed", "accepted")
+
+
+def _as_utc(dt):
+    """Coerce a possibly-naive datetime (e.g. from SQLite) to UTC-aware for safe arithmetic."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+async def _count_active_matches(db: AsyncSession, user: User) -> int:
+    """Count the user's non-terminal matches on their current side. Suppliers have none."""
+    from app.listings.models import DemandPosting, HarvestListing
+    from app.matching.models import Match, MatchStatus
+
+    active = [MatchStatus.proposed, MatchStatus.accepted]
+    if user.role == UserRole.farmer:
+        stmt = (
+            select(func.count())
+            .select_from(Match)
+            .join(HarvestListing, Match.harvest_id == HarvestListing.id)
+            .where(HarvestListing.farmer_id == user.id, Match.status.in_(active))
+        )
+    elif user.role == UserRole.buyer:
+        stmt = (
+            select(func.count())
+            .select_from(Match)
+            .join(DemandPosting, Match.demand_id == DemandPosting.id)
+            .where(DemandPosting.buyer_id == user.id, Match.status.in_(active))
+        )
+    else:
+        return 0
+    return int(await db.scalar(stmt) or 0)
 
 
 class ChangeRoleRequest(BaseModel):
@@ -56,55 +97,109 @@ async def complete_registration(
     return user
 
 
-@router.put("/me/role", response_model=UserRead)
+@router.get("/me/role-change-eligibility", response_model=RoleChangeEligibility)
+async def role_change_eligibility(
+    current_user: User = Depends(require_complete_profile),
+    db: AsyncSession = Depends(get_db),
+):
+    """Report whether the user may change role right now (30-day cooldown + active-match block).
+
+    Lets the modal show the reason (count / date) and disable confirm BEFORE the user taps it.
+    """
+    if current_user.role == UserRole.admin:
+        return RoleChangeEligibility(eligible=False, reason="admin")
+
+    now = datetime.now(timezone.utc)
+    last = _as_utc(current_user.last_role_change_at)
+    in_cooldown = False
+    cooldown_ends_at = None
+    if last is not None:
+        cooldown_ends_at = last + timedelta(days=ROLE_CHANGE_COOLDOWN_DAYS)
+        in_cooldown = now < cooldown_ends_at
+
+    active_matches = await _count_active_matches(db, current_user)
+
+    if in_cooldown:
+        return RoleChangeEligibility(
+            eligible=False, active_matches=active_matches,
+            cooldown_ends_at=cooldown_ends_at, reason="cooldown",
+        )
+    if active_matches > 0:
+        return RoleChangeEligibility(
+            eligible=False, active_matches=active_matches, reason="active_matches",
+        )
+    return RoleChangeEligibility(eligible=True, active_matches=0)
+
+
+@router.put("/me/role", response_model=RoleChangeResponse)
 async def change_role(
     body: ChangeRoleRequest,
     current_user: User = Depends(require_complete_profile),
     db: AsyncSession = Depends(get_db),
 ):
-    """Change user's role. Deactivates old role data, creates new profile."""
+    """Self-service role change (see ROLE_CHANGE_AUDIT.md).
+
+    Enforces a 30-day cooldown and blocks while active matches exist. KEEPS the old
+    role's profile row, deactivates the old role's open listings, and reissues fresh
+    tokens carrying the new role claim so the client's next request is authorised.
+    """
+    from app.auth.service import GoogleAuthService
     from app.listings.models import DemandPosting, HarvestListing
     from app.marketplace.models import SupplyListing
+    from app.notifications.models import Notification, NotificationChannel, NotificationType
 
     new_role_enum = UserRole(body.new_role)
 
-    # 1. Validate new role != current role
+    # ---- Preconditions (before any mutation). These structured errors must NOT be
+    # swallowed by the mutation try/except below, so they are raised outside it. ----
+    if current_user.role == UserRole.admin:
+        raise GoviHubException(
+            status_code=400, error_code="ROLE_INVALID",
+            detail="Admin users cannot change role.",
+        )
     if current_user.role == new_role_enum:
-        raise ValidationError(
-            detail=f"You already have the '{body.new_role}' role",
+        raise GoviHubException(
+            status_code=400, error_code="ROLE_SAME",
+            detail=f"You already have the '{body.new_role}' role.",
         )
 
-    # Admin cannot change role via this endpoint
-    if current_user.role == UserRole.admin:
-        raise ValidationError(detail="Admin users cannot change role via this endpoint")
+    now = datetime.now(timezone.utc)
+    last = _as_utc(current_user.last_role_change_at)
+    if last is not None:
+        next_allowed = last + timedelta(days=ROLE_CHANGE_COOLDOWN_DAYS)
+        if now < next_allowed:
+            raise GoviHubException(
+                status_code=429, error_code="ROLE_CHANGE_COOLDOWN",
+                detail="You can change your role once every 30 days.",
+                details={
+                    "retry_after_days": (next_allowed - now).days + 1,
+                    "next_allowed_at": next_allowed.isoformat(),
+                },
+            )
 
+    active_matches = await _count_active_matches(db, current_user)
+    if active_matches > 0:
+        raise GoviHubException(
+            status_code=409, error_code="ACTIVE_MATCHES_EXIST",
+            detail=f"Fulfill or cancel your {active_matches} active matches before changing role.",
+            details={"count": active_matches},
+        )
+
+    # ---- Mutation (single transaction; rollback on any failure) ----
     try:
-        # 2. Delete old role-specific profile
-        if current_user.role == UserRole.farmer:
-            await db.execute(
-                delete(FarmerProfile).where(FarmerProfile.user_id == current_user.id)
-            )
-        elif current_user.role == UserRole.buyer:
-            await db.execute(
-                delete(BuyerProfile).where(BuyerProfile.user_id == current_user.id)
-            )
-        elif current_user.role == UserRole.supplier:
-            await db.execute(
-                delete(SupplierProfile).where(SupplierProfile.user_id == current_user.id)
-            )
+        old_role = current_user.role
+        listings_deactivated = 0
 
-        # 3. Deactivate old role-specific data (preserve history, don't delete)
-        if current_user.role == UserRole.farmer:
-            # Cancel active harvest listings
-            await db.execute(
+        # Deactivate the current role's OPEN inventory (keep history) and dismiss its
+        # active matches so the engine won't propose against cancelled listings.
+        if old_role == UserRole.farmer:
+            res = await db.execute(
                 update(HarvestListing)
                 .where(HarvestListing.farmer_id == current_user.id)
                 .where(HarvestListing.status.notin_(["cancelled", "fulfilled"]))
                 .values(status="cancelled")
             )
-            # Dismiss active matches linked to farmer's harvest listings.
-            # NOTE: match_status after migration 007 is {proposed, accepted,
-            # completed, dismissed} — 'cancelled'/'fulfilled' no longer exist.
+            listings_deactivated = res.rowcount or 0
             await db.execute(
                 text("""
                     UPDATE matches SET status = 'dismissed'
@@ -113,16 +208,14 @@ async def change_role(
                 """),
                 {"uid": str(current_user.id)},
             )
-        elif current_user.role == UserRole.buyer:
-            # Cancel active demand postings
-            await db.execute(
+        elif old_role == UserRole.buyer:
+            res = await db.execute(
                 update(DemandPosting)
                 .where(DemandPosting.buyer_id == current_user.id)
                 .where(DemandPosting.status.notin_(["cancelled", "closed"]))
                 .values(status="cancelled")
             )
-            # Dismiss active matches linked to buyer's demand postings.
-            # See note above re migration 007 enum change.
+            listings_deactivated = res.rowcount or 0
             await db.execute(
                 text("""
                     UPDATE matches SET status = 'dismissed'
@@ -131,55 +224,91 @@ async def change_role(
                 """),
                 {"uid": str(current_user.id)},
             )
-        elif current_user.role == UserRole.supplier:
-            # Discontinue active supply listings
-            await db.execute(
+        elif old_role == UserRole.supplier:
+            res = await db.execute(
                 update(SupplyListing)
                 .where(SupplyListing.supplier_id == current_user.id)
                 .where(SupplyListing.status == "active")
                 .values(status="discontinued")
             )
+            listings_deactivated = res.rowcount or 0
 
-        # 4. Create new role profile
+        # Ensure the TARGET profile row exists (create empty only if missing).
+        # KEEP the old role's profile row — do NOT delete it (Decision 4).
         if new_role_enum == UserRole.farmer:
-            db.add(FarmerProfile(
-                user_id=current_user.id,
-                farm_size_acres=0,
-                primary_crops=[],
-                irrigation_type="rainfed",
-            ))
+            exists = await db.scalar(
+                select(FarmerProfile.id).where(FarmerProfile.user_id == current_user.id)
+            )
+            if not exists:
+                db.add(FarmerProfile(
+                    user_id=current_user.id, farm_size_acres=0,
+                    primary_crops=[], irrigation_type="rainfed",
+                ))
         elif new_role_enum == UserRole.buyer:
-            db.add(BuyerProfile(
-                user_id=current_user.id,
-                business_name="",
-                business_type="",
-                preferred_districts=[],
-                preferred_radius_km=50,
-            ))
+            exists = await db.scalar(
+                select(BuyerProfile.id).where(BuyerProfile.user_id == current_user.id)
+            )
+            if not exists:
+                db.add(BuyerProfile(
+                    user_id=current_user.id, business_name="", business_type="",
+                    preferred_districts=[], preferred_radius_km=50,
+                ))
         elif new_role_enum == UserRole.supplier:
-            db.add(SupplierProfile(
-                user_id=current_user.id,
-                business_name="",
-                categories=[],
-                coverage_area=[],
-            ))
+            exists = await db.scalar(
+                select(SupplierProfile.id).where(SupplierProfile.user_id == current_user.id)
+            )
+            if not exists:
+                db.add(SupplierProfile(
+                    user_id=current_user.id, business_name="",
+                    categories=[], coverage_area=[],
+                ))
 
-        # 5. Update user role
-        old_role = current_user.role.value if current_user.role else "none"
+        # Flip role + stamp cooldown.
         current_user.role = new_role_enum
+        current_user.last_role_change_at = now
+        await db.flush()
+
+        # Audit row + in-app confirmation.
+        db.add(RoleChange(
+            user_id=current_user.id,
+            old_role=old_role.value,
+            new_role=new_role_enum.value,
+            listings_deactivated=listings_deactivated,
+        ))
+        db.add(Notification(
+            user_id=current_user.id,
+            type=NotificationType.system_message,
+            channel=NotificationChannel.in_app,
+            title="Role changed",
+            body=(
+                f"Your role is now {new_role_enum.value}. "
+                f"{listings_deactivated} open listing(s) from your previous role were deactivated."
+            ),
+            is_read=False,
+            is_sent=True,
+        ))
+
+        # Revoke old sessions, mint fresh tokens carrying the NEW role claim.
+        await GoogleAuthService.revoke_all_user_tokens(db, current_user.id)
+        token_resp, raw_refresh = await GoogleAuthService.create_tokens(db, current_user)
+
         await db.commit()
-        await db.refresh(current_user)
 
         logger.info(
-            "User %s changed role from %s to %s",
-            current_user.id,
-            old_role,
-            body.new_role,
+            "User %s changed role from %s to %s (deactivated %d listings)",
+            current_user.id, old_role.value, new_role_enum.value, listings_deactivated,
         )
 
-        return current_user
+        return RoleChangeResponse(
+            ok=True,
+            role=new_role_enum.value,
+            listings_deactivated=listings_deactivated,
+            access_token=token_resp.access_token,
+            refresh_token=raw_refresh,
+        )
 
-    except ValidationError:
+    except GoviHubException:
+        await db.rollback()
         raise
     except Exception as e:
         await db.rollback()

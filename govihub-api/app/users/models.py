@@ -45,6 +45,8 @@ class User(Base):
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Soft-delete timestamp set by admin DELETE /admin/users/{id}; see migration 012.
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    # Set on each successful self-service role change; enforces the 30-day cooldown.
+    last_role_change_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     farmer_profile: Mapped[Optional["FarmerProfile"]] = relationship(
@@ -64,7 +66,9 @@ class User(Base):
         UniqueConstraint("email", "role", name="uq_users_email_role"),
         UniqueConstraint("phone", "role", name="uq_users_phone_role"),
         Index("ix_users_role", "role"),
-        Index("ix_users_district", "district"),
+        # NOTE: `district` already declares index=True above, which emits
+        # ix_users_district. A second explicit Index here duplicated it and broke
+        # metadata.create_all (SQLite test harness). The column-level index remains.
     )
 
 
@@ -109,3 +113,20 @@ class SupplierProfile(Base):
     contact_whatsapp: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="supplier_profile")
+
+
+class RoleChange(Base):
+    """Audit row written on each successful self-service role change.
+
+    Old-role profile rows are intentionally KEPT (not deleted), so this only
+    records the transition and how many open listings were deactivated.
+    """
+
+    __tablename__ = "role_changes"
+
+    user_id: Mapped["UUID"] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    old_role: Mapped[str] = mapped_column(String(20), nullable=False)
+    new_role: Mapped[str] = mapped_column(String(20), nullable=False)
+    listings_deactivated: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")

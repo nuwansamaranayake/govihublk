@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import AsyncGenerator, Optional
@@ -17,36 +18,119 @@ from app.auth.service import create_access_token, _hash_token
 from app.database import Base
 from app.main import create_app
 
+# ── SQLite test shim ─────────────────────────────────────────────────────────
+# geoalchemy2's Geography/Geometry types emit PostGIS DDL (e.g. geography(POINT,4326))
+# that SQLite cannot parse. Map them to TEXT so Base.metadata.create_all works against
+# the in-memory test DB. Test-only — production uses PostGIS. Without this, create_all
+# raises `near "POINT": syntax error` for every model that touches the users table.
+from geoalchemy2 import Geography, Geometry  # noqa: E402
+from sqlalchemy.ext.compiler import compiles  # noqa: E402
+
+
+@compiles(Geography, "sqlite")
+@compiles(Geometry, "sqlite")
+def _compile_geo_as_text_sqlite(element, compiler, **kw):  # noqa: ANN001, ARG001
+    return "TEXT"
+
+
+# JSONB (24 model columns) and pgvector Vector (advisory embeddings) are PostgreSQL
+# types the SQLite compiler can't render. Map them to types SQLite accepts; the
+# Python-side bind/result processors are unchanged. Test-only.
+from sqlalchemy.dialects.postgresql import JSONB as _PG_JSONB  # noqa: E402
+
+
+@compiles(_PG_JSONB, "sqlite")
+def _compile_jsonb_sqlite(element, compiler, **kw):  # noqa: ANN001, ARG001
+    return "JSON"
+
+
+try:
+    from pgvector.sqlalchemy import Vector as _PGVector  # noqa: E402
+
+    @compiles(_PGVector, "sqlite")
+    def _compile_vector_sqlite(element, compiler, **kw):  # noqa: ANN001, ARG001
+        return "TEXT"
+except Exception:  # pragma: no cover - pgvector always present in the API image
+    pass
+
 # ---------------------------------------------------------------------------
 # Test database — SQLite in-memory for lightweight unit/integration tests
 # ---------------------------------------------------------------------------
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Default: in-memory SQLite (fast, isolated). Override with TEST_DATABASE_URL to run
+# against real PostgreSQL (prod parity — native geography/JSONB/UUID), e.g.
+#   postgresql+asyncpg://govihub:...@postgres:5432/govihub_test
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def engine():
-    """Create a session-scoped in-memory SQLite engine."""
+    """Create a per-test engine (function-scoped so it lives on the test's event loop)."""
     import os
     os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
     os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
     os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
     os.environ.setdefault("MCP_ADMIN_SECRET", "test-mcp-secret")
 
+    _is_sqlite = TEST_DATABASE_URL.startswith("sqlite")
+    _connect_args = {"check_same_thread": False} if _is_sqlite else {}
+    _extra = {}
+    if not _is_sqlite:
+        # asyncpg pooled connections carry event-loop affinity that clashes with
+        # pytest-asyncio's per-test loops ("another operation is in progress").
+        # NullPool hands each operation a fresh connection.
+        from sqlalchemy.pool import NullPool
+        _extra["poolclass"] = NullPool
     test_engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
-        connect_args={"check_same_thread": False},
+        connect_args=_connect_args,
+        **_extra,
     )
 
-    # Create all tables
+    # SpatiaLite is not installed in the test image, but geoalchemy2 still emits
+    # spatial DDL (CreateSpatialIndex, AddGeometryColumn, ...) on create/drop.
+    # Register those as no-op SQLite functions so create_all/drop_all succeed.
+    _SPATIAL_NOOPS = (
+        # DDL management (create/drop)
+        "AddGeometryColumn", "CreateSpatialIndex", "RecoverGeometryColumn",
+        "DiscardGeometryColumn", "DisableSpatialIndex", "RecoverSpatialIndex",
+        "CreateGeometryColumn", "DropGeoTable", "GeometryType",
+        "InitSpatialMetaData", "InitSpatialMetaDataFull",
+        # Value constructors/accessors emitted in INSERT/SELECT for Geography columns
+        "ST_GeogFromText", "ST_GeomFromText", "ST_GeogFromWKB", "ST_GeomFromWKB",
+        "ST_GeomFromEWKT", "ST_GeomFromEWKB", "ST_AsText", "ST_AsEWKT",
+        "ST_AsBinary", "ST_AsEWKB",
+    )
+
+    @event.listens_for(test_engine.sync_engine, "connect")
+    def _register_spatial_noops(dbapi_conn, _rec):  # noqa: ANN001, ANN202
+        # Return the first argument so ST_GeogFromText(NULL) -> NULL; DDL helpers
+        # ignore the result. Keeps geography columns NULL-safe on SQLite.
+        for _name in _SPATIAL_NOOPS:
+            try:
+                dbapi_conn.create_function(_name, -1, lambda *a: (a[0] if a else None))
+            except Exception:
+                pass
+
+    # pgvector may be unavailable in some test DBs (e.g. a fresh govihub_test whose
+    # postgres image lacks the extension control file). Skip tables that need a Vector
+    # column — only the advisory embeddings table — since no feature under test uses it.
+    from pgvector.sqlalchemy import Vector as _Vec
+
+    _skip = {
+        t.name for t in Base.metadata.sorted_tables
+        if any(isinstance(c.type, _Vec) for c in t.columns)
+    }
+    _tables = [t for t in Base.metadata.sorted_tables if t.name not in _skip]
+
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(lambda sc: Base.metadata.create_all(sc, tables=_tables))
 
     yield test_engine
 
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(lambda sc: Base.metadata.drop_all(sc, tables=_tables))
 
     await test_engine.dispose()
 
