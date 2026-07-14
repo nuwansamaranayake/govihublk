@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 interface ChangeRoleModalProps {
@@ -10,48 +10,119 @@ interface ChangeRoleModalProps {
   locale: string;
 }
 
+// NEXT_PUBLIC_API_URL already includes the /api/v1 prefix in every environment
+// (see docker-compose.spices.yml and lib/api.ts). The previous code appended a
+// SECOND /api/v1 here, which produced /api/v1/api/v1/... -> 404 "Not Found".
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002/api/v1";
+
+interface Eligibility {
+  eligible: boolean;
+  active_matches: number;
+  cooldown_ends_at: string | null;
+  reason: string | null;
+}
+
 const ROLES = [
-  { key: "farmer", icon: "\uD83C\uDF3E", color: "green" },
-  { key: "buyer", icon: "\uD83D\uDED2", color: "amber" },
-  { key: "supplier", icon: "\uD83D\uDCE6", color: "blue" },
+  { key: "farmer", icon: "🌾", color: "green" },
+  { key: "buyer", icon: "🛒", color: "amber" },
+  { key: "supplier", icon: "📦", color: "blue" },
 ] as const;
+
+// Prefer the backend's structured message ({error:{message}}), then a raw detail,
+// then a status fallback. NEVER surface a bare "Not Found" to the user.
+function serverMessage(data: any, status: number, fallback: string): string {
+  return data?.error?.message || (typeof data?.detail === "string" ? data.detail : null) || `${fallback} (${status})`;
+}
 
 export function ChangeRoleModal({ isOpen, onClose, currentRole, locale }: ChangeRoleModalProps) {
   const t = useTranslations("more");
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eligibility, setEligibility] = useState<Eligibility | null>(null);
+  const [eligLoading, setEligLoading] = useState(false);
+
+  // Pre-check eligibility when the modal opens so the user sees any block
+  // (active matches / cooldown) BEFORE tapping confirm — no dead-end errors.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setEligibility(null);
+    setError(null);
+    setSelectedRole(null);
+    setEligLoading(true);
+    (async () => {
+      try {
+        const token = sessionStorage.getItem("govihub_token");
+        const res = await fetch(`${API_BASE}/users/me/role-change-eligibility`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = (await res.json()) as Eligibility;
+          if (!cancelled) setEligibility(data);
+        }
+      } catch {
+        // Non-fatal: confirm() will surface any real error with a human message.
+      } finally {
+        if (!cancelled) setEligLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const blocked = eligibility !== null && !eligibility.eligible;
+
+  const blockedMessage = (): string => {
+    if (!eligibility) return "";
+    if (eligibility.reason === "cooldown") {
+      const date = eligibility.cooldown_ends_at
+        ? new Date(eligibility.cooldown_ends_at).toLocaleDateString(locale)
+        : "";
+      return t("blockedCooldown", { date });
+    }
+    if (eligibility.reason === "active_matches") {
+      return t("blockedActiveMatches", { count: eligibility.active_matches });
+    }
+    return t("blockedGeneric");
+  };
+
   const handleConfirm = async () => {
-    if (!selectedRole || selectedRole === currentRole) return;
+    if (!selectedRole || selectedRole === currentRole || blocked) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const token = sessionStorage.getItem("govihub_token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002"}/api/v1/users/me/role`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ new_role: selectedRole }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/users/me/role`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ new_role: selectedRole }),
+      });
+
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.detail || `Failed to change role (${res.status})`);
+        throw new Error(serverMessage(data, res.status, t("changeRoleFailed")));
+      }
+
+      // Success: swap in the fresh access token (it carries the NEW role claim) so
+      // the new-role dashboard authorises the very next request.
+      if (data?.access_token) {
+        sessionStorage.setItem("govihub_token", data.access_token);
+        document.cookie = "govihub_token=" + data.access_token + ";path=/;max-age=86400";
       }
 
       window.location.href = `/${locale}/${selectedRole}/dashboard`;
     } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      setError(err.message || t("changeRoleFailed"));
       setLoading(false);
     }
   };
@@ -91,16 +162,26 @@ export function ChangeRoleModal({ isOpen, onClose, currentRole, locale }: Change
           <h2 className="text-lg font-bold text-neutral-900">{t("changeRoleTitle")}</h2>
         </div>
 
+        {/* Blocked banner (active matches / cooldown) */}
+        {blocked && (
+          <div className="px-5 mb-1">
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-relaxed">
+              {blockedMessage()}
+            </p>
+          </div>
+        )}
+
         {/* Role cards */}
         <div className="px-5 space-y-2.5">
           {ROLES.map((role) => {
             const isCurrent = role.key === currentRole;
             const isSelected = role.key === selectedRole;
+            const disabled = isCurrent || loading || blocked || eligLoading;
 
             return (
               <button
                 key={role.key}
-                disabled={isCurrent || loading}
+                disabled={disabled}
                 onClick={() => setSelectedRole(role.key)}
                 className={`w-full flex items-center gap-3.5 p-3.5 rounded-xl border-2 transition-all text-left ${
                   isCurrent
@@ -108,7 +189,7 @@ export function ChangeRoleModal({ isOpen, onClose, currentRole, locale }: Change
                     : isSelected
                     ? "border-green-500 bg-green-50 shadow-sm"
                     : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
-                }`}
+                } ${blocked || eligLoading ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <span className="text-2xl flex-shrink-0">{role.icon}</span>
                 <div className="flex-1 min-w-0">
@@ -166,7 +247,7 @@ export function ChangeRoleModal({ isOpen, onClose, currentRole, locale }: Change
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!selectedRole || selectedRole === currentRole || loading}
+            disabled={!selectedRole || selectedRole === currentRole || loading || blocked || eligLoading}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading && (
