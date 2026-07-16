@@ -103,6 +103,13 @@
     "disputes": "Disputes"
   },
   "auth": {
+    "auth_error_username_taken": "That username is already taken. Please choose another.",
+    "auth_error_role_account_exists": "You already have an account for this role. Try logging in, or switch roles in Settings.",
+    "auth_error_max_accounts": "You have reached the maximum of 3 accounts (one per role).",
+    "auth_error_invalid_credentials": "Incorrect username or password.",
+    "auth_error_account_inactive": "This account is inactive. Please contact support.",
+    "auth_error_rate_limited": "Too many attempts. Please wait a moment and try again.",
+    "auth_error_generic": "Something went wrong. Please try again. (Ref: {code})",
     "login": "Login",
     "register": "Register",
     "loginWithGoogle": "Sign in with Google",

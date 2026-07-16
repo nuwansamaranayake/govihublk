@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -104,6 +104,35 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
+// Map backend error codes -> auth-namespace i18n keys. Unknown codes fall back to a
+// generic message that INCLUDES the code, so support can trace any complaint in any
+// language. Backend business errors return detail = {code, message}; field-validation
+// returns detail = [{field, code, message}]; older endpoints return a plain string.
+const AUTH_ERROR_KEYS: Record<string, string> = {
+  USERNAME_TAKEN: "auth_error_username_taken",
+  ROLE_ACCOUNT_EXISTS: "auth_error_role_account_exists",
+  MAX_ACCOUNTS: "auth_error_max_accounts",
+  INVALID_CREDENTIALS: "auth_error_invalid_credentials",
+  ACCOUNT_INACTIVE: "auth_error_account_inactive",
+  RATE_LIMITED: "auth_error_rate_limited",
+};
+
+function localizeAuthError(
+  detail: any,
+  status: number,
+  t: any, // next-intl translator (overloaded generic) — typed loosely to accept it
+): string {
+  const obj = detail && typeof detail === "object" && !Array.isArray(detail) ? detail : null;
+  const code: string | undefined =
+    obj?.code ?? (Array.isArray(detail) ? detail[0]?.code : undefined);
+  if (code) {
+    const key = AUTH_ERROR_KEYS[code];
+    return key ? t(key) : t("auth_error_generic", { code });
+  }
+  if (typeof detail === "string" && detail) return detail;
+  return t("auth_error_generic", { code: String(status) });
+}
+
 export default function BetaLoginPage() {
   const router = useRouter();
   const params = useParams();
@@ -117,6 +146,14 @@ export default function BetaLoginPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  // Make errors impossible to miss: the banner sits above a long form, so a
+  // validation error on the Create Account button would otherwise render
+  // off-screen and read as "nothing happened". Scroll it into view.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   // Login state
   const [loginUsername, setLoginUsername] = useState("");
@@ -156,7 +193,7 @@ export default function BetaLoginPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || t('invalidCredentials'));
+        throw new Error(localizeAuthError(err.detail, res.status, t));
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
@@ -217,11 +254,8 @@ export default function BetaLoginPage() {
           setRegUsernameError(t(codeKey));
           throw new Error('__handled__');
         }
-        // Fallback: legacy {loc, msg, type} or a string detail
-        const msg = typeof err.detail === 'string'
-          ? err.detail
-          : first?.msg || `Registration failed (${res.status})`;
-        throw new Error(msg);
+        // Business errors ({code,message}) + legacy string details -> localized message.
+        throw new Error(localizeAuthError(err.detail, res.status, t));
       }
       const data = await res.json();
       if (typeof window !== "undefined") {
@@ -281,7 +315,7 @@ export default function BetaLoginPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div ref={errorRef} role="alert" className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             {error}
           </div>
         )}

@@ -62,7 +62,7 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
         select(User).where(func.lower(User.username) == body.username.lower())
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Username already taken")
+        raise HTTPException(status_code=409, detail={"code": "USERNAME_TAKEN", "message": "Username already taken"})
 
     # Check email uniqueness scoped to role (same email allowed across different roles)
     target_email = body.email or f"{body.username.lower()}@beta.govihub.lk"
@@ -70,14 +70,14 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
         select(User).where(User.email == target_email, User.role == UserRole(body.role))
     )
     if email_check.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail=f"You already have a {body.role} account with this email")
+        raise HTTPException(status_code=409, detail={"code": "ROLE_ACCOUNT_EXISTS", "message": f"You already have a {body.role} account with this email", "role": body.role})
 
     # Cap at 3 accounts per email (one per role: farmer, buyer, supplier)
     email_count = await db.execute(
         select(func.count()).select_from(User).where(User.email == target_email)
     )
     if email_count.scalar() >= 3:
-        raise HTTPException(status_code=409, detail="Maximum 3 accounts per email (one per role)")
+        raise HTTPException(status_code=409, detail={"code": "MAX_ACCOUNTS", "message": "Maximum 3 accounts per email (one per role)"})
 
     # Create user
     user = User(
@@ -135,13 +135,13 @@ async def beta_login(body: BetaLoginRequest, db: AsyncSession = Depends(get_db))
     user = result.scalar_one_or_none()
 
     if not user or not user.password_hash:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
 
     if not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Invalid username or password"})
 
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="User account is inactive")
+        raise HTTPException(status_code=403, detail={"code": "ACCOUNT_INACTIVE", "message": "User account is inactive"})
 
     # Update last login
     user.last_login_at = datetime.now(timezone.utc)
