@@ -3,6 +3,7 @@
 import React from "react";
 import { Modal } from "./Modal";
 import { Badge } from "./Badge";
+import { MatchDisclaimer } from "./MatchDisclaimer";
 import { formatDateSafe } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -162,6 +163,11 @@ export function ListingDetailsModal({
           <p className="text-sm text-neutral-700 leading-relaxed">{listing.description}</p>
         </div>
       )}
+
+      {/* Liability disclaimer */}
+      <div className="mt-4">
+        <MatchDisclaimer variant="full" />
+      </div>
 
       {/* Close button */}
       <div className="mt-5">

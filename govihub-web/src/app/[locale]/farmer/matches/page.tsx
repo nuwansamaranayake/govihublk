@@ -13,6 +13,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { formatStatus, formatDateSafe } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { ListingDetailsModal } from "@/components/ui/ListingDetailsModal";
+import { MatchDisclaimer } from "@/components/ui/MatchDisclaimer";
 
 type MatchStatus = "proposed" | "accepted" | "completed" | "dismissed";
 
@@ -231,6 +232,9 @@ export default function FarmerMatchesPage() {
                         )}
                       </div>
                     ) : null}
+                    <div className="mt-3 pt-3 border-t border-neutral-100">
+                      <MatchDisclaimer variant="short" />
+                    </div>
                   </Card>
                 ))
               )}

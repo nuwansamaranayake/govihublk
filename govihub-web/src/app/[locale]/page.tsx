@@ -262,7 +262,7 @@ export default function HomePage({ params }: { params: { locale: string } }) {
               </Link>
               <a href="#" className="hover:text-white transition-colors">{t("footerAbout")}</a>
               <a href="#" className="hover:text-white transition-colors">{t("footerPrivacy")}</a>
-              <a href="#" className="hover:text-white transition-colors">{t("footerTerms")}</a>
+              <Link href={`/${locale}/terms`} className="hover:text-white transition-colors">{t("footerTerms")}</Link>
             </div>
 
             {/* Copyright */}
