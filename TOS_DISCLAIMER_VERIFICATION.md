@@ -1,7 +1,9 @@
 # TOS_DISCLAIMER_VERIFICATION.md
 
 **Feature:** Trilingual Terms of Use + registration acceptance + match liability disclaimer
-**Branch:** `spices` · **Date:** 2026-07-19 · **Target:** `spices.govihublk.com` (`govihub-mumbai`)
+**Branch:** `spices` · **Date:** 2026-07-19
+**Targets:** `spices.govihublk.com` (app) **and** `govihublk.com` (umbrella marketing site)
+**Current version: ToS v1.1** — v1.0 shipped first; see §9 for why it was superseded the same day.
 
 Companion docs: [`TOS_AUDIT.md`](TOS_AUDIT.md) (STEP 0) ·
 [`docs/agent-legibility/2026-07-19-tos-claims-truth-layer.md`](docs/agent-legibility/2026-07-19-tos-claims-truth-layer.md) (truth layer) ·
@@ -298,6 +300,99 @@ admin 6 = **116**.
 
 Post-cleanup smoke: `/api/v1/health` 200 · `/en/terms` 200 · `/si/terms` 200 · `/ta/terms` 200 ·
 `/en/auth/beta-login` 200 · `/` 200 · registration gate still returns **422 TOS_NOT_ACCEPTED**.
+
+## 9. ToS v1.1 + umbrella site (same day, after v1.0 shipped)
+
+**Trigger:** applying the canonical Terms to `govihublk.com/terms` surfaced that the existing
+umbrella draft and v1.0 conflicted **in both directions** — so a straight copy would have been a
+regression, not a fix.
+
+### What the old umbrella draft had that v1.0 did NOT
+
+| Clause | Why it mattered |
+|---|---|
+| Content ownership + licence | GoviHub displays farmer listings and photos. v1.0 gave **no permission to do so**. Dropping this was a real legal gap, not a nicety. |
+| Age requirement (16+) | No eligibility floor in v1.0 |
+| Prohibited uses | No scraping / impersonation / harassment rules in v1.0 |
+
+### What v1.0 fixed in the old umbrella draft
+
+- *"matching suggestions are **AI-generated**"* — the **identical over-claim** corrected in the app
+  (R1). Confirms the problem was **systemic across surfaces**, not a one-off in the spec.
+- Liability capped at *"fees paid in the preceding 12 months"* with **no carve-out for death,
+  personal injury, or fraud** — precisely what the Unfair Contract Terms Act voids. v1.1 §11 restores it.
+- *"courts of Colombo"* → now courts of Sri Lanka.
+- A publicly rendered **"Note to counsel: Draft terms pending review"** on both `/terms` and
+  `/privacy` — visible to real users. Removed from both.
+
+### Resolution — v1.1 (manager decision: merge, ship both)
+
+Three clauses merged in; sections renumbered **14 → 17**. New `§5 Who Can Use GoviHub`,
+`§7 Your Content`, `§8 Prohibited Uses`. AI clause is now §9 (bounded scope intact); UCTA carve-out
+is now §11 (intact). SI/TA updated as a **delta** so already-reviewed v1.0 prose was not regressed.
+
+`TOS_VERSION` 1.0 → 1.1 in backend (`app/config.py`) and frontend (`TosGateModal.tsx`).
+**This re-gates every user who accepted 1.0**, including the two real users who accepted earlier
+today. Correct per §16 — adding a content licence is a material change.
+
+### Umbrella deploy (`docker-compose.umbrella.yml`, separate stack)
+
+Not a git repo — files are `scp`'d to `/opt/govihub-umbrella/public/`, then the image is rebuilt
+because the Dockerfile bakes `public/` in. `build --no-cache` + `up -d --force-recreate`.
+
+**Bug found and fixed during deploy:** `/terms-si` returned **404 despite the file being in the
+image**. The umbrella nginx uses **explicit `location =` blocks per clean URL** with a catch-all
+`return 404` — there is no generic `try_files` fallback, so a new page is unreachable until a block
+is added. Fixed in `govihub-umbrella/nginx.conf`, rebuilt, verified.
+
+Also: the three Sinhala pages (`si.html`, `about-si.html`, `contact-si.html`) linked to the **English**
+`/terms`; repointed to `/terms-si`. English pages left on `/terms`.
+
+**Umbrella verification (live):**
+```
+/terms       200  h2=17  si_chars=2
+/terms-si    200  h2=17  si_chars=3867
+/privacy     200  h2=8   si_chars=0
+/about       200  h2=3   /about-si  200  h2=3
+/contact     200  h2=1   /si        200  h2=3   /  200
+```
+Stale-content scan on `/terms`: `matching suggestions are AI-generated`, `Note to counsel`,
+`preceding 12 months`, `courts of Colombo` — **all absent**. v1.1 markers present 4/4.
+
+### Spices v1.1 deploy (live)
+
+`build --no-cache` both services, 0 errors; api + web both recreated on fresh images.
+
+```
+/en/terms  200  h2=17  v1.1=True  new_clauses=3/3
+/si/terms  200  h2=17  v1.1=True
+/ta/terms  200  h2=17  v1.1=True
+registration gate -> 422 TOS_NOT_ACCEPTED
+backend settings.TOS_VERSION -> 1.1
+```
+(SI/TA report 0/3 on the English clause markers because those strings are translated — expected,
+not a gap. The 17-section count is the structural check that matters.)
+
+**Who the v1.1 gate now catches** — measured, not estimated:
+
+| tos_version | non-admin | admin |
+|---|---|---|
+| `1.0` | **2** (re-gated by the bump) | 0 |
+| never accepted | **108** | 6 (exempt) |
+
+**110 non-admin users** will see the modal on next load; the 6 admins never will. The 2 at v1.0 are
+the real users who accepted earlier today — they will be asked once more, which is the intended and
+correct consequence of a material change under §16.
+
+### Still open after v1.1
+
+- **`/privacy` on the umbrella is untouched and still contradicts the code** — claims accounts are
+  hard-deleted when `deleted_at` is a soft delete, and broadly denies advertising use of data while
+  ads are first-party targeted by role and district. Only the "Note to counsel" came out.
+- **The in-app `/privacy` route still 404s** (audit D6, unchanged).
+- Sinhala privacy page does not exist; SI pages still link to the English `/privacy`.
+- Tamil has no umbrella page — §15 claims publication in three languages, true of the app, not of
+  the marketing site.
 
 ## 8. Rollback
 
