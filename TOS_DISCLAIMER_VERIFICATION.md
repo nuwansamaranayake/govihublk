@@ -266,13 +266,38 @@ T3 required a farmer with actual matches. The 9 pre-existing matches all belong 
 passwords we do not have, and logging into a real user's account was not acceptable — so a match was
 built by driving the real UI, which is what produced the listings and demands above.
 
-**Not cleaned up automatically.** Deleting production rows is a destructive operation requiring
-explicit per-operation authorization under the project rules, and these rows have foreign-key
-relationships (profiles, listings, matches). They also inflate platform stats — the MCP
-`get_platform_stats` / `govihub_get_registrations` tools will count them as real farmers and buyers.
+### CLEANED UP — authorized by Nuwan, executed 2026-07-19 16:09 UTC
 
-**Recommended:** authorize a scoped cleanup of `tossmoke0719` and `tosplay*` (matches → listings →
-profiles → users, in that order to respect FKs). Say the word and it will be run and verified.
+Pre-cleanup snapshot: `/root/backups/spices-pre-testdata-cleanup-20260719-160923.sql` (5,136,459 bytes)
+
+`users` turned out to have **23 FK references**, not the naive four — so the cleanup script covers
+`ad_events, advertisements, advisory_questions, beta_feedback, crop_diagnoses,
+farmer_crop_selections, google_accounts, notification_preferences, notifications, refresh_tokens,
+role_changes, weather_alerts`, the three `*_listings`/`demand_postings` owner columns, the three
+profile tables, and nulls the `removed_by` moderation back-references. Script: `/root/cleanup_testdata.sql`.
+
+Two safety measures: an in-transaction assertion that **aborts** if any match ties test data to a
+real user's listing (it passed — all 4 test matches were test↔test), and a full **dry run ending in
+ROLLBACK** before the committed run.
+
+**A real check that mattered:** 126 users existed pre-cleanup vs the 113 counted at audit. The gap
+was not test data — **three genuine pilot users registered during the session**:
+
+| username | registered (UTC) | ToS state |
+|---|---|---|
+| `sakuralankaent` | 06:30 — **before** deploy | NULL → will correctly get the modal |
+| `inoj` | 11:54 — after deploy | **v1.0, accepted** |
+| `dinesh1985` | 14:50 — after deploy | **v1.0, accepted** |
+
+`inoj` and `dinesh1985` accepted the Terms through the real UI with no involvement from testing.
+That is stronger evidence the feature works than any synthetic test in this document.
+
+**Result:** 10 test users and all dependents removed. `leftover_test = 0`, `orphan_harvests = 0`,
+`orphan_matches = 0`. Population reconciles exactly — farmer 59→60, buyer 27→29, supplier 21,
+admin 6 = **116**.
+
+Post-cleanup smoke: `/api/v1/health` 200 · `/en/terms` 200 · `/si/terms` 200 · `/ta/terms` 200 ·
+`/en/auth/beta-login` 200 · `/` 200 · registration gate still returns **422 TOS_NOT_ACCEPTED**.
 
 ## 8. Rollback
 
