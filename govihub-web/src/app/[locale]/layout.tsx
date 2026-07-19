@@ -3,6 +3,7 @@ import { getMessages } from "next-intl/server";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/components/ui/Toast";
 import FeedbackFAB from "@/components/ui/FeedbackFAB";
+import TosGateModal from "@/components/ui/TosGateModal";
 import "../globals.css";
 
 export const metadata = {
@@ -62,6 +63,7 @@ export default async function LocaleLayout({
             <ToastProvider>
               {children}
               <FeedbackFAB />
+              <TosGateModal />
             </ToastProvider>
           </AuthProvider>
         </NextIntlClientProvider>

@@ -210,3 +210,20 @@ Default `extra="ignore"` is how the `preferred_language` / `language` field-name
 ## Bisectability note (informational, not debt)
 
 Commits C1–C8 in the phone-mandatory rollout reference `require_complete_profile` which isn't defined until commit C9 (`f74f748`). The branch tip builds and deploys correctly; `git bisect run` across the intermediate commits would fail on import. Accepted tradeoff; no action required.
+
+---
+
+## Open: `TOS_VERSION` duplicated between frontend and backend
+
+`TOS_VERSION = "1.0"` is hardcoded in `govihub-web/src/components/ui/TosGateModal.tsx`
+and duplicates the backend `settings.TOS_VERSION`. No meta endpoint exposes the
+backend value, so the frontend cannot read it at runtime.
+
+**Consequence:** bumping the Terms of Use requires changing **both** places. If only
+the backend is bumped, no user is ever re-prompted (the gate compares against the
+stale frontend constant). If only the frontend is bumped, every non-admin user is
+prompted and `POST /users/me/accept-tos` writes the old backend version back —
+leaving them permanently gated in a loop.
+
+**Fix when convenient:** expose `TOS_VERSION` from a public meta endpoint
+(e.g. `GET /api/v1/meta`) and have `TosGateModal` compare against that.

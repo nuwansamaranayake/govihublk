@@ -8,8 +8,17 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import TopBar from "@/components/ui/TopBar";
 import { PhoneInput, isValidE164Phone } from "@/components/ui/PhoneInput";
-import { api } from "@/lib/api";
+import { api, ApiException } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+
+/** True when a 422 body carries the backend's TOS_NOT_ACCEPTED field error. */
+function isTosNotAccepted(details: unknown): boolean {
+  const detail = (details as { detail?: unknown } | null)?.detail;
+  return (
+    Array.isArray(detail) &&
+    detail.some((d) => (d as { code?: string })?.code === "TOS_NOT_ACCEPTED")
+  );
+}
 
 type Role = "farmer" | "buyer" | "supplier";
 
@@ -79,6 +88,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   function validate(): boolean {
     const errs: FormErrors = {};
@@ -109,6 +119,7 @@ export default function RegisterPage() {
           phone: form.phone.trim(),
           district: form.district,
           language: form.language,
+          tos_accepted: true,
         }
       );
       updateUser({ role: data.role as Role, name: data.name, isProfileComplete: true });
@@ -119,6 +130,13 @@ export default function RegisterPage() {
         router.replace("/" + locale + "/" + selectedRole + "/dashboard");
       }
     } catch (err: unknown) {
+      // The backend rejects a missing/false tos_accepted with a 422 whose
+      // detail entries carry `code` but no `msg`, so ApiException.message ends
+      // up useless here — read the code off `details` and localize it instead.
+      if (err instanceof ApiException && isTosNotAccepted(err.details)) {
+        setServerError(t("auth.auth_error_tos_not_accepted"));
+        return;
+      }
       const message =
         err instanceof Error ? err.message : "Registration failed. Please try again.";
       setServerError(message);
@@ -241,6 +259,28 @@ export default function RegisterPage() {
           onChange={(e) => setForm({ ...form, language: e.target.value })}
         />
 
+        {/* Terms of Use acceptance */}
+        <div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={(e) => setTosAccepted(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 text-primary-600 focus:ring-2 focus:ring-primary-500"
+            />
+            <span className="text-sm text-neutral-700">{t("auth.tos_checkbox")}</span>
+          </label>
+          {/* New tab — a same-tab navigation would discard the filled form. */}
+          <a
+            href={`/${locale}/terms`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 ml-8 inline-block text-sm text-primary-600 font-medium hover:underline"
+          >
+            {t("tos.title")}
+          </a>
+        </div>
+
         {serverError && (
           <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">
             {serverError}
@@ -253,7 +293,7 @@ export default function RegisterPage() {
           size="lg"
           fullWidth
           loading={isSubmitting}
-          disabled={isSubmitting || !isValidE164Phone(form.phone)}
+          disabled={isSubmitting || !isValidE164Phone(form.phone) || !tosAccepted}
         >
           {t("common.submit")}
         </Button>

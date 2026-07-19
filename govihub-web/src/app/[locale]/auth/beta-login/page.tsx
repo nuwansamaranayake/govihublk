@@ -115,6 +115,7 @@ const AUTH_ERROR_KEYS: Record<string, string> = {
   INVALID_CREDENTIALS: "auth_error_invalid_credentials",
   ACCOUNT_INACTIVE: "auth_error_account_inactive",
   RATE_LIMITED: "auth_error_rate_limited",
+  TOS_NOT_ACCEPTED: "auth_error_tos_not_accepted",
 };
 
 function localizeAuthError(
@@ -142,6 +143,7 @@ export default function BetaLoginPage() {
   const t = useTranslations('auth');
   const tRoles = useTranslations('roles');
   const tCommon = useTranslations('common');
+  const tTos = useTranslations('tos');
 
   const [tab, setTab] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
@@ -170,6 +172,8 @@ export default function BetaLoginPage() {
   const [regDistrict, setRegDistrict] = useState("");
   const [regLanguage, setRegLanguage] = useState<"si" | "en">("si");
   const [regPhone, setRegPhone] = useState("");
+  const [regTosAccepted, setRegTosAccepted] = useState(false);
+  const [regTosError, setRegTosError] = useState<string | null>(null);
 
   // Real-time username availability / validity (debounced 400ms).
   // Re-runs automatically when regUsername changes — including when a
@@ -218,9 +222,10 @@ export default function BetaLoginPage() {
     e.preventDefault();
     setError(null);
     setRegUsernameError(null);
-    // Username-specific errors surface inline below the field; everything
-    // else (required fields, password, district, phone) still uses the
-    // cross-field banner.
+    setRegTosError(null);
+    // Username- and ToS-specific errors surface inline below their field;
+    // everything else (required fields, password, district, phone) still uses
+    // the cross-field banner.
     if (!regName.trim()) { setError(t('requiredFields')); return; }
     if (!regUsername.trim()) {
       setRegUsernameError(t('username_error_required'));
@@ -229,9 +234,11 @@ export default function BetaLoginPage() {
     if (regPassword.length < 6) { setError(t('passwordHint')); return; }
     if (!regDistrict) { setError(t('selectDistrict')); return; }
     if (!isValidE164Phone(regPhone)) { setError(t('phone_invalid')); return; }
+    // Belt-and-braces: the submit button is already disabled until checked.
+    if (!regTosAccepted) { setRegTosError(t('tos_error')); return; }
     setLoading(true);
     try {
-      const body: Record<string, string> = {
+      const body: Record<string, string | boolean> = {
         username: regUsername.trim(),
         password: regPassword,
         name: regName.trim(),
@@ -239,6 +246,7 @@ export default function BetaLoginPage() {
         district: regDistrict,
         language: regLanguage,
         phone: regPhone,
+        tos_accepted: true,
       };
       const res = await fetch(`${API_URL}/auth/beta/register`, {
         method: "POST",
@@ -252,6 +260,12 @@ export default function BetaLoginPage() {
         if (first?.field === 'username' && typeof first?.code === 'string') {
           const codeKey = `username_error_${first.code.toLowerCase()}`;
           setRegUsernameError(t(codeKey));
+          throw new Error('__handled__');
+        }
+        // Same inline mechanism for the ToS checkbox, so the message lands
+        // next to the box rather than in the far-away banner.
+        if (first?.field === 'tos_accepted') {
+          setRegTosError(t('auth_error_tos_not_accepted'));
           throw new Error('__handled__');
         }
         // Business errors ({code,message}) + legacy string details -> localized message.
@@ -559,10 +573,42 @@ export default function BetaLoginPage() {
               helperText={t('phone_required_explanation')}
             />
 
+            {/* Terms of Use acceptance (register only) */}
+            <div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={regTosAccepted}
+                  onChange={(e) => {
+                    setRegTosAccepted(e.target.checked);
+                    if (regTosError) setRegTosError(null);
+                  }}
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 text-green-600 focus:ring-2 focus:ring-green-500"
+                />
+                <span className="text-sm text-neutral-700">
+                  {t('tos_checkbox')}
+                </span>
+              </label>
+              {/* New tab — a same-tab navigation would discard the filled form. */}
+              <a
+                href={`/${locale}/terms`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 ml-8 inline-block text-sm text-green-600 font-medium hover:underline"
+              >
+                {tTos('title')}
+              </a>
+              {regTosError && (
+                <p className="text-xs text-red-600 mt-1" role="alert">
+                  {regTosError}
+                </p>
+              )}
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading || !isValidE164Phone(regPhone)}
+              disabled={loading || !isValidE164Phone(regPhone) || !regTosAccepted}
               className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? <><Spinner /> {t('creatingAccount')}</> : t('createAccount')}

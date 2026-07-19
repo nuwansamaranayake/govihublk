@@ -22,6 +22,10 @@ export interface AuthUser {
   phone?: string | null;
   district?: string | null;
   isProfileComplete: boolean;
+  /** ISO timestamp of the last Terms of Use acceptance, or null if never accepted */
+  tosAcceptedAt?: string | null;
+  /** Terms of Use version the user accepted, or null */
+  tosVersion?: string | null;
 }
 
 interface AuthContextValue {
@@ -61,6 +65,8 @@ interface MeResponse {
   phone?: string | null;
   district?: string | null;
   is_profile_complete: boolean;
+  tos_accepted_at?: string | null;
+  tos_version?: string | null;
 }
 
 function mapUser(me: MeResponse): AuthUser {
@@ -73,6 +79,8 @@ function mapUser(me: MeResponse): AuthUser {
     phone: me.phone,
     district: me.district,
     isProfileComplete: me.is_profile_complete,
+    tosAcceptedAt: me.tos_accepted_at ?? null,
+    tosVersion: me.tos_version ?? null,
   };
 }
 
