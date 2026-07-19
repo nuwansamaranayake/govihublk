@@ -208,3 +208,52 @@ The practical consequence: **this Terms of Use will be the most complete Tamil t
 Backfilling those placeholders was explicitly **out of scope** for this task and none of them were touched. The three new `auth` keys and the new `tos` and `matches` entries are real Tamil, not placeholders.
 
 Note also that `ta.json` had **no `matches` namespace at all** before this change. It was created containing only the three disclaimer keys — the other ~31 `matches` keys that exist in English and Sinhala are still absent from Tamil.
+
+---
+
+## v1.1 changes — review only this delta
+
+The document moved from v1.0 (14 sections) to v1.1 (17 sections) on 19 July 2026. Three new clauses were added and everything after them was renumbered. **The wording of every pre-existing section is unchanged** — only its number moved. Please review the three new sections and the one added sentence below; you do not need to re-read the rest.
+
+### New sections
+
+| § | Heading (TA) | What it says |
+|---|---|---|
+| 5 | GoviHub ஐ யார் பயன்படுத்தலாம் | Eligibility. GoviHub is for farmers, buyers and suppliers operating in or sourcing from Sri Lanka. Minimum age to create an account is 16. |
+| 7 | உங்கள் உள்ளடக்கம் | The user keeps ownership of listings, demand postings and photos. Submitting content grants GoviHub permission to store, display and process it to run the platform. The permission ends when the content or account is removed, except where the law requires us to keep a record. Second paragraph forbids misleading quantities, fraudulent listings, and content that breaks Sri Lankan law. |
+| 8 | தடைசெய்யப்பட்ட பயன்பாடுகள் | Prohibited uses, as (a)/(b)/(c): (a) scraping, reverse-engineering or automated crawling beyond what robots.txt permits; (b) impersonating another person, farm, cooperative or business; (c) using the platform to target, harass or threaten other users. |
+
+### Added sentence
+
+§13 (இடைநிறுத்தம் மற்றும் நீக்கம், previously §10) gained a closing sentence:
+
+> support@govihublk.com ஐத் தொடர்புகொள்வதன் மூலம் நீங்கள் எந்த நேரத்திலும் உங்கள் கணக்கை மூடலாம்.
+
+("You may close your account at any time by contacting support@govihublk.com.")
+
+### Renumbering map
+
+| v1.0 § | v1.1 § | Heading |
+|---|---|---|
+| 1–4 | 1–4 | unchanged |
+| — | 5 | **new** — Who Can Use GoviHub |
+| 5 | 6 | உங்கள் பொறுப்புகள் |
+| — | 7 | **new** — Your Content |
+| — | 8 | **new** — Prohibited Uses |
+| 6 | 9 | செயற்கை நுண்ணறிவு அம்சங்கள் வழிகாட்டல் மட்டுமே |
+| 7 | 10 | பொறுப்பு வரம்பு |
+| 8 | 11 | நாங்கள் விலக்காதவை |
+| 9 | 12 | பயனர்களுக்கு இடையிலான தகராறுகள் |
+| 10 | 13 | இடைநிறுத்தம் மற்றும் நீக்கம் *(+1 sentence)* |
+| 11 | 14 | ஆளும் சட்டம் மற்றும் அதிகார எல்லை |
+| 12 | 15 | மொழி |
+| 13 | 16 | இந்த விதிகளுக்கான மாற்றங்கள் |
+| 14 | 17 | தொடர்பு |
+
+### Notes on the new text
+
+- **`robots.txt` left in English.** It is a filename, not a word, and translating it would make the clause unenforceable in practice. Same reasoning as the statute names.
+- **"GoviHub" kept in Latin script** in the §5 heading, matching every other occurrence in the document. The machine draft had transliterated it as *கோவிஹப்* in that one heading; this was corrected.
+- **"தலைகீழ் பொறியியல்"** is used for *reverse-engineer* and **"ஊடுருவிப் பரிசோதித்தல்"** for *crawl*. If Sri Lankan Tamil technology writing uses different standard terms, please supply them.
+- **"கூட்டுறவு"** is used for *cooperative* in §8(b), on the assumption this means a farmers' cooperative society. Confirm this is the term farmers would recognise.
+- **Age is written as digits (16)** to match how numbers appear elsewhere in the document.

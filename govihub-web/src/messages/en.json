@@ -663,7 +663,7 @@
   },
   "tos": {
     "title": "Terms of Use",
-    "version_line": "Version 1.0. Last updated 19 July 2026.",
+    "version_line": "Version 1.1. Last updated 19 July 2026.",
     "modal_title": "Updated Terms of Use",
     "modal_body": "Please review and accept our Terms of Use to continue using GoviHub.",
     "modal_view": "View Terms",

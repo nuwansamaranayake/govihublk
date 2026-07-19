@@ -77,7 +77,7 @@ class Settings(BaseSettings):
 
     # Terms of Use version — single source of truth. Bumping this re-gates every
     # non-admin user through the re-acceptance modal (tos_version != TOS_VERSION).
-    TOS_VERSION: str = "1.0"
+    TOS_VERSION: str = "1.1"
 
     @property
     def sync_database_url(self) -> str:

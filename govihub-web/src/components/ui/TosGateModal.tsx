@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
  * Duplicates the backend `settings.TOS_VERSION` — no meta endpoint exposes it.
  * Bumping the terms means changing BOTH places. See TECH_DEBT.md.
  */
-const TOS_VERSION = "1.0";
+const TOS_VERSION = "1.1";
 
 interface AcceptTosResponse {
   tos_accepted_at: string;

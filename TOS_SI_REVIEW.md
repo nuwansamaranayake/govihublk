@@ -189,3 +189,52 @@ Notes on the UI strings:
 
 - **Statute names kept in English.** `Electronic Transactions Act No. 19 of 2006` and `Unfair Contract Terms Act No. 26 of 1997` are left in English inside the Sinhala text, because we could not confirm the official published Sinhala titles. If you know the official Sinhala titles as gazetted, please supply them and we will swap them in.
 - **Document register vs app register differ deliberately.** The document says *කොන්දේසි* for "Terms"; the in-app UI strings say *භාවිත නියම*. The document is written to read as a formal agreement, the UI strings to read as everyday app language. If you would rather they matched, tell us which one to standardise on — this is a text-only change.
+
+---
+
+## v1.1 changes — review only this delta
+
+The document moved from v1.0 (14 sections) to v1.1 (17 sections) on 19 July 2026. Three new clauses were added and everything after them was renumbered. **The wording of every pre-existing section is unchanged** — only its number moved. Please review the three new sections and the one added sentence below; you do not need to re-read the rest.
+
+### New sections
+
+| § | Heading (SI) | What it says |
+|---|---|---|
+| 5 | GoviHub භාවිතා කළ හැක්කේ කාටද | Eligibility. GoviHub is for farmers, buyers and suppliers operating in or sourcing from Sri Lanka. Minimum age to create an account is 16. |
+| 7 | ඔබගේ අන්තර්ගතය | The user keeps ownership of listings, demand postings and photos. Submitting content grants GoviHub permission to store, display and process it to run the platform. The permission ends when the content or account is removed, except where the law requires us to keep a record. Second paragraph forbids misleading quantities, fraudulent listings, and content that breaks Sri Lankan law. |
+| 8 | තහනම් භාවිතයන් | Prohibited uses, as (a)/(b)/(c): (a) scraping, reverse-engineering or automated crawling beyond what robots.txt permits; (b) impersonating another person, farm, cooperative or business; (c) using the platform to target, harass or threaten other users. |
+
+### Added sentence
+
+§13 (ගිණුම් අත්හිටුවීම සහ අවසන් කිරීම, previously §10) gained a closing sentence:
+
+> ඔබට ඕනෑම වේලාවක support@govihublk.com අමතා ඔබගේ ගිණුම වසා දැමිය හැකිය.
+
+("You may close your account at any time by contacting support@govihublk.com.")
+
+### Renumbering map
+
+| v1.0 § | v1.1 § | Heading |
+|---|---|---|
+| 1–4 | 1–4 | unchanged |
+| — | 5 | **new** — Who Can Use GoviHub |
+| 5 | 6 | ඔබගේ වගකීම් |
+| — | 7 | **new** — Your Content |
+| — | 8 | **new** — Prohibited Uses |
+| 6 | 9 | කෘත්‍රිම බුද්ධි විශේෂාංග උපදෙස් සඳහා පමණි |
+| 7 | 10 | වගකීම් සීමා කිරීම |
+| 8 | 11 | අප බැහැර නොකරන දේ |
+| 9 | 12 | පරිශීලකයින් අතර ආරවුල් |
+| 10 | 13 | ගිණුම් අත්හිටුවීම සහ අවසන් කිරීම *(+1 sentence)* |
+| 11 | 14 | පාලන නීතිය සහ අධිකරණ බලය |
+| 12 | 15 | භාෂාව |
+| 13 | 16 | මෙම කොන්දේසි වලට කරන වෙනස්කම් |
+| 14 | 17 | සම්බන්ධ කර ගැනීම |
+
+### Notes on the new text
+
+- **`robots.txt` left in English.** It is a filename, not a word, and translating it would make the clause unenforceable in practice. Same reasoning as the statute names.
+- **"ප්‍රතිලෝම විශ්ලේෂණය"** is used for *reverse-engineer*. If there is a more standard Sinhala rendering in local technology writing, please supply it.
+- **"සමුපකාරය"** is used for *cooperative* in §8(b), on the assumption this means a farmers' cooperative society. Confirm this is the term farmers would recognise.
+- **Age is written as digits (16)** to match how numbers appear elsewhere in the document.
+- The version line now reads **අනුවාදය 1.1**; the in-app UI string reads **සංස්කරණය 1.1** (the pre-existing register difference between document and app is preserved).
