@@ -14,7 +14,7 @@ USERNAME_MIN = 3
 USERNAME_MAX = 20
 
 
-class UsernameError(ValueError):
+class FieldError(ValueError):
     """Typed validator failure with a machine-readable code for frontend mapping.
 
     Pydantic v2 surfaces the live exception instance at ``err["ctx"]["error"]``
@@ -22,12 +22,25 @@ class UsernameError(ValueError):
     in ``app.main`` detects this type and emits a structured
     ``{field, code, message, offending}`` entry instead of the default
     ``{loc, msg, type}`` shape.
+
+    Subclasses set ``field`` so the handler can label the entry without
+    hardcoding a field name.
     """
+
+    field = "unknown"
 
     def __init__(self, code: str, message: str, offending: Optional[str] = None) -> None:
         self.code = code
         self.offending = offending
         super().__init__(message)
+
+
+class UsernameError(FieldError):
+    field = "username"
+
+
+class TosNotAcceptedError(FieldError):
+    field = "tos_accepted"
 
 
 def validate_username_value(raw: str) -> str:
@@ -76,6 +89,20 @@ class BetaRegisterRequest(BaseModel):
     language: str = Field(default="si", max_length=5)
     phone: str = Field(..., min_length=8, max_length=16, description="Phone number in E.164 format (required)")
     email: Optional[str] = Field(default=None, max_length=255)
+    # validate_default=True is load-bearing: Pydantic v2 skips validators on
+    # defaults, so without it an OMITTED tos_accepted silently parses as False
+    # and registration proceeds ungated — only an explicit false would be
+    # caught. Absence is not consent.
+    tos_accepted: bool = Field(default=False, validate_default=True)
+
+    @field_validator("tos_accepted")
+    @classmethod
+    def validate_tos(cls, v: bool) -> bool:
+        if v is not True:
+            raise TosNotAcceptedError(
+                "TOS_NOT_ACCEPTED", "You must accept the Terms of Use to register"
+            )
+        return v
 
     @field_validator("username")
     @classmethod

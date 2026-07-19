@@ -93,6 +93,10 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
         is_active=True,
         is_verified=True,
         last_login_at=datetime.now(timezone.utc),
+        # Server stamps acceptance — a client-supplied timestamp is never trusted.
+        # body.tos_accepted is guaranteed True here; the validator rejects anything else.
+        tos_accepted_at=datetime.now(timezone.utc),
+        tos_version=settings.TOS_VERSION,
     )
     db.add(user)
     await db.flush()

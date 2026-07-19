@@ -75,6 +75,10 @@ class Settings(BaseSettings):
         """Parse comma-separated origins into a list."""
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
+    # Terms of Use version — single source of truth. Bumping this re-gates every
+    # non-admin user through the re-acceptance modal (tos_version != TOS_VERSION).
+    TOS_VERSION: str = "1.0"
+
     @property
     def sync_database_url(self) -> str:
         """Synchronous database URL for Alembic."""
