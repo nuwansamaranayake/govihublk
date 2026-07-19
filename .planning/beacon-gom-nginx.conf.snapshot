@@ -1,0 +1,228 @@
+upstream frontend {
+    server frontend:80;
+}
+
+upstream backend {
+    server backend:8000;
+}
+
+# ---------------------------------------------------------------
+# Public MCP subdomain: publicmcp.beacongom.com
+# Routes /sse and /messages directly to the MCP server (no /mcp prefix).
+# Only public (unauthenticated) tools are available on this endpoint.
+# ---------------------------------------------------------------
+server {
+    listen 80;
+    server_name publicmcp.beacongom.com;
+
+    server_tokens off;
+
+    # SSE endpoint
+    location /sse {
+        proxy_pass http://mcp-server:8001/sse;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header X-Accel-Buffering no;
+        proxy_read_timeout 300s;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+
+    # Messages endpoint (direct access)
+    # FastMCP 2.x registers /messages as a Starlette Mount requiring trailing slash.
+    # Handle /messages/ (primary) and redirect bare /messages → /messages/ with 307.
+    location /messages/ {
+        proxy_pass http://mcp-server:8001/messages/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+    location = /messages {
+        return 307 /messages/$is_args$args;
+    }
+
+    # MCP messages with /mcp prefix (SSE endpoint returns /mcp/messages/ due to root_path)
+    location /mcp/messages/ {
+        proxy_pass http://mcp-server:8001/messages/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+    location = /mcp/messages {
+        return 307 /mcp/messages/$is_args$args;
+    }
+
+    # Smithery / MCP registry discovery endpoint
+    location = /.well-known/mcp/server-card.json {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Cache-Control "public, max-age=3600";
+        return 200 '{
+  "name": "Beacon GoM \u2014 Gulf of Mexico Safety Intelligence",
+  "description": "Query BSEE offshore safety data for Gulf of Mexico oil and gas operations. Search incidents by operator, area, and date range. Get operator safety summaries including incident counts, injuries, fatalities, and violations. Raw public data from the Bureau of Safety and Environmental Enforcement.",
+  "url": "https://publicmcp.beacongom.com/sse",
+  "transport": "sse",
+  "version": "1.0.0",
+  "author": {
+    "name": "AiGNITE Consulting LLC",
+    "url": "https://aigniteconsulting.ai"
+  },
+  "tools": [
+    {
+      "name": "public_search_incidents",
+      "description": "Search BSEE incident records by operator, area, date range. Returns incident type, injuries, fatalities, location.",
+      "parameters": ["operator", "area", "start_date", "end_date", "limit"]
+    },
+    {
+      "name": "public_get_operator_summary",
+      "description": "Get total incidents, injuries, fatalities, violations, and active platform count for any Gulf of Mexico operator.",
+      "parameters": ["operator"]
+    },
+    {
+      "name": "public_list_recent_incidents",
+      "description": "List the most recent BSEE incidents across all operators. Configurable time window and result limit.",
+      "parameters": ["days", "limit"]
+    }
+  ],
+  "tags": ["energy", "safety", "compliance", "offshore", "bsee", "gulf-of-mexico"],
+  "website": "https://aigniteconsulting.ai"
+}';
+    }
+
+    # Root: simple info page
+    location / {
+        default_type application/json;
+        return 200 '{"name":"Beacon GoM Public MCP","status":"ok","docs":"https://beacongom.com","sse_endpoint":"/sse","server_card":"/.well-known/mcp/server-card.json"}';
+    }
+}
+
+# ---------------------------------------------------------------
+# Main app: gomsafety.aigniteconsulting.ai / beacongom.com
+# ---------------------------------------------------------------
+server {
+    listen 80 default_server;
+    server_name localhost gomsafety.aigniteconsulting.ai beacongom.com www.beacongom.com;
+
+    # --- Security & Limits ---
+    client_max_body_size 2m;          # Max request body (prevents abuse)
+    client_body_timeout 30s;          # Timeout waiting for request body
+    client_header_timeout 30s;        # Timeout waiting for headers
+
+    # Hide nginx version
+    server_tokens off;
+
+    # --- Custom error pages (branded, not raw nginx HTML) ---
+    error_page 502 503 504 /error_50x.html;
+    location = /error_50x.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+
+    # --- API requests → FastAPI ---
+    location /api/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 120s;      # Long timeout for AI analysis calls
+
+        # Request body limit for API
+        client_max_body_size 1m;
+
+        # Disable buffering for SSE (streaming chat)
+        proxy_buffering off;
+        proxy_cache off;
+    }
+
+    # MCP SSE endpoint (bypass root_path, proxy directly to /sse)
+    location /mcp/sse {
+        proxy_pass http://mcp-server:8001/sse;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header X-Accel-Buffering no;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+
+    # MCP messages endpoint
+    # FastMCP 2.x /messages is a Starlette Mount requiring trailing slash.
+    location /mcp/messages/ {
+        proxy_pass http://mcp-server:8001/messages/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_buffering off;
+        proxy_cache off;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+    location = /mcp/messages {
+        return 307 /mcp/messages/$is_args$args;
+    }
+
+    # --- Health check → FastAPI ---
+    location /health {
+        proxy_pass http://backend;
+        proxy_read_timeout 10s;
+    }
+
+    # --- Everything else → React SPA ---
+    location / {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}

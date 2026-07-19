@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-19T09:19:38.996Z",
+  "source": "auto-postool",
+  "partial": false,
+  "phase": null,
+  "phase_name": null,
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "auto-checkpoint",
+  "completed_tasks": [],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [],
+  "uncommitted_files": [
+    {
+      "status": "M",
+      "path": "CLAUDE.md"
+    },
+    {
+      "status": "M",
+      "path": "govihub-umbrella/public/about-si.html"
+    },
+    {
+      "status": "M",
+      "path": "govihub-umbrella/public/about.html"
+    },
+    {
+      "status": "??",
+      "path": ".planning/"
+    },
+    {
+      "status": "??",
+      "path": "TOS_AUDIT.md"
+    },
+    {
+      "status": "??",
+      "path": "TOS_DISCLAIMER_VERIFICATION.md"
+    },
+    {
+      "status": "??",
+      "path": "assets/logo-kit.zip"
+    },
+    {
+      "status": "??",
+      "path": "docker-compose.dev.local.yml"
+    },
+    {
+      "status": "??",
+      "path": "docs/agent-legibility/"
+    },
+    {
+      "status": "??",
+      "path": "e2e-v3/test-tos.js"
+    }
+  ],
+  "next_action": null,
+  "context_notes": "Recent commits:\n5843110 feat(legal): ToS checkbox on both registration paths + blocking re-acceptance modal\n643bd15 feat(legal): match liability disclaimer on match card and detail\n6a3a2be feat(legal): Terms of Use EN/SI/TA + trilingual locale keys + review docs\n0b566f7 feat(legal): POST /users/me/accept-tos, tos fields on /users/me, gate complete-registration\nf8e1906 feat(legal): TOS_NOT_ACCEPTED structured error + acceptance stamped on beta register"
+}
