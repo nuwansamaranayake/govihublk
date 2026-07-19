@@ -47,6 +47,10 @@ class User(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     # Set on each successful self-service role change; enforces the 30-day cooldown.
     last_role_change_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Terms of Use acceptance; see migration 014. NULL means never accepted, which
+    # is what triggers the blocking re-acceptance modal for non-admin users.
+    tos_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    tos_version: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     # Relationships
     farmer_profile: Mapped[Optional["FarmerProfile"]] = relationship(
