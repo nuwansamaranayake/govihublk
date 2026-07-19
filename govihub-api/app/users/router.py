@@ -9,6 +9,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.dependencies import get_current_active_user, get_current_user, get_db, require_complete_profile, require_role
 from app.exceptions import GoviHubException, ValidationError
 from app.users.models import BuyerProfile, FarmerProfile, RoleChange, SupplierProfile, User, UserRole
@@ -92,7 +93,14 @@ async def complete_registration(
 ):
     """Assign role and create profile for new user."""
     svc = UserService(db)
-    user = await svc.complete_registration(current_user.id, body.model_dump())
+    # tos_accepted is excluded from the service payload — it is a gate, not a
+    # profile field. The validator has already guaranteed it is True here.
+    user = await svc.complete_registration(
+        current_user.id, body.model_dump(exclude={"tos_accepted"})
+    )
+    # Server stamps acceptance; a client-supplied timestamp is never trusted.
+    user.tos_accepted_at = datetime.now(timezone.utc)
+    user.tos_version = settings.TOS_VERSION
     await db.commit()
     return user
 
@@ -324,6 +332,29 @@ async def get_current_profile(
     """Get current user full profile. Always accessible (no profile gate)."""
     svc = UserService(db)
     return await svc.get_user(current_user.id)
+
+
+@router.post("/me/accept-tos")
+async def accept_tos(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record acceptance of the current Terms of Use version. Idempotent.
+
+    Deliberately gated on get_current_active_user, NOT require_complete_profile:
+    a user who has not accepted the terms — or whose profile is incomplete —
+    must still be able to accept them, or the modal traps them.
+
+    The server sets the timestamp; a client-supplied one is never trusted.
+    """
+    current_user.tos_accepted_at = datetime.now(timezone.utc)
+    current_user.tos_version = settings.TOS_VERSION
+    await db.commit()
+    await db.refresh(current_user)
+    return {
+        "tos_accepted_at": current_user.tos_accepted_at,
+        "tos_version": current_user.tos_version,
+    }
 
 
 @router.post("/me/complete-profile", response_model=UserRead)

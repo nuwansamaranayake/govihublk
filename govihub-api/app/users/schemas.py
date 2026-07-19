@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.auth.beta_schemas import TosNotAcceptedError
 from app.users.phone import validate_e164_phone, validate_e164_phone_optional
 
 
@@ -18,11 +19,24 @@ class CompleteRegistrationRequest(BaseModel):
     gn_division: Optional[str] = None
     ds_division: Optional[str] = None
     province: Optional[str] = None
+    # D2: this is the second registration path. Gating it too means "accepted at
+    # registration" is literally true for every new user, rather than deferred to
+    # the re-acceptance modal. validate_default=True — absence is not consent.
+    tos_accepted: bool = Field(default=False, validate_default=True)
 
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
         return validate_e164_phone(v)
+
+    @field_validator("tos_accepted")
+    @classmethod
+    def validate_tos(cls, v: bool) -> bool:
+        if v is not True:
+            raise TosNotAcceptedError(
+                "TOS_NOT_ACCEPTED", "You must accept the Terms of Use to register"
+            )
+        return v
 
 
 class CompleteProfileRequest(BaseModel):
@@ -48,6 +62,10 @@ class UserRead(BaseModel):
     avatar_url: Optional[str] = None
     is_verified: bool
     created_at: datetime
+    # Terms of Use acceptance state. The frontend uses these to decide whether
+    # to show the blocking re-acceptance modal (NULL or stale version = show).
+    tos_accepted_at: Optional[datetime] = None
+    tos_version: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
