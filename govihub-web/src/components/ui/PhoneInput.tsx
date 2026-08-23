@@ -55,6 +55,10 @@ export function PhoneInput({
         // phone entry point (register, beta-login, complete-profile, all three
         // settings pages) inherits it without call-site changes.
         countries={PHONE_COUNTRIES}
+        // Pin LK to the top of the dropdown (locked decision: "LK default and
+        // first") — the library otherwise sorts alphabetically. "|" renders a
+        // divider; the rest stay alphabetical.
+        countryOptionsOrder={["LK", "|"]}
         addInternationalOption={false}
         countryCallingCodeEditable={false}
         defaultCountry={defaultCountry as any}
