@@ -380,9 +380,39 @@
           </div>
           <div class="form-group">
             <label>District</label>
-            <input type="text" id="edit-user-district" />
+            <!-- Canonical 25 Sri Lankan districts, same list the registration flow uses.
+                 Free text here previously allowed values the API now rejects. -->
+            <select id="edit-user-district">
+              <option value="">(none)</option>
+              <option value="Ampara">Ampara</option>
+              <option value="Anuradhapura">Anuradhapura</option>
+              <option value="Badulla">Badulla</option>
+              <option value="Batticaloa">Batticaloa</option>
+              <option value="Colombo">Colombo</option>
+              <option value="Galle">Galle</option>
+              <option value="Gampaha">Gampaha</option>
+              <option value="Hambantota">Hambantota</option>
+              <option value="Jaffna">Jaffna</option>
+              <option value="Kalutara">Kalutara</option>
+              <option value="Kandy">Kandy</option>
+              <option value="Kegalle">Kegalle</option>
+              <option value="Kilinochchi">Kilinochchi</option>
+              <option value="Kurunegala">Kurunegala</option>
+              <option value="Mannar">Mannar</option>
+              <option value="Matale">Matale</option>
+              <option value="Matara">Matara</option>
+              <option value="Monaragala">Monaragala</option>
+              <option value="Mullaitivu">Mullaitivu</option>
+              <option value="Nuwara Eliya">Nuwara Eliya</option>
+              <option value="Polonnaruwa">Polonnaruwa</option>
+              <option value="Puttalam">Puttalam</option>
+              <option value="Ratnapura">Ratnapura</option>
+              <option value="Trincomalee">Trincomalee</option>
+              <option value="Vavuniya">Vavuniya</option>
+            </select>
           </div>
         </div>
+        <div id="edit-user-error" role="alert" style="display:none;margin-top:10px;padding:8px 10px;border-radius:6px;background:#FEF2F2;color:#B91C1C;font-size:13px;"></div>
         <div style="font-size:12px;color:#94A3B8;">Email address cannot be changed.</div>
       </div>
       <div class="modal-footer">
@@ -847,6 +877,8 @@ function openEditUser(u) {
   document.getElementById('edit-user-phone').value = u.phone || '';
   document.getElementById('edit-user-role').value = u.role || 'farmer';
   document.getElementById('edit-user-district').value = u.district || '';
+  const errBox = document.getElementById('edit-user-error');
+  if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; }
   openModal('edit-user');
 }
 
@@ -864,6 +896,10 @@ async function saveUserEdit() {
     showToast('User updated', 'success');
     loadUsers();
   } catch (e) {
+    // Render validation failures next to the field the API named, so a rejected
+    // phone or district is visible where the admin is typing, not just in a toast.
+    const err = document.getElementById('edit-user-error');
+    if (err) { err.textContent = e.message; err.style.display = 'block'; }
     showToast(e.message, 'error');
   }
 }

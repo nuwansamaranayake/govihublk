@@ -178,6 +178,7 @@ class AdminService:
             pattern = f"%{filters.search}%"
             query = query.where(
                 or_(
+                    User.username.ilike(pattern),
                     User.name.ilike(pattern),
                     User.email.ilike(pattern),
                     User.phone.ilike(pattern),

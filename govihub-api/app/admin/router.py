@@ -59,6 +59,9 @@ router = APIRouter()
 # Dependency shorthand — every route in this router requires admin role.
 AdminRequired = Depends(require_role("admin"))
 
+# Hard ceiling on admin list page size (callers above this are clamped, not rejected).
+MAX_USER_PAGE_SIZE = 100
+
 
 def _get_service(db: AsyncSession = Depends(get_db)) -> AdminService:
     return AdminService(db)
@@ -99,10 +102,13 @@ async def list_users(
     is_verified: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    size: int = Query(25, ge=1, description="Page size; values above 100 are clamped to 100"),
     _admin=AdminRequired,
     service: AdminService = Depends(_get_service),
 ):
+    # Clamp rather than reject: an oversized page size is a caller being greedy,
+    # not an error worth failing the request over.
+    size = min(size, MAX_USER_PAGE_SIZE)
     filters = AdminUserListFilter(
         role=role,
         district=district,

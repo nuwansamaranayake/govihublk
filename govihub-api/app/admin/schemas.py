@@ -45,7 +45,7 @@ class AdminUserListFilter(BaseModel):
     is_verified: Optional[bool] = None
     search: Optional[str] = None
     page: int = Field(1, ge=1)
-    size: int = Field(20, ge=1, le=100)
+    size: int = Field(25, ge=1, le=100)
 
 
 class AdminUserRead(BaseModel):
@@ -110,7 +110,25 @@ class AdminUserUpdate(BaseModel):
     ds_division: Optional[str] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
+    # NOTE: role remains editable by admins. This is a live capability the panel
+    # already exposes; leaving it intact is a deliberate product decision.
     role: Optional[str] = Field(None, pattern="^(farmer|buyer|supplier|admin)$")
+
+    # Unknown fields are rejected loudly instead of being silently dropped, so a
+    # typo'd or unsupported field never looks like a successful save.
+    model_config = {"extra": "forbid"}
+
+    @field_validator("district")
+    @classmethod
+    def validate_district(cls, v: Optional[str]) -> Optional[str]:
+        # Empty/None stays legal - 6 production users have no district set and
+        # editing them must not force one.
+        if v is None or not v.strip():
+            return v
+        from app.utils.sri_lanka import DISTRICTS
+        if v not in DISTRICTS:
+            raise ValueError(f"Unknown district '{v}'. Must be one of the 25 Sri Lankan districts.")
+        return v
 
 
 class AdminUserListResponse(BaseModel):
