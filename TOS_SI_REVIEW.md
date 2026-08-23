@@ -238,3 +238,23 @@ The document moved from v1.0 (14 sections) to v1.1 (17 sections) on 19 July 2026
 - **"සමුපකාරය"** is used for *cooperative* in §8(b), on the assumption this means a farmers' cooperative society. Confirm this is the term farmers would recognise.
 - **Age is written as digits (16)** to match how numbers appear elsewhere in the document.
 - The version line now reads **අනුවාදය 1.1**; the in-app UI string reads **සංස්කරණය 1.1** (the pre-existing register difference between document and app is preserved).
+
+---
+
+## 2026-08-23 marketplace/phone keys
+
+**For Aruni to review.** Nine new UI strings were added to `govihub-web/src/messages/si.json` (marketplace supplier detail, listing photos, and phone country selector). Spoken register, Gemini-translated. Please flag anything that reads unnaturally to a farmer.
+
+| Key | English | Sinhala |
+|---|---|---|
+| `marketplace.supplier_details` | Supplier details | සැපයුම්කරුගේ විස්තර |
+| `marketplace.call_supplier` | Call supplier | සැපයුම්කරුට අමතන්න |
+| `marketplace.whatsapp_supplier` | Message on WhatsApp | WhatsApp හරහා පණිවිඩයක් යවන්න |
+| `marketplace.listing_photos` | Photos | ඡායාරූප |
+| `marketplace.add_photos` | Add photos (up to 3) | ඡායාරූප එකතු කරන්න (3ක් දක්වා) |
+| `marketplace.photo_rules` | Up to 3 photos, each under 5MB. JPEG, PNG, or WebP. | ඡායාරූප 3ක් දක්වා, එක් එක් 5MB ට අඩු විය යුතුය. JPEG, PNG, හෝ WebP. |
+| `marketplace.photo_upload_failed` | Photo upload failed. Your listing was saved. Add photos again from Edit. | ඡායාරූප උඩුගත කිරීම අසාර්ථක විය. ඔබගේ දැන්වීම සුරැකිණි. Edit වෙතින් නැවත ඡායාරූප එකතු කරන්න. |
+| `marketplace.no_photos` | No photos | ඡායාරූප නොමැත |
+| `auth.select_country` | Country | රට |
+
+WhatsApp, JPEG, PNG, WebP, 5MB and the Edit screen name stay in Latin script by design.

@@ -257,3 +257,23 @@ The document moved from v1.0 (14 sections) to v1.1 (17 sections) on 19 July 2026
 - **"தலைகீழ் பொறியியல்"** is used for *reverse-engineer* and **"ஊடுருவிப் பரிசோதித்தல்"** for *crawl*. If Sri Lankan Tamil technology writing uses different standard terms, please supply them.
 - **"கூட்டுறவு"** is used for *cooperative* in §8(b), on the assumption this means a farmers' cooperative society. Confirm this is the term farmers would recognise.
 - **Age is written as digits (16)** to match how numbers appear elsewhere in the document.
+
+---
+
+## 2026-08-23 marketplace/phone keys
+
+**Still no assigned Tamil reviewer.** Nine new UI strings were added to `govihub-web/src/messages/ta.json` (marketplace supplier detail, listing photos, and phone country selector). Spoken register, Gemini-translated, unreviewed by a native speaker.
+
+| Key | English | Tamil |
+|---|---|---|
+| `marketplace.supplier_details` | Supplier details | வழங்குநர் விவரங்கள் |
+| `marketplace.call_supplier` | Call supplier | வழங்குநரை அழைக்கவும் |
+| `marketplace.whatsapp_supplier` | Message on WhatsApp | WhatsApp-ல் செய்தி அனுப்பவும் |
+| `marketplace.listing_photos` | Photos | புகைப்படங்கள் |
+| `marketplace.add_photos` | Add photos (up to 3) | புகைப்படங்களைச் சேர்க்கவும் (அதிகபட்சம் 3) |
+| `marketplace.photo_rules` | Up to 3 photos, each under 5MB. JPEG, PNG, or WebP. | அதிகபட்சம் 3 புகைப்படங்கள், ஒவ்வொன்றும் 5MB-க்கும் குறைவாக இருக்க வேண்டும். JPEG, PNG அல்லது WebP. |
+| `marketplace.photo_upload_failed` | Photo upload failed. Your listing was saved. Add photos again from Edit. | புகைப்படங்களைப் பதிவேற்ற முடியவில்லை. உங்கள் பட்டியல் சேமிக்கப்பட்டது. Edit திரையிலிருந்து மீண்டும் புகைப்படங்களைச் சேர்க்கவும். |
+| `marketplace.no_photos` | No photos | புகைப்படங்கள் இல்லை |
+| `auth.select_country` | Country | நாடு |
+
+WhatsApp, JPEG, PNG, WebP, 5MB and the Edit screen name stay in Latin script by design. These 9 strings are unlike the rest of `ta.json`, which is still largely "[TA] ..." placeholders — they carry real Tamil and should be included in the eventual native-speaker review.

@@ -168,7 +168,8 @@
     "username_error_taken": "මෙම පරිශීලක නාමය දැනටමත් භාවිතා කර ඇත",
     "tos_checkbox": "මා භාවිත නියම කියවා පිළිගන්නෙමි",
     "tos_error": "ලියාපදිංචි වීමට භාවිත නියම පිළිගත යුතුය",
-    "auth_error_tos_not_accepted": "ලියාපදිංචි වීමට භාවිත නියම පිළිගත යුතුය"
+    "auth_error_tos_not_accepted": "ලියාපදිංචි වීමට භාවිත නියම පිළිගත යුතුය",
+    "select_country": "රට"
   },
   "roles": {
     "farmer": "ගොවියා",
@@ -490,7 +491,15 @@
     "catPesticide": "කෘමිනාශක",
     "catEquipment": "උපකරණ",
     "catTransport": "ප්‍රවාහනය",
-    "catIrrigation": "වාරිමාර්ග"
+    "catIrrigation": "වාරිමාර්ග",
+    "supplier_details": "සැපයුම්කරුගේ විස්තර",
+    "call_supplier": "සැපයුම්කරුට අමතන්න",
+    "whatsapp_supplier": "WhatsApp හරහා පණිවිඩයක් යවන්න",
+    "listing_photos": "ඡායාරූප",
+    "add_photos": "ඡායාරූප එකතු කරන්න (3ක් දක්වා)",
+    "photo_rules": "ඡායාරූප 3ක් දක්වා, එක් එක් 5MB ට අඩු විය යුතුය. JPEG, PNG, හෝ WebP.",
+    "photo_upload_failed": "ඡායාරූප උඩුගත කිරීම අසාර්ථක විය. ඔබගේ දැන්වීම සුරැකිණි. Edit වෙතින් නැවත ඡායාරූප එකතු කරන්න.",
+    "no_photos": "ඡායාරූප නොමැත"
   },
   "more": {
     "accountPreferences": "ගිණුම සහ මනාප",

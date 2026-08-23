@@ -168,7 +168,8 @@
     "username_error_taken": "This username is already taken",
     "tos_checkbox": "I have read and accept the Terms of Use",
     "tos_error": "You must accept the Terms of Use to register",
-    "auth_error_tos_not_accepted": "You must accept the Terms of Use to register"
+    "auth_error_tos_not_accepted": "You must accept the Terms of Use to register",
+    "select_country": "Country"
   },
   "roles": {
     "farmer": "Farmer",
@@ -490,7 +491,15 @@
     "catPesticide": "Pesticide",
     "catEquipment": "Equipment",
     "catTransport": "Transport",
-    "catIrrigation": "Irrigation"
+    "catIrrigation": "Irrigation",
+    "supplier_details": "Supplier details",
+    "call_supplier": "Call supplier",
+    "whatsapp_supplier": "Message on WhatsApp",
+    "listing_photos": "Photos",
+    "add_photos": "Add photos (up to 3)",
+    "photo_rules": "Up to 3 photos, each under 5MB. JPEG, PNG, or WebP.",
+    "photo_upload_failed": "Photo upload failed. Your listing was saved. Add photos again from Edit.",
+    "no_photos": "No photos"
   },
   "more": {
     "accountPreferences": "Account & preferences",
