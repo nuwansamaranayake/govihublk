@@ -20,6 +20,28 @@ function isTosNotAccepted(details: unknown): boolean {
   );
 }
 
+/**
+ * Backend 409 conflict codes -> `auth.*` i18n keys. The body shape is
+ * {detail: {code, message}}; without this the raw English `message` would leak
+ * into a Sinhala or Tamil session. Unmapped codes fall through to the generic
+ * message, which carries the code so support can trace it.
+ */
+const CONFLICT_KEYS: Record<string, string> = {
+  DUPLICATE_PHONE: "auth.phone_already_registered",
+  USERNAME_TAKEN: "auth.username_taken",
+  // This wizard identifies the user by their Google email, so a duplicate
+  // role account here really is a duplicate email.
+  ROLE_ACCOUNT_EXISTS: "auth.email_already_registered",
+  MAX_ACCOUNTS: "auth.auth_error_max_accounts",
+};
+
+/** The `{code, message}` object from a 409 body, or null for any other shape. */
+function conflictCode(details: unknown): string | undefined {
+  const detail = (details as { detail?: unknown } | null)?.detail;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail)) return undefined;
+  return (detail as { code?: string }).code;
+}
+
 type Role = "farmer" | "buyer" | "supplier";
 
 const ROLES: { key: Role; label: string; emoji: string; desc: string }[] = [
@@ -135,6 +157,16 @@ export default function RegisterPage() {
       // up useless here — read the code off `details` and localize it instead.
       if (err instanceof ApiException && isTosNotAccepted(err.details)) {
         setServerError(t("auth.auth_error_tos_not_accepted"));
+        return;
+      }
+      // Duplicate phone / username / role-account come back as a 409 whose
+      // `message` is English-only. Localize it rather than showing it raw.
+      if (err instanceof ApiException && err.status === 409) {
+        const code = conflictCode(err.details);
+        const key = code ? CONFLICT_KEYS[code] : undefined;
+        setServerError(
+          key ? t(key) : t("auth.auth_error_generic", { code: code ?? String(err.status) }),
+        );
         return;
       }
       const message =

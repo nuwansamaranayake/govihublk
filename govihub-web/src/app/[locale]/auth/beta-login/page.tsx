@@ -109,7 +109,11 @@ function EyeIcon({ open }: { open: boolean }) {
 // language. Backend business errors return detail = {code, message}; field-validation
 // returns detail = [{field, code, message}]; older endpoints return a plain string.
 const AUTH_ERROR_KEYS: Record<string, string> = {
-  USERNAME_TAKEN: "auth_error_username_taken",
+  USERNAME_TAKEN: "username_taken",
+  DUPLICATE_PHONE: "phone_already_registered",
+  // Kept on the role-specific wording: this form signs up with a username, not
+  // an email, so "switch roles in Settings" is the actionable next step here.
+  // The OAuth wizard maps the same code to auth.email_already_registered.
   ROLE_ACCOUNT_EXISTS: "auth_error_role_account_exists",
   MAX_ACCOUNTS: "auth_error_max_accounts",
   INVALID_CREDENTIALS: "auth_error_invalid_credentials",
@@ -172,6 +176,7 @@ export default function BetaLoginPage() {
   const [regDistrict, setRegDistrict] = useState("");
   const [regLanguage, setRegLanguage] = useState<"si" | "en">("si");
   const [regPhone, setRegPhone] = useState("");
+  const [regPhoneError, setRegPhoneError] = useState<string | null>(null);
   const [regTosAccepted, setRegTosAccepted] = useState(false);
   const [regTosError, setRegTosError] = useState<string | null>(null);
 
@@ -222,8 +227,9 @@ export default function BetaLoginPage() {
     e.preventDefault();
     setError(null);
     setRegUsernameError(null);
+    setRegPhoneError(null);
     setRegTosError(null);
-    // Username- and ToS-specific errors surface inline below their field;
+    // Username-, phone- and ToS-specific errors surface inline below their field;
     // everything else (required fields, password, district, phone) still uses
     // the cross-field banner.
     if (!regName.trim()) { setError(t('requiredFields')); return; }
@@ -266,6 +272,22 @@ export default function BetaLoginPage() {
         // next to the box rather than in the far-away banner.
         if (first?.field === 'tos_accepted') {
           setRegTosError(t('auth_error_tos_not_accepted'));
+          throw new Error('__handled__');
+        }
+        // 409 duplicate conflicts arrive as detail = {code, message}. The two
+        // that name a specific field go inline next to that field instead of the
+        // banner, so the user can see which box to change. Nothing is cleared —
+        // everything they typed stays in place.
+        const conflict =
+          err?.detail && typeof err.detail === 'object' && !Array.isArray(err.detail)
+            ? (err.detail as { code?: string })
+            : null;
+        if (conflict?.code === 'DUPLICATE_PHONE') {
+          setRegPhoneError(t('phone_already_registered'));
+          throw new Error('__handled__');
+        }
+        if (conflict?.code === 'USERNAME_TAKEN') {
+          setRegUsernameError(t('username_taken'));
           throw new Error('__handled__');
         }
         // Business errors ({code,message}) + legacy string details -> localized message.
@@ -567,9 +589,15 @@ export default function BetaLoginPage() {
               label={t('phone_label')}
               required
               value={regPhone}
-              onChange={setRegPhone}
+              onChange={(v) => {
+                setRegPhone(v);
+                if (regPhoneError) setRegPhoneError(null);
+              }}
               defaultCountry="LK"
-              error={regPhone && !isValidE164Phone(regPhone) ? t('phone_invalid') : undefined}
+              error={
+                regPhoneError ??
+                (regPhone && !isValidE164Phone(regPhone) ? t('phone_invalid') : undefined)
+              }
               helperText={t('phone_required_explanation')}
             />
 

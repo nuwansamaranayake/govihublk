@@ -3,6 +3,14 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { getSectorConfig } from "@/config/sectors";
+import {
+  VISION_SI,
+  VISION_EN,
+  MISSION_SI,
+  MISSION_EN,
+  VISION_LABEL,
+  MISSION_LABEL,
+} from "@/lib/visionMission";
 
 export default function HomePage({ params }: { params: { locale: string } }) {
   const t = useTranslations("home");
@@ -178,6 +186,28 @@ export default function HomePage({ params }: { params: { locale: string } }) {
                 <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-gradient-to-r from-transparent via-[#E8A838]/40 to-transparent" />
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Vision & Mission (canonical, locale-independent) ───────── */}
+      <section className="py-20 px-6 bg-white border-t border-neutral-200">
+        <div className="max-w-[70ch] mx-auto">
+          <div className="mb-12">
+            <div className="w-14 h-1 rounded-full bg-[#E8A838] mb-4" />
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#2D6A2E] mb-4">
+              {VISION_LABEL}
+            </h2>
+            <p className="text-[17px] leading-[1.85] text-neutral-800 mb-4">{VISION_SI}</p>
+            <p className="text-base leading-relaxed text-neutral-600">{VISION_EN}</p>
+          </div>
+          <div>
+            <div className="w-14 h-1 rounded-full bg-[#E8A838] mb-4" />
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#2D6A2E] mb-4">
+              {MISSION_LABEL}
+            </h2>
+            <p className="text-[17px] leading-[1.85] text-neutral-800 mb-4">{MISSION_SI}</p>
+            <p className="text-base leading-relaxed text-neutral-600">{MISSION_EN}</p>
           </div>
         </div>
       </section>

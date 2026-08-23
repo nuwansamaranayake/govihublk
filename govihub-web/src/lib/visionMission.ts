@@ -1,0 +1,21 @@
+/**
+ * CANONICAL VISION/MISSION — locale-independent constants.
+ * Source of truth: .cc_state/vision_canonical.txt at the repo root.
+ * The same bilingual block renders on every locale (en / si / ta).
+ * Do NOT translate, paraphrase, trim, or move these into next-intl message keys.
+ */
+
+export const VISION_SI =
+  "අතරමැදි සූරාකෑමෙන් තොර සෘජු වෙළෙඳපොළ බලය සහ AI තාක්ෂණයේ ප්‍රඥාව ගොවියාගේම අතට පත් කරමින්, සෑම ශ්‍රී ලාංකික ගොවියෙකුම අභිමානවත් හා ස්වාධීන ඩිජිටල් යුගයක පෙරගමන්කරුවෙකු බවට පත්කිරීම.";
+
+export const VISION_EN =
+  "To make every Sri Lankan farmer a proud and independent pioneer of the digital age, with direct market power and the intelligence of AI in their own hands, free from middleman exploitation.";
+
+export const MISSION_SI =
+  "අතරමැදි බාධක බිඳහෙලමින් ගොවීන් සහ ගැනුම්කරුවන් සෘජුවම යා කරන, ගොවියාට සදහටම නොමිලේ වන ඩිජිටල් වේදිකාවක් තිළිණ කිරීමත්, සරල AI තාක්ෂණය මගින් වගා අභියෝගවලට සැණින් විසඳුම් දෙමින් කාලය, ශ්‍රමය සහ අස්වනු නාස්තිය වළක්වා ග්‍රාමීය ගොවි ආර්ථිකය සවිබල ගැන්වීමත් අපගේ මෙහෙවරයි.";
+
+export const MISSION_EN =
+  "Our mission is to give farmers a digital platform, free for farmers forever. We connect farmers and buyers directly, break down middleman barriers, and put simple AI to work on crop problems the moment they appear. We cut waste of time, labor, and harvests, and build a stronger rural farming economy for Sri Lanka.";
+
+export const VISION_LABEL = "දැක්ම — Vision";
+export const MISSION_LABEL = "මෙහෙවර — Mission";

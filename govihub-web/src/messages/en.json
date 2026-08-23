@@ -169,7 +169,10 @@
     "tos_checkbox": "I have read and accept the Terms of Use",
     "tos_error": "You must accept the Terms of Use to register",
     "auth_error_tos_not_accepted": "You must accept the Terms of Use to register",
-    "select_country": "Country"
+    "select_country": "Country",
+    "phone_already_registered": "This phone number is already registered for this role. Log in instead, or use a different number.",
+    "username_taken": "This username is taken. Choose another.",
+    "email_already_registered": "This email is already registered. Log in instead."
   },
   "roles": {
     "farmer": "Farmer",
