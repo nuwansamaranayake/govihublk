@@ -9,22 +9,31 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Tabs } from "@/components/ui/Tabs";
+import { SupplyListingDetailModal } from "@/components/ui/SupplyListingDetailModal";
 import { useAuth } from "@/lib/auth";
 
 type Category = "all"|"fertilizer"|"seeds"|"pesticide"|"equipment"|"transport"|"irrigation";
 
-interface SupplierProduct {
+interface SupplyListing {
   id: string;
+  supplier_id: string;
+  category: string;
   name: string;
-  supplier: string;
-  category: Exclude<Category,"all">;
-  description: string;
-  price: number;
-  unit: string;
-  coverageArea: string;
-  availability: string;
-  rating: number;
-  verified: boolean;
+  name_si: string | null;
+  description: string | null;
+  price: number | null;
+  unit: string | null;
+  stock_quantity: number | null;
+  photos: string[];
+  thumbnail: string | null;
+  supplier_name: string | null;
+  supplier_district: string | null;
+  delivery_available: boolean;
+  delivery_radius_km: number | null;
+  status: string;
+  distance_km: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 
@@ -45,35 +54,40 @@ const CATEGORY_ICON: Record<string, string> = {
 export default function BuyerMarketplacePage() {
   const t = useTranslations();
   const { isReady } = useAuth();
-  const [products, setProducts] = useState<SupplierProduct[]>([]);
+  const [listings, setListings] = useState<SupplyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<Category>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
     api.get<any>("/marketplace/search")
       .then((res) => {
         const items = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
-        setProducts(items);
+        setListings(items);
       })
       .catch((err: any) => {
         setError(err?.message || "Failed to load marketplace");
-        setProducts([]);
+        setListings([]);
       })
       .finally(() => setLoading(false));
   }, [isReady]);
 
-  const filtered = products
+  const filtered = listings
     .filter(p => category==="all" || p.category===category)
-    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.supplier.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b) => b.rating - a.rating);
+    .filter(p =>
+      !search ||
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.supplier_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.description ?? "").toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
 
   const tabs = CATEGORY_KEYS.map(c => ({
     key: c.key,
     label: t(c.labelKey),
-    badge: c.key==="all" ? products.length : products.filter(p=>p.category===c.key).length,
+    badge: c.key==="all" ? listings.length : listings.filter(p=>p.category===c.key).length,
   }));
 
   return (
@@ -106,30 +120,40 @@ export default function BuyerMarketplacePage() {
               <EmptyState icon="🏪" title={t("marketplace.noProductsFound")} description={t("marketplace.tryDifferent")} />
             ) : (
               filtered.map(product => (
-                <Card key={product.id} padding="md">
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                <Card key={product.id} padding="md" onClick={() => setSelectedId(product.id)}>
+                  <div className="flex items-start gap-3">
+                    {product.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.thumbnail}
+                        alt=""
+                        loading="lazy"
+                        className="w-16 h-16 rounded-lg object-cover bg-neutral-100 shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-neutral-100 flex items-center justify-center text-2xl shrink-0" aria-hidden="true">
+                        {CATEGORY_ICON[product.category] || "📦"}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-base" aria-hidden="true">{CATEGORY_ICON[product.category]}</span>
                         <h3 className="font-semibold text-neutral-900 text-sm">{product.name}</h3>
-                        {product.verified && (
-                          <Badge color="green" size="sm">✓ {t("marketplace.verified")}</Badge>
-                        )}
+                        <Badge color="gray" size="sm">{product.category}</Badge>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-1 line-clamp-2">{product.description}</p>
-                      <p className="text-xs text-neutral-400 mt-1">by {product.supplier}</p>
+                      <p className="text-sm font-bold text-green-700 mt-1">
+                        {product.price != null
+                          ? `Rs. ${product.price.toLocaleString()}${product.unit ? ` / ${product.unit}` : ""}`
+                          : "—"}
+                      </p>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {product.supplier_name || "—"}
+                        {product.supplier_district ? ` · 📍 ${product.supplier_district}` : ""}
+                      </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-lg font-bold text-green-700">Rs. {product.price.toLocaleString()}</p>
-                      <p className="text-xs text-neutral-400">per {product.unit}</p>
-                      <p className="text-sm font-medium text-amber-500 mt-1">★ {product.rating}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                    <p className="text-xs text-neutral-500">📍 {product.coverageArea}</p>
-                    <Badge color={product.availability === "In Stock" ? "green" : product.availability === "Limited Stock" ? "gold" : "gray"} size="sm">
-                      {product.availability}
-                    </Badge>
+                    {product.distance_km != null && (
+                      <p className="text-xs text-neutral-400 shrink-0">{product.distance_km} km</p>
+                    )}
                   </div>
                 </Card>
               ))
@@ -137,6 +161,12 @@ export default function BuyerMarketplacePage() {
           </div>
         )}
       </Tabs>
+
+      <SupplyListingDetailModal
+        isOpen={selectedId !== null}
+        listingId={selectedId}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }

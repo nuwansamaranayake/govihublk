@@ -179,8 +179,8 @@ export const api = {
     return request<T>("PATCH", path, body);
   },
 
-  delete<T>(path: string): Promise<T> {
-    return request<T>("DELETE", path);
+  delete<T>(path: string, body?: unknown): Promise<T> {
+    return request<T>("DELETE", path, body);
   },
 
   upload<T>(path: string, formData: FormData, method: "POST" | "PUT" = "POST"): Promise<T> {

@@ -27,10 +27,9 @@ interface Listing {
   delivery_available: boolean;
   delivery_radius_km?: number;
   stock_quantity?: number;
-  // Photos are stored in supply_listings.images (JSONB) and exposed by the
-  // API as `photos` per SupplyListingRead.
-  photos?: any;
-  images?: any;
+  // Listing photos as exposed by the API (`photos`: string[], `thumbnail`).
+  photos?: string[] | null;
+  thumbnail?: string | null;
   created_at?: string;
 }
 
@@ -45,6 +44,11 @@ const CATEGORY_ICON: Record<Category, string> = {
 const EMPTY_FORM = { name:"", category:"fertilizer" as Category, description:"", price:"", unit:"kg", stock_quantity:"", delivery_available:false };
 type FormData = typeof EMPTY_FORM;
 
+interface PendingPhoto {
+  file: File;
+  preview: string;
+}
+
 export default function SupplierListingsPage() {
   const t = useTranslations();
   const { isReady } = useAuth();
@@ -55,11 +59,15 @@ export default function SupplierListingsPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Photo upload state — photos uploaded immediately and tracked as URLs.
-  // Submitted under SupplyListingCreate.photos (Optional[list[str]]).
+  // Page-level banner for photo-upload failure after the listing was saved.
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  // Photos already on the listing (edit mode) — server URLs.
   const [photos, setPhotos] = useState<string[]>([]);
+  // Photos staged locally before the listing exists (create mode).
+  const [pending, setPending] = useState<PendingPhoto[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const MAX_PHOTOS = 5;
+  const MAX_PHOTOS = 3;
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
   const load = () => {
     setLoading(true);
@@ -78,73 +86,114 @@ export default function SupplierListingsPage() {
 
   useEffect(() => { if (isReady) load(); }, [isReady]);
 
+  const clearPending = () => {
+    setPending(prev => {
+      prev.forEach(p => URL.revokeObjectURL(p.preview));
+      return [];
+    });
+  };
+
   const openCreate = () => {
     setEditId(null);
     setForm(EMPTY_FORM);
     setPhotos([]);
+    clearPending();
     setError(null);
+    setPhotoUploadError(null);
     setShowModal(true);
   };
   const openEdit = (l: Listing) => {
     setEditId(l.id);
     setForm({ name:l.name||"", category:l.category, description:l.description||"", price:String(l.price||""), unit:l.unit||"kg", stock_quantity:String(l.stock_quantity||""), delivery_available:l.delivery_available||false });
-    // Hydrate existing photos. API exposes `photos` per schema; some older
-    // rows may surface them under `images` (the DB column). Accept either,
-    // and normalise string[] vs {url}[] shapes.
-    const raw: any[] = Array.isArray(l.photos)
-      ? l.photos
-      : Array.isArray(l.images)
-        ? l.images
-        : [];
-    const existing: string[] = raw
-      .map((it: any) => (typeof it === "string" ? it : it?.url))
-      .filter((u: any): u is string => typeof u === "string" && u.length > 0);
-    setPhotos(existing);
+    // Hydrate existing photos from the listing's `photos` array (string[]).
+    const raw = Array.isArray(l.photos) ? l.photos : [];
+    setPhotos(raw.filter((u): u is string => typeof u === "string" && u.length > 0));
+    clearPending();
     setError(null);
+    setPhotoUploadError(null);
     setShowModal(true);
+  };
+
+  const closeModal = () => {
+    clearPending();
+    setShowModal(false);
+  };
+
+  const photoCount = photos.length + pending.length;
+
+  const uploadFiles = async (listingId: string, files: File[]): Promise<string[]> => {
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+    const res = await api.upload<{ photos: string[] }>(
+      `/marketplace/listings/${listingId}/images`,
+      fd,
+    );
+    return res?.photos ?? [];
   };
 
   const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     event.target.value = "";  // allow re-selecting the same file later
     if (files.length === 0) return;
-    if (photos.length + files.length > MAX_PHOTOS) {
-      setError(`Up to ${MAX_PHOTOS} photos per listing.`);
+    if (photoCount + files.length > MAX_PHOTOS) {
+      setError(t("marketplace.photo_rules"));
+      return;
+    }
+    if (files.some(f => f.size > MAX_PHOTO_BYTES)) {
+      setError(t("marketplace.photo_rules"));
       return;
     }
     setError(null);
-    setUploadingPhotos(true);
-    try {
-      for (const file of files) {
-        if (file.size > 10 * 1024 * 1024) {
-          setError(`"${file.name}" is larger than 10 MB.`);
-          continue;
-        }
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await api.upload<{ url: string; folder: string }>(
-          "/uploads/image?folder=supply",
-          fd,
+    if (editId) {
+      // Listing exists — upload immediately via the listing images endpoint.
+      setUploadingPhotos(true);
+      try {
+        const updated = await uploadFiles(editId, files);
+        setPhotos(updated);
+      } catch (err: any) {
+        setError(
+          err?.code === "LISTING_PHOTO_LIMIT"
+            ? t("marketplace.photo_rules")
+            : err?.message || t("marketplace.photo_upload_failed")
         );
-        if (res?.url) {
-          setPhotos(prev => [...prev, res.url]);
-        }
+      } finally {
+        setUploadingPhotos(false);
       }
-    } catch (err: any) {
-      setError(err?.message || "Photo upload failed");
-    } finally {
-      setUploadingPhotos(false);
+    } else {
+      // No listing yet — stage locally, upload after create.
+      setPending(prev => [
+        ...prev,
+        ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) })),
+      ]);
     }
   };
 
-  const removePhoto = (url: string) => {
-    setPhotos(prev => prev.filter(u => u !== url));
+  const removePendingPhoto = (preview: string) => {
+    setPending(prev => {
+      const target = prev.find(p => p.preview === preview);
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter(p => p.preview !== preview);
+    });
+  };
+
+  const removeServerPhoto = async (url: string) => {
+    if (!editId) return;
+    try {
+      const res = await api.delete<{ photos: string[] }>(
+        `/marketplace/listings/${editId}/images`,
+        { url },
+      );
+      setPhotos(res?.photos ?? []);
+    } catch (err: any) {
+      setError(err?.message || t("marketplace.photo_upload_failed"));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setPhotoUploadError(null);
     try {
       const payload: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(form)) {
@@ -154,16 +203,21 @@ export default function SupplierListingsPage() {
       if (payload.delivery_available && !payload.delivery_radius_km) {
         payload.delivery_radius_km = 50; // default 50km radius
       }
-      // Include uploaded photo URLs. SupplyListingCreate.photos is
-      // Optional[list[str]] and persists into supply_listings.images (JSONB).
-      if (photos.length > 0) {
-        payload.photos = photos;
-      } else if (editId) {
-        // On edit, explicitly null out when the supplier removed all photos.
-        payload.photos = null;
+      if (editId) {
+        await api.put(`/marketplace/listings/${editId}`, payload);
+      } else {
+        const created = await api.post<{ id: string }>("/marketplace/listings", payload);
+        // Listing saved — now upload any staged photos to the images endpoint.
+        if (pending.length > 0 && created?.id) {
+          try {
+            await uploadFiles(created.id, pending.map(p => p.file));
+          } catch {
+            // Listing is saved; surface the photo failure, never drop it silently.
+            setPhotoUploadError(t("marketplace.photo_upload_failed"));
+          }
+        }
       }
-      if (editId) await api.put(`/marketplace/listings/${editId}`, payload);
-      else await api.post("/marketplace/listings", payload);
+      clearPending();
       setShowModal(false);
       await load();
     } catch (err: any) {
@@ -195,6 +249,13 @@ export default function SupplierListingsPage() {
         <p className="text-blue-100 text-sm mt-1">{listings.length} {t("listing.totalListings")}</p>
       </div>
 
+      {photoUploadError && (
+        <div className="mx-4 mt-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-2 flex items-start justify-between gap-2">
+          <span>{photoUploadError}</span>
+          <button type="button" onClick={() => setPhotoUploadError(null)} aria-label="Dismiss" className="shrink-0 font-bold">✕</button>
+        </div>
+      )}
+
       <Tabs tabs={tabs} defaultTab="all">
         {(activeTab) => {
           const filtered = activeTab==="all" ? listings : listings.filter(l => l.category===activeTab);
@@ -213,9 +274,22 @@ export default function SupplierListingsPage() {
                 filtered.map(listing => (
                   <Card key={listing.id} padding="md">
                     <div className="flex items-start justify-between gap-2">
+                      {listing.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={listing.thumbnail}
+                          alt=""
+                          loading="lazy"
+                          className="w-14 h-14 rounded-lg object-cover bg-neutral-100 shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center text-2xl shrink-0" aria-hidden="true">
+                          {CATEGORY_ICON[listing.category] || "📦"}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-base" aria-hidden="true">{CATEGORY_ICON[listing.category] || "📦"}</span>
                           <h3 className="font-semibold text-neutral-900 text-sm">{listing.name}</h3>
                           <Badge color={listing.status==="active"?"green":"gray"} size="sm" dot>{listing.status}</Badge>
                         </div>
@@ -244,7 +318,7 @@ export default function SupplierListingsPage() {
         className="fixed bottom-20 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-95 transition-transform z-10"
         aria-label={t("supplier.addListing")}>+</button>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)}
+      <Modal isOpen={showModal} onClose={closeModal}
         title={editId ? t("supplier.editListing") : t("supplier.newSupplyListing")}
         size="lg"
         footer={
@@ -275,18 +349,32 @@ export default function SupplierListingsPage() {
             onChange={e => f("stock_quantity", e.target.value)} placeholder="e.g. 100" />
 
           <div>
-            <p className="text-sm font-medium text-neutral-700 mb-1.5">Photos</p>
+            <p className="text-sm font-medium text-neutral-700 mb-1.5">{t("marketplace.listing_photos")}</p>
 
-            {/* Thumbnails of already-uploaded photos */}
-            {photos.length > 0 && (
+            {/* Thumbnails: server photos (edit) + staged photos (create) */}
+            {photoCount > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-2">
                 {photos.map((url) => (
                   <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-200 bg-neutral-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removePhoto(url)}
+                      onClick={() => removeServerPhoto(url)}
+                      aria-label="Remove photo"
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {pending.map((p) => (
+                  <div key={p.preview} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-200 bg-neutral-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePendingPhoto(p.preview)}
                       aria-label="Remove photo"
                       className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
                     >
@@ -298,14 +386,14 @@ export default function SupplierListingsPage() {
             )}
 
             {/* Upload zone (hidden once we've hit the cap so the cap is visually clear) */}
-            {photos.length < MAX_PHOTOS && (
+            {photoCount < MAX_PHOTOS && (
               <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-xl p-6 cursor-pointer hover:border-blue-400 transition-colors">
                 <span className="text-3xl mb-2" aria-hidden="true">📸</span>
                 <span className="text-sm text-neutral-500">
-                  {uploadingPhotos ? "Uploading..." : t("common.tapToAddPhotos")}
+                  {uploadingPhotos ? "Uploading..." : t("marketplace.add_photos")}
                 </span>
                 <span className="text-xs text-neutral-400 mt-1">
-                  {photos.length}/{MAX_PHOTOS} • JPEG, PNG, WebP — max 10 MB each
+                  {photoCount}/{MAX_PHOTOS} • {t("marketplace.photo_rules")}
                 </span>
                 <input
                   type="file"
