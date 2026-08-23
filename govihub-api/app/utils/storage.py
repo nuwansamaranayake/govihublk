@@ -296,6 +296,43 @@ class StorageService:
         return url
 
     # ------------------------------------------------------------------
+    # Delete (best-effort)
+    # ------------------------------------------------------------------
+
+    async def delete_image(self, url: str) -> None:
+        """Best-effort delete of a previously uploaded object, given its public URL.
+
+        Callers treat the DB row as the source of truth and must not fail their
+        request on a delete error — raise here only so the caller can log it.
+        """
+        # Derive the object key from the URL: everything after the public base
+        # (R2) or after the /uploads/ prefix (local fallback).
+        object_key: Optional[str] = None
+        if url.startswith("/uploads/"):
+            object_key = url[len("/uploads/"):]
+        elif self._public_url_resolved and url.startswith(self._public_url_resolved + "/"):
+            object_key = url[len(self._public_url_resolved) + 1:]
+        elif settings.R2_PUBLIC_URL and url.startswith(settings.R2_PUBLIC_URL.rstrip("/") + "/"):
+            object_key = url[len(settings.R2_PUBLIC_URL.rstrip("/")) + 1:]
+        if not object_key:
+            raise ValueError(f"Cannot derive object key from URL: {url}")
+
+        if self._r2_available and not url.startswith("/uploads/"):
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: self._r2_client.delete_object(  # type: ignore[union-attr]
+                    Bucket=settings.R2_BUCKET_NAME, Key=object_key
+                ),
+            )
+            logger.info("storage_r2_deleted", key=object_key)
+        else:
+            dest = LOCAL_UPLOAD_DIR / object_key
+            if dest.is_file():
+                dest.unlink()
+                logger.info("storage_local_deleted", path=str(dest))
+
+    # ------------------------------------------------------------------
     # Local filesystem fallback
     # ------------------------------------------------------------------
 

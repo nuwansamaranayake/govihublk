@@ -251,6 +251,116 @@ class SupplyMarketplaceService:
             raise NotFoundError(detail="Listing not found")
         return listing
 
+    async def get_listing_with_supplier(self, listing_id: UUID) -> tuple[SupplyListing, Optional[User]]:
+        """Fetch a listing plus its supplier row for the detail response."""
+        listing = await self.get_listing(listing_id)
+        result = await self.db.execute(select(User).where(User.id == listing.supplier_id))
+        return listing, result.scalar_one_or_none()
+
+    # -----------------------------------------------------------------------
+    # Supplier names for list/search responses (no phone — detail only)
+    # -----------------------------------------------------------------------
+
+    async def supplier_names_for(self, supplier_ids: list[UUID]) -> dict[UUID, tuple[str, Optional[str]]]:
+        """Batch-fetch (name, district) for a page of listings in one query."""
+        if not supplier_ids:
+            return {}
+        result = await self.db.execute(
+            select(User.id, User.name, User.district).where(User.id.in_(set(supplier_ids)))
+        )
+        return {row.id: (row.name, row.district) for row in result.all()}
+
+    # -----------------------------------------------------------------------
+    # Listing images (owner-scoped; rules per CC_INTL_PHONE_SUPPLIER_FIX)
+    # -----------------------------------------------------------------------
+
+    MAX_PHOTOS = 3
+    MAX_PHOTO_BYTES = 5 * 1024 * 1024
+    ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+    def _require_owner_or_admin(self, listing: SupplyListing, user) -> None:
+        from app.users.models import UserRole
+
+        if listing.supplier_id != user.id and user.role != UserRole.admin:
+            raise ForbiddenError(detail="You do not own this listing")
+
+    @staticmethod
+    def _photo_urls(listing: SupplyListing) -> list[str]:
+        raw = listing.images
+        if isinstance(raw, dict) and isinstance(raw.get("urls"), list):
+            return [u for u in raw["urls"] if isinstance(u, str)]
+        if isinstance(raw, list):
+            return [u for u in raw if isinstance(u, str)]
+        return []
+
+    async def add_listing_images(
+        self, listing_id: UUID, user, files: list[tuple[bytes, str]]
+    ) -> list[str]:
+        """Validate and upload 1-3 images for a listing. Returns the full photo list."""
+        from app.exceptions import GoviHubException
+        from app.utils.storage import storage_service
+
+        listing = await self._get_or_404(listing_id)
+        self._require_owner_or_admin(listing, user)
+
+        existing = self._photo_urls(listing)
+        if len(existing) + len(files) > self.MAX_PHOTOS:
+            raise GoviHubException(
+                status_code=400,
+                detail=f"A listing can have at most {self.MAX_PHOTOS} photos",
+                error_code="LISTING_PHOTO_LIMIT",
+                details={"current": len(existing), "adding": len(files), "max": self.MAX_PHOTOS},
+            )
+
+        for file_bytes, content_type in files:
+            normalised = (content_type or "").lower().split(";")[0].strip()
+            if normalised not in self.ALLOWED_PHOTO_TYPES:
+                raise ValidationError(
+                    detail=f"Unsupported file type '{content_type}'. Only JPEG, PNG, and WebP are accepted.",
+                    details={"allowed": sorted(self.ALLOWED_PHOTO_TYPES)},
+                )
+            if len(file_bytes) > self.MAX_PHOTO_BYTES:
+                raise ValidationError(
+                    detail=f"File too large ({len(file_bytes):,} bytes). Maximum is 5 MB per photo.",
+                    details={"max_bytes": self.MAX_PHOTO_BYTES},
+                )
+
+        urls = list(existing)
+        for file_bytes, content_type in files:
+            url = await storage_service.upload_image(
+                file_bytes, content_type, folder=f"marketplace/{listing_id}"
+            )
+            urls.append(url)
+
+        # Reassign (never mutate in place) so SQLAlchemy detects the JSONB change.
+        listing.images = {"urls": urls}
+        await self.db.flush()
+        logger.info("supply_listing_images_added", listing_id=str(listing_id), count=len(files))
+        return urls
+
+    async def remove_listing_image(self, listing_id: UUID, user, url: str) -> list[str]:
+        """Remove one image URL from a listing. R2 delete is best-effort."""
+        from app.utils.storage import storage_service
+
+        listing = await self._get_or_404(listing_id)
+        self._require_owner_or_admin(listing, user)
+
+        existing = self._photo_urls(listing)
+        if url not in existing:
+            raise NotFoundError(detail="Photo not found on this listing")
+
+        urls = [u for u in existing if u != url]
+        listing.images = {"urls": urls}
+        await self.db.flush()
+
+        try:
+            await storage_service.delete_image(url)
+        except Exception as exc:  # noqa: BLE001 — best-effort by spec; the DB row is the source of truth
+            logger.warning("supply_listing_image_r2_delete_failed", url=url, error=str(exc))
+
+        logger.info("supply_listing_image_removed", listing_id=str(listing_id))
+        return urls
+
     # -----------------------------------------------------------------------
     # Internal helpers
     # -----------------------------------------------------------------------

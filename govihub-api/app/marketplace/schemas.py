@@ -19,9 +19,17 @@ class LocationCoords(BaseModel):
 
 
 class SupplierBrief(BaseModel):
+    """Supplier contact block for the listing DETAIL response only.
+
+    Phone is deliberately absent from list responses (bulk-scrape control);
+    it appears here, behind auth, where a user is viewing one listing.
+    """
+
     id: UUID
     name: str
-    email: str
+    phone: Optional[str] = None
+    district: Optional[str] = None
+    member_since: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -108,8 +116,36 @@ class SupplyListingRead(BaseModel):
     distance_km: Optional[float] = Field(None, description="Distance from search origin in km")
     created_at: datetime
     updated_at: datetime
+    # Derived, read-only surface for photos. Storage keeps the legacy
+    # images = {"urls": [...]} shape; clients speak photos/thumbnail.
+    photos: list[str] = Field(default_factory=list, description="Photo URLs")
+    thumbnail: Optional[str] = Field(None, description="First photo URL, or null")
+    # Populated by the service for list/search responses (batch users lookup).
+    # Never includes phone — that lives only in the detail response.
+    supplier_name: Optional[str] = None
+    supplier_district: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def derive_photos(self) -> "SupplyListingRead":
+        if not self.photos:
+            raw = self.images
+            if isinstance(raw, dict):
+                urls = raw.get("urls")
+                self.photos = [u for u in urls if isinstance(u, str)] if isinstance(urls, list) else []
+            elif isinstance(raw, list):
+                # Tolerate a bare-array legacy shape, should one ever exist.
+                self.photos = [u for u in raw if isinstance(u, str)]
+        if self.thumbnail is None and self.photos:
+            self.thumbnail = self.photos[0]
+        return self
+
+
+class SupplyListingDetail(SupplyListingRead):
+    """Detail response: everything in the list item plus the supplier block."""
+
+    supplier: Optional[SupplierBrief] = None
 
 
 # ---------------------------------------------------------------------------

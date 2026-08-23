@@ -4,13 +4,16 @@ from typing import Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_complete_profile, require_role
 from app.marketplace.models import SupplyCategory, SupplyStatus
 from app.marketplace.schemas import (
+    SupplierBrief,
     SupplyListingCreate,
+    SupplyListingDetail,
     SupplyListingPage,
     SupplyListingRead,
     SupplyListingUpdate,
@@ -31,6 +34,24 @@ def _orm_to_read(listing) -> SupplyListingRead:
     """Convert ORM object to SupplyListingRead, extracting geo coords."""
     d = _listing_to_dict(listing)
     return SupplyListingRead(**d)
+
+
+async def _page_with_supplier_names(
+    svc: SupplyMarketplaceService, items: list[dict]
+) -> list[SupplyListingRead]:
+    """Attach supplier_name/supplier_district to a page of result dicts.
+
+    One batch query per page. Phone is deliberately NOT included here — the
+    list surface never carries it (bulk-scrape control); only the detail does.
+    """
+    names = await svc.supplier_names_for([d["supplier_id"] for d in items])
+    results = []
+    for d in items:
+        name_district = names.get(d["supplier_id"])
+        if name_district:
+            d["supplier_name"], d["supplier_district"] = name_district
+        results.append(SupplyListingRead(**d))
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +148,7 @@ async def search_listings(
     svc = SupplyMarketplaceService(db)
     total, items = await svc.search_listings(filters)
 
-    results = [SupplyListingRead(**item) for item in items]
+    results = await _page_with_supplier_names(svc, items)
     return SupplyListingPage(total=total, page=page, page_size=page_size, results=results)
 
 
@@ -135,16 +156,31 @@ async def search_listings(
 # GET /listings/{id}
 # ---------------------------------------------------------------------------
 
-@router.get("/listings/{listing_id}", response_model=SupplyListingRead, summary="Get supply listing by ID")
+@router.get("/listings/{listing_id}", response_model=SupplyListingDetail, summary="Get supply listing by ID")
 async def get_listing(
     listing_id: UUID,
     db: AsyncSession = Depends(get_db),
     _current_user=Depends(require_complete_profile),
 ):
-    """Retrieve a single supply listing by its UUID."""
+    """Retrieve a single supply listing with its supplier contact block.
+
+    This is the only marketplace surface that exposes the supplier's phone,
+    and it sits behind auth — the list responses never carry it.
+    """
     svc = SupplyMarketplaceService(db)
-    listing = await svc.get_listing(listing_id)
-    return _orm_to_read(listing)
+    listing, supplier = await svc.get_listing_with_supplier(listing_id)
+    detail = SupplyListingDetail(**_listing_to_dict(listing))
+    if supplier is not None:
+        detail.supplier = SupplierBrief(
+            id=supplier.id,
+            name=supplier.name,
+            phone=supplier.phone,
+            district=supplier.district,
+            member_since=supplier.created_at,
+        )
+        detail.supplier_name = supplier.name
+        detail.supplier_district = supplier.district
+    return detail
 
 
 # ---------------------------------------------------------------------------
@@ -202,5 +238,40 @@ async def list_listings(
     )
     svc = SupplyMarketplaceService(db)
     total, items = await svc.search_listings(filters)
-    results = [SupplyListingRead(**item) for item in items]
+    results = await _page_with_supplier_names(svc, items)
     return SupplyListingPage(total=total, page=page, page_size=page_size, results=results)
+
+
+# ---------------------------------------------------------------------------
+# Listing images — owner or admin only (see CC_INTL_PHONE_SUPPLIER_FIX)
+# ---------------------------------------------------------------------------
+
+class ImageDeleteRequest(BaseModel):
+    url: str
+
+
+@router.post("/listings/{listing_id}/images", summary="Upload listing photos (owner/admin)")
+async def upload_listing_images(
+    listing_id: UUID,
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role("supplier", "admin")),
+):
+    """Upload 1-3 photos for a listing. JPEG/PNG/WebP, max 5MB each, 3 per listing."""
+    svc = SupplyMarketplaceService(db)
+    payload = [(await f.read(), f.content_type or "") for f in files]
+    urls = await svc.add_listing_images(listing_id, current_user, payload)
+    return {"photos": urls}
+
+
+@router.delete("/listings/{listing_id}/images", summary="Remove a listing photo (owner/admin)")
+async def delete_listing_image(
+    listing_id: UUID,
+    body: ImageDeleteRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role("supplier", "admin")),
+):
+    """Remove one photo URL from a listing. The R2 object delete is best-effort."""
+    svc = SupplyMarketplaceService(db)
+    urls = await svc.remove_listing_image(listing_id, current_user, body.url)
+    return {"photos": urls}
