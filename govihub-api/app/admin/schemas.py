@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.users.phone import validate_e164_phone_optional
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +93,16 @@ class ResetPasswordTempResponse(BaseModel):
 
 class AdminUserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=255)
+    # Any NON-EMPTY phone must be valid E.164, whatever the target user's role —
+    # the admin panel previously accepted anything (e.g. "0771234567", "abc"),
+    # which the DB CHECK only blocks for non-admin rows. Emptiness is a role
+    # question, enforced in AdminService.update_user, not here.
     phone: Optional[str] = Field(None, max_length=20)
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        return validate_e164_phone_optional(v)
     language: Optional[str] = Field(None, pattern="^(si|en|ta)$")
     district: Optional[str] = None
     province: Optional[str] = None

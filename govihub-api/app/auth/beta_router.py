@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.beta_schemas import (
@@ -72,6 +73,23 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
     if email_check.scalar_one_or_none():
         raise HTTPException(status_code=409, detail={"code": "ROLE_ACCOUNT_EXISTS", "message": f"You already have a {body.role} account with this email", "role": body.role})
 
+    # Phone is UNIQUE per (phone, role) — uq_users_phone_role. Without this
+    # pre-check the insert raises IntegrityError and surfaces as a 500 to the
+    # user. Note the constraint is scoped to role, so the SAME phone on a
+    # DIFFERENT role is legitimate and must still be allowed.
+    phone_check = await db.execute(
+        select(User).where(User.phone == body.phone, User.role == UserRole(body.role))
+    )
+    if phone_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "DUPLICATE_PHONE",
+                "message": f"This phone number is already registered as a {body.role}",
+                "role": body.role,
+            },
+        )
+
     # Cap at 3 accounts per email (one per role: farmer, buyer, supplier)
     email_count = await db.execute(
         select(func.count()).select_from(User).where(User.email == target_email)
@@ -99,7 +117,24 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
         tos_version=settings.TOS_VERSION,
     )
     db.add(user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        # Safety net for the race between the pre-checks above and this insert
+        # (two concurrent signups with the same phone/username). A unique
+        # violation is user input, never a server fault — never let it 500.
+        await db.rollback()
+        constraint = str(getattr(exc, "orig", exc))
+        if "uq_users_phone_role" in constraint:
+            code, message = "DUPLICATE_PHONE", "This phone number is already registered for this role"
+        elif "username" in constraint:
+            code, message = "USERNAME_TAKEN", "Username already taken"
+        elif "email" in constraint:
+            code, message = "DUPLICATE_EMAIL", "This email is already registered"
+        else:
+            raise
+        logger.info("beta_register_duplicate", code=code, username=body.username)
+        raise HTTPException(status_code=409, detail={"code": code, "message": message})
 
     # Create role-specific profile
     if body.role == "farmer":

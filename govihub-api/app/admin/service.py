@@ -214,6 +214,17 @@ class AdminService:
         user = await self.get_user_detail(user_id)
         update_data = data.model_dump(exclude_unset=True)
 
+        # Phone is mandatory for non-admin users (ck_users_phone_required_for_non_admin).
+        # Reject an attempt to clear it up front — otherwise the DB CHECK fires on
+        # flush and the admin sees a 500 instead of a reason. Format is already
+        # validated by AdminUserUpdate; this is the role rule only.
+        if "phone" in update_data and not (update_data["phone"] or "").strip():
+            target_role = UserRole(update_data["role"]) if update_data.get("role") else user.role
+            if target_role != UserRole.admin:
+                raise ValidationError(
+                    detail="Phone number is required for non-admin users and cannot be cleared."
+                )
+
         for field, value in update_data.items():
             if field == "role" and value is not None:
                 setattr(user, field, UserRole(value))

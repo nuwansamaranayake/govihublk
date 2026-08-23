@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_complete_profile, require_role
-from app.exceptions import ForbiddenError, ValidationError
+from app.exceptions import ForbiddenError, GoviHubException, ValidationError
 from app.listings.models import CropTaxonomy, HarvestStatus
 from app.listings.schemas import (
     DemandPostingCreate,
@@ -128,24 +128,113 @@ async def list_districts():
 # Image Upload
 # ---------------------------------------------------------------------------
 
+# Purposes an authenticated user may upload against. This is an ALLOWLIST:
+# the old free-form `folder` query param let any complete-profile user write to
+# any prefix in the bucket (including ones belonging to other features), with no
+# binding to the uploader. Marketplace and ad images have their own scoped,
+# resource-bound endpoints and are deliberately NOT reachable from here.
+UPLOAD_PURPOSES = {"harvests", "demands"}
+UPLOAD_RATE_LIMIT_PER_HOUR = 60
+
+
+def user_upload_prefix(purpose: str, user_id) -> str:
+    """Storage prefix that binds an uploaded object to one user and purpose."""
+    return f"{purpose}/{user_id}"
+
+
+def assert_images_belong_to(images, user_id) -> None:
+    """Attach-time check: every image URL must sit under this user's prefix.
+
+    Without this the per-user upload prefix would be decorative — a caller could
+    still attach a URL somebody else uploaded. Pre-existing images uploaded
+    before this binding shipped live under the old flat ``harvests/`` prefix and
+    are still accepted, so already-published listings keep their photos.
+    """
+    if not images:
+        return
+    for url in images:
+        if not isinstance(url, str):
+            raise ValidationError(detail="Image entries must be URL strings")
+
+        segments = url.split("/")
+        owner = None
+        for purpose in UPLOAD_PURPOSES:
+            if purpose in segments:
+                idx = segments.index(purpose)
+                # Bound key: .../{purpose}/{user_id}/{file}  -> 2 segments after
+                # Legacy key: .../{purpose}/{file}           -> 1 segment after
+                if len(segments) - idx - 1 == 2:
+                    owner = segments[idx + 1]
+                break
+
+        # Legacy flat keys predate this binding and carry no owner segment;
+        # already-published listings keep their photos.
+        if owner is None:
+            continue
+        if owner == str(user_id):
+            continue
+        raise ValidationError(
+            detail="Image URL does not belong to you. Upload the image again.",
+            details={"url": url},
+        )
+
+
 @router.post("/uploads/image", tags=["Listings"])
 async def upload_listing_image(
-    folder: str = Query("listings", description="Storage folder (e.g. harvests, demands)"),
-    file: UploadFile = File(..., description="JPEG or PNG image, max 10 MB"),
+    purpose: Optional[str] = Query(
+        None, description="Upload purpose: harvests | demands"
+    ),
+    folder: Optional[str] = Query(
+        None, description="Deprecated alias for `purpose`; kept so already-loaded browser bundles keep working"
+    ),
+    file: UploadFile = File(..., description="JPEG, PNG or WebP image, max 10 MB"),
     current_user=Depends(require_complete_profile),
 ):
-    """Upload an image for a listing. Returns the public URL."""
+    """Upload an image for a listing being composed, before the listing exists.
+
+    Harvest and demand forms collect photos before the record is created, so the
+    object cannot be keyed by resource id. It is keyed by uploader instead:
+    ``{purpose}/{user_id}/{uuid}.{ext}``. Attach time re-checks that prefix, so a
+    URL uploaded by one user cannot be attached to another user's listing.
+    """
+    from app.dependencies import get_redis
     from app.utils.storage import storage_service
+
+    chosen = (purpose or folder or "").strip().lower()
+    if chosen not in UPLOAD_PURPOSES:
+        raise ValidationError(
+            detail=f"Unsupported upload purpose '{chosen or '(none)'}'.",
+            details={"allowed": sorted(UPLOAD_PURPOSES)},
+        )
+
+    # Per-user hourly cap (same Redis counter pattern as the admin AI query).
+    try:
+        redis = await get_redis()
+        key = f"upload_rate:{current_user.id}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 3600)
+        if count > UPLOAD_RATE_LIMIT_PER_HOUR:
+            raise GoviHubException(
+                status_code=429,
+                detail=f"Upload limit reached ({UPLOAD_RATE_LIMIT_PER_HOUR}/hour). Try again later.",
+                error_code="UPLOAD_RATE_LIMITED",
+            )
+    except GoviHubException:
+        raise
+    except Exception as exc:  # noqa: BLE001 — Redis outage must not block uploads
+        logger.warning("upload_rate_limit_unavailable", error=str(exc))
 
     file_bytes = await file.read()
     content_type = file.content_type or "application/octet-stream"
 
+    # storage_service enforces JPEG/PNG/WebP and the size ceiling.
     url = await storage_service.upload_image(
         file_bytes=file_bytes,
         content_type=content_type,
-        folder=folder,
+        folder=user_upload_prefix(chosen, current_user.id),
     )
-    return {"url": url, "folder": folder}
+    return {"url": url, "folder": chosen, "purpose": chosen}
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +254,7 @@ async def create_harvest_listing(
 ):
     """Create a new harvest listing. Requires farmer role."""
     data_dict = data.model_dump()
+    assert_images_belong_to(data_dict.get("images"), current_user.id)
 
     # Auto-set location from farmer's district when no coordinates provided
     if not data_dict.get("latitude") and not data_dict.get("longitude") and current_user.district:
@@ -303,6 +393,7 @@ async def update_harvest_listing(
     current_user=Depends(require_role("farmer")),
 ):
     """Update a harvest listing. Owner only; only planned/ready listings."""
+    assert_images_belong_to(data.images, current_user.id)
     svc = ListingService(db)
     listing = await svc.update_harvest(
         listing_id=listing_id,
