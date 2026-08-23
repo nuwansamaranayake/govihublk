@@ -4,6 +4,8 @@ import React from "react";
 import RPNInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
+import { PHONE_COUNTRIES } from "@/lib/phoneCountries";
+
 interface PhoneInputProps {
   label?: string;
   value: string;
@@ -48,6 +50,13 @@ export function PhoneInput({
       <RPNInput
         id={inputId}
         international
+        // Curated whitelist of Sri Lanka's spice export markets (see
+        // lib/phoneCountries.ts). Applied here in the shared component so every
+        // phone entry point (register, beta-login, complete-profile, all three
+        // settings pages) inherits it without call-site changes.
+        countries={PHONE_COUNTRIES}
+        addInternationalOption={false}
+        countryCallingCodeEditable={false}
         defaultCountry={defaultCountry as any}
         value={value || undefined}
         onChange={(v) => onChange((v as string) || "")}
