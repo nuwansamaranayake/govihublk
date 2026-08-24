@@ -17,6 +17,7 @@ OUT = os.path.join(ROOT, "tamil_inventory.json")
 WHITELIST = {
     "GoviHub", "govihub", "GoviHubLk", "govihublk.com", "WhatsApp", "SMS", "OK",
     "Email", "email", "AI", "PDPA", "ID", "URL", "%", "LKR", "Rs", "Rs.", "kg", "km",
+    "07X XXX XXXX",  # phone format mask - si.json keeps it identical too
 }
 
 TOKEN = re.compile(r"\{([a-zA-Z0-9_]+)\}")
