@@ -434,3 +434,38 @@ class AIQueryResponse(BaseModel):
     answer: str
     tool_calls: List[AIQueryToolCall]
     iterations: int
+
+
+# ---------------------------------------------------------------------------
+# Listing moderation
+# ---------------------------------------------------------------------------
+
+
+class ModerationFlagRequest(BaseModel):
+    reason: str = Field(..., min_length=3, max_length=1000)
+
+
+class ModerationActionResponse(BaseModel):
+    listing_type: str
+    listing_id: UUID
+    moderation_status: str
+    detail: str
+
+
+class FlaggedListingRead(BaseModel):
+    listing_type: str
+    id: UUID
+    name: Optional[str] = None
+    supplier_or_farmer_name: Optional[str] = None
+    moderation_status: str
+    status: Optional[str] = None
+    created_at: Optional[datetime] = None
+    last_reason: Optional[str] = None
+
+
+class FlaggedListingListResponse(BaseModel):
+    items: List[FlaggedListingRead]
+    total: int
+    page: int
+    size: int
+    pages: int

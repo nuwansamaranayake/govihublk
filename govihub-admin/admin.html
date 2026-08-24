@@ -76,6 +76,10 @@
     .badge-fulfilled { background: #F3E8FF; color: #7E22CE; }
     .badge-cancelled, .badge-expired, .badge-closed, .badge-discontinued { background: #F1F5F9; color: #64748B; }
     .badge-out_of_stock { background: #FEF3C7; color: #B45309; }
+    .badge-clean { background: #DCFCE7; color: #16A34A; }
+    .badge-pending_scan { background: #FEF3C7; color: #B45309; }
+    .badge-flagged { background: #FEE2E2; color: #DC2626; }
+    .badge-reviewed { background: #DBEAFE; color: #1D4ED8; }
     .badge-ad-active { background: #DCFCE7; color: #16A34A; }
     .badge-ad-paused { background: #FEF3C7; color: #B45309; }
     .badge-ad-expired { background: #F1F5F9; color: #64748B; }
@@ -308,14 +312,16 @@
       <div id="view-listings" class="view" style="display:none;">
         <div class="page-header">
           <div class="page-title">Listings</div>
+          <div style="font-size:13px;color:#64748B;" id="listings-count"></div>
         </div>
         <div class="tab-bar">
           <div class="tab active" id="tab-harvest" onclick="switchListingTab('harvest')">Harvest</div>
           <div class="tab" id="tab-demand" onclick="switchListingTab('demand')">Demand</div>
           <div class="tab" id="tab-supply" onclick="switchListingTab('supply')">Supply</div>
+          <div class="tab" id="tab-flagged" onclick="switchListingTab('flagged')">Flagged</div>
         </div>
         <div class="table-container">
-          <div class="table-toolbar">
+          <div class="table-toolbar" id="listings-toolbar">
             <input type="text" class="search-input" id="listings-search" placeholder="Search..." />
             <select class="filter-select" id="listings-status-filter" onchange="loadListings()">
               <option value="">All status</option>
@@ -609,6 +615,7 @@ let currentToken = sessionStorage.getItem('gh_admin_token');
 let currentUser = null;
 let usersPage = 1;
 let listingsPage = 1;
+let flaggedPage = 1;
 let currentListingTab = 'harvest';
 let confirmCallback = null;
 let allAdsCache = [];
@@ -1008,7 +1015,8 @@ function switchListingTab(tab) {
   const heads = {
     harvest: '<tr><th>Farmer</th><th>Crop</th><th>Qty (kg)</th><th>Price/kg</th><th>Status</th><th>Listed</th><th>Action</th></tr>',
     demand:  '<tr><th>Buyer</th><th>Crop</th><th>Qty needed</th><th>Max price</th><th>Status</th><th>Posted</th><th>Action</th></tr>',
-    supply:  '<tr><th>Supplier</th><th>Category</th><th>Item</th><th>Price</th><th>Status</th><th>Posted</th><th>Action</th></tr>'
+    supply:  '<tr><th>Supplier</th><th>Category</th><th>Item</th><th>Price</th><th>Status</th><th>Posted</th><th>Action</th></tr>',
+    flagged: '<tr><th>Owner</th><th>Listing</th><th>Type</th><th>Moderation</th><th>Status</th><th>Created</th><th>Action</th></tr>'
   };
   document.getElementById('listings-thead').innerHTML = heads[tab];
 
@@ -1018,6 +1026,18 @@ function switchListingTab(tab) {
   document.getElementById('listings-tbody').innerHTML =
     '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">Loading...</td></tr>';
   document.getElementById('listings-pagination').innerHTML = '';
+  document.getElementById('listings-count').textContent = '';
+
+  // The flagged view is served by its own endpoint, which takes no search or
+  // status params, so hide the toolbar rather than show filters that do nothing.
+  const toolbar = document.getElementById('listings-toolbar');
+  if (tab === 'flagged') {
+    toolbar.style.display = 'none';
+    flaggedPage = 1;
+    loadFlaggedListings();
+    return;
+  }
+  toolbar.style.display = '';
 
   // Refresh status filter options for this tab
   const sel = document.getElementById('listings-status-filter');
@@ -1030,6 +1050,11 @@ function switchListingTab(tab) {
 }
 
 async function loadListings() {
+  // showView(), the debounced search input and the filter selects all call
+  // loadListings(). Route to the flagged endpoint when that tab is active so
+  // none of them can fire a /admin/listings/flagged?search=... request.
+  if (currentListingTab === 'flagged') return loadFlaggedListings();
+
   const search = document.getElementById('listings-search').value.trim();
   const status = document.getElementById('listings-status-filter').value;
   const includeRemoved = document.getElementById('listings-include-removed').checked;
@@ -1063,11 +1088,15 @@ function renderListingsTable(data) {
       if (l && l.id) listingsById[l.id] = l;
     }
   }
+  document.getElementById('listings-count').textContent = `${data.total ?? 0} listings`;
   if (!data.items || data.items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">No listings found</td></tr>';
     document.getElementById('listings-pagination').innerHTML = '';
     return;
   }
+  // The moderation endpoints only accept supply and harvest listing types,
+  // so the Flag action is not offered on the demand tab.
+  const canModerate = currentListingTab === 'harvest' || currentListingTab === 'supply';
   tbody.innerHTML = data.items.map(l => {
     const isRemoved = !!l.removed_at;
     const actor = l.farmer_name || l.buyer_name || l.supplier_name || '—';
@@ -1102,6 +1131,7 @@ function renderListingsTable(data) {
         <td>
           ${isRemoved ? '<span class="badge badge-removed">REMOVED</span>'
                      : `<span class="badge badge-${l.status}">${l.status || '—'}</span>`}
+          ${moderationBadge(l.moderation_status)}
         </td>
         <td style="font-size:13px;">${formatDate(l.created_at)}</td>
         <td>
@@ -1110,6 +1140,12 @@ function renderListingsTable(data) {
                     onclick="openViewListing('${l.id}')">
               View
             </button>
+            ${canModerate ? `
+            <button class="btn btn-sm btn-secondary"
+                    ${isRemoved ? 'disabled' : ''}
+                    onclick="${isRemoved ? '' : `promptFlagListing('${currentListingTab}', '${l.id}')`}">
+              Flag
+            </button>` : ''}
             <button class="btn btn-sm btn-danger"
                     ${isRemoved ? 'disabled' : ''}
                     onclick="${isRemoved ? '' : `openRemoveListing('${l.id}')`}">
@@ -1150,6 +1186,128 @@ async function confirmRemoveListing() {
     closeModal('remove-listing');
     showToast('Listing removed successfully', 'success');
     loadListings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// =============================================
+// MODERATION
+// =============================================
+// Rows on the flagged tab, keyed by id, so the action handlers can read the
+// listing name without HTML-embedding it in an onclick attribute.
+let flaggedById = {};
+
+const MODERATION_LABELS = {
+  clean: 'Clean',
+  pending_scan: 'Pending scan',
+  flagged: 'Flagged',
+  reviewed: 'Reviewed'
+};
+
+function moderationBadge(status) {
+  if (!status || !MODERATION_LABELS[status]) return '';
+  return `<span class="badge badge-${status}" style="margin-left:6px;">${MODERATION_LABELS[status]}</span>`;
+}
+
+async function loadFlaggedListings() {
+  const params = new URLSearchParams({ page: flaggedPage, size: 20 });
+  try {
+    const data = await apiFetch(`/admin/listings/flagged?${params}`);
+    if (currentListingTab !== 'flagged') return;  // stale response
+    renderFlaggedTable(data);
+  } catch (e) {
+    if (currentListingTab !== 'flagged') return;
+    showToast(e.message, 'error');
+  }
+}
+
+function renderFlaggedTable(data) {
+  const tbody = document.getElementById('listings-tbody');
+  flaggedById = {};
+  if (Array.isArray(data.items)) {
+    for (const l of data.items) {
+      if (l && l.id) flaggedById[l.id] = l;
+    }
+  }
+  document.getElementById('listings-count').textContent = `${data.total ?? 0} flagged listings`;
+  if (!data.items || data.items.length === 0) {
+    // Approving the last row of a later page leaves that page empty; fall
+    // back to page 1 instead of showing a dead-end blank table.
+    if (flaggedPage > 1) { flaggedPage = 1; loadFlaggedListings(); return; }
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#94A3B8;">No flagged listings</td></tr>';
+    document.getElementById('listings-pagination').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = data.items.map(l => `
+    <tr>
+      <td>
+        <div style="font-weight:500;font-size:14px;">${escapeHtml(l.owner_name || '—')}</div>
+      </td>
+      <td>
+        <div style="font-size:14px;">${escapeHtml(l.name || '—')}</div>
+        ${l.last_reason ? `<div style="font-size:12px;color:#94A3B8;">${escapeHtml(l.last_reason)}</div>` : ''}
+      </td>
+      <td style="font-size:13px;">${escapeHtml(l.listing_type || '—')}</td>
+      <td>${moderationBadge(l.moderation_status) || '—'}</td>
+      <td><span class="badge badge-${l.status}">${l.status || '—'}</span></td>
+      <td style="font-size:13px;">${formatDate(l.created_at)}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-secondary"
+                  onclick="approveListing('${l.listing_type}', '${l.id}')">
+            Approve
+          </button>
+          <button class="btn btn-sm btn-danger"
+                  onclick="confirmFlaggedRemoval('${l.listing_type}', '${l.id}')">
+            Remove
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  renderPagination('listings', data.page, data.pages, p => { flaggedPage = p; loadFlaggedListings(); });
+}
+
+async function approveListing(type, id) {
+  try {
+    await apiFetch(`/admin/listings/${type}/${id}/approve`, { method: 'POST' });
+    showToast('Listing approved and republished', 'success');
+    loadFlaggedListings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// Remove from the flagged tab: the listing is already flagged, so we only
+// confirm rather than asking for a reason a second time.
+function confirmFlaggedRemoval(type, id) {
+  const l = flaggedById[id];
+  const name = (l && l.name) || 'this listing';
+  if (!confirm(`Remove "${name}" from the marketplace? It stays unpublished until approved.`)) return;
+  flagListing(type, id, (l && l.last_reason) || 'Removed by admin after review');
+}
+
+// Flag from the normal listings tabs: an admin has to give a reason.
+function promptFlagListing(type, id) {
+  const reason = prompt('Reason for flagging this listing:');
+  if (reason === null) return;               // cancelled
+  if (!reason.trim()) {
+    showToast('A reason is required to flag a listing', 'error');
+    return;
+  }
+  flagListing(type, id, reason.trim());
+}
+
+async function flagListing(type, id, reason) {
+  try {
+    await apiFetch(`/admin/listings/${type}/${id}/flag`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+    showToast('Listing flagged and unpublished', 'success');
+    if (currentListingTab === 'flagged') loadFlaggedListings();
+    else loadListings();
   } catch (e) {
     showToast(e.message, 'error');
   }

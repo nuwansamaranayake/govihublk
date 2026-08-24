@@ -62,6 +62,11 @@ class SupplyListing(Base):
     )
     removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # AI moderation (see migration 015): pending_scan | clean | flagged | reviewed
+    moderation_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending_scan", server_default="pending_scan", index=True
+    )
+
     supplier: Mapped["app.users.models.User"] = relationship(foreign_keys=[supplier_id])
 
     __table_args__ = (

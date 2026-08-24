@@ -4,12 +4,18 @@ from typing import Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_complete_profile, require_role
 from app.marketplace.models import SupplyCategory, SupplyStatus
+from app.moderation.models import STATUS_PENDING
+from app.moderation.service import (
+    count_user_listings,
+    notify_first_listing_standalone,
+    scan_listing_standalone,
+)
 from app.marketplace.schemas import (
     SupplierBrief,
     SupplyListingCreate,
@@ -76,12 +82,31 @@ async def list_categories():
 @router.post("/listings", response_model=SupplyListingRead, status_code=201, summary="Create supply listing")
 async def create_listing(
     data: SupplyListingCreate,
+    background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("supplier", "admin")),
 ):
-    """Create a new supply listing. Requires supplier or admin role."""
+    """Create a new supply listing. Requires supplier or admin role.
+
+    The moderation scan is queued, not awaited: the supplier's request never
+    waits on an AI call, and the listing goes live immediately.
+    """
     svc = SupplyMarketplaceService(db)
     listing = await svc.create_listing(supplier_id=current_user.id, data=data)
+
+    listing.moderation_status = STATUS_PENDING
+    is_first = await count_user_listings(db, current_user.id) == 1
+
+    # Commit BEFORE scheduling: background tasks run ahead of the get_db
+    # teardown commit, so an uncommitted row is invisible to them.
+    await db.commit()
+
+    if is_first:
+        background.add_task(
+            notify_first_listing_standalone, current_user.id, "supply", listing.id
+        )
+    background.add_task(scan_listing_standalone, "supply", listing.id)
+
     return _orm_to_read(listing)
 
 
@@ -191,14 +216,24 @@ async def get_listing(
 async def update_listing(
     listing_id: UUID,
     data: SupplyListingUpdate,
+    background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("supplier", "admin")),
 ):
-    """Update an existing supply listing. Only the owning supplier may update."""
+    """Update an existing supply listing. Only the owning supplier may update.
+
+    An edit re-enters the moderation queue — otherwise a clean listing could be
+    edited into a scam after it passed its first scan.
+    """
     svc = SupplyMarketplaceService(db)
     listing = await svc.update_listing(
         listing_id=listing_id, supplier_id=current_user.id, data=data
     )
+
+    listing.moderation_status = STATUS_PENDING
+    await db.commit()  # see create_listing — commit before scheduling
+    background.add_task(scan_listing_standalone, "supply", listing.id)
+
     return _orm_to_read(listing)
 
 

@@ -29,6 +29,8 @@ from app.admin.schemas import (
     CropTaxonomyRead,
     CropTaxonomyUpdate,
     DashboardStats,
+    FlaggedListingListResponse,
+    FlaggedListingRead,
     DiagnosisAnalytics,
     KnowledgeChunkListFilter,
     KnowledgeChunkListResponse,
@@ -37,6 +39,8 @@ from app.admin.schemas import (
     KnowledgeStats,
     ListingRemovalRequest,
     MatchAnalytics,
+    ModerationActionResponse,
+    ModerationFlagRequest,
     ResetPasswordRequest,
     ResetPasswordResponse,
     ResetPasswordTempResponse,
@@ -45,10 +49,13 @@ from app.admin.schemas import (
     UserAnalytics,
 )
 from app.admin.service import AdminService
+from app.admin import moderation_ops
 from app.admin import ai_query as ai_query_mod
 from app.admin import listing_ops
 from app.admin import user_ops
 from app.auth.password import hash_password
+from app.exceptions import NotFoundError, ValidationError
+from app.moderation import service as moderation_service
 from app.dependencies import get_current_user, get_db, get_redis, require_role
 from app.users.models import User
 
@@ -799,3 +806,94 @@ async def admin_ai_query(
         query=body.query,
     )
     return AIQueryResponse(**result)
+
+
+# ---------------------------------------------------------------------------
+# Listing moderation — flag / approve / flagged queue
+# ---------------------------------------------------------------------------
+
+
+def _validate_listing_type(listing_type: str) -> str:
+    if listing_type not in ("supply", "harvest"):
+        raise ValidationError(
+            detail=f"listing_type must be 'supply' or 'harvest', got '{listing_type}'"
+        )
+    return listing_type
+
+
+@router.post(
+    "/listings/{listing_type}/{listing_id}/flag",
+    response_model=ModerationActionResponse,
+    summary="Manually unpublish a listing (admin)",
+)
+async def flag_listing(
+    listing_type: str,
+    listing_id: UUID,
+    body: ModerationFlagRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    """Admin manual flag.
+
+    Deliberately goes through the SAME `unpublish_listing` used by the auto-flag
+    path, so a manual takedown and an AI takedown can never diverge in what they
+    change or what they record.
+    """
+    _validate_listing_type(listing_type)
+    ok = await moderation_service.unpublish_listing(
+        db, listing_type, listing_id, body.reason
+    )
+    if not ok:
+        raise NotFoundError(detail=f"{listing_type} listing {listing_id} not found")
+    await db.commit()
+    return ModerationActionResponse(
+        listing_type=listing_type,
+        listing_id=listing_id,
+        moderation_status="flagged",
+        detail="Listing unpublished.",
+    )
+
+
+@router.post(
+    "/listings/{listing_type}/{listing_id}/approve",
+    response_model=ModerationActionResponse,
+    summary="Republish a flagged listing (admin)",
+)
+async def approve_flagged_listing(
+    listing_type: str,
+    listing_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin=AdminRequired,
+):
+    _validate_listing_type(listing_type)
+    ok = await moderation_service.approve_listing(db, listing_type, listing_id)
+    if not ok:
+        raise NotFoundError(detail=f"{listing_type} listing {listing_id} not found")
+    await db.commit()
+    return ModerationActionResponse(
+        listing_type=listing_type,
+        listing_id=listing_id,
+        moderation_status="reviewed",
+        detail="Listing republished.",
+    )
+
+
+@router.get(
+    "/listings/flagged",
+    response_model=FlaggedListingListResponse,
+    summary="List flagged listings from both tables",
+)
+async def list_flagged_listings(
+    page: int = Query(1, ge=1),
+    size: int = Query(25, ge=1, le=100),
+    _admin=AdminRequired,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await moderation_ops.list_flagged(db, page=page, size=size)
+    return FlaggedListingListResponse(
+        items=[FlaggedListingRead(**item) for item in result["items"]],
+        total=result["total"],
+        page=result["page"],
+        size=result["size"],
+        pages=result["pages"],
+    )

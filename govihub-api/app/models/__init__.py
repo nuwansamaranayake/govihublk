@@ -11,6 +11,7 @@ from app.notifications.models import Notification, NotificationPreference
 from app.alerts.models import PriceHistory, WeatherCache
 from app.weather.models import FarmerCropSelection, WeatherAlert
 from app.ads.models import Advertisement, AdEvent
+from app.moderation.models import ModerationEvent
 
 __all__ = [
     "RefreshToken",
@@ -35,4 +36,5 @@ __all__ = [
     "WeatherAlert",
     "Advertisement",
     "AdEvent",
+    "ModerationEvent",
 ]

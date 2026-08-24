@@ -96,6 +96,11 @@ class HarvestListing(Base):
     )
     removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # AI moderation (see migration 015): pending_scan | clean | flagged | reviewed
+    moderation_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending_scan", server_default="pending_scan", index=True
+    )
+
     # Relationships
     farmer: Mapped["app.users.models.User"] = relationship(foreign_keys=[farmer_id])
     crop: Mapped["CropTaxonomy"] = relationship(foreign_keys=[crop_id])

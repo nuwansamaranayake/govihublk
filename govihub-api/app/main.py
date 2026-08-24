@@ -52,6 +52,27 @@ async def _weather_alert_scheduler():
         await asyncio.sleep(3600)  # 60 minutes
 
 
+async def _moderation_scheduler():
+    """Scan listings left at pending_scan every 10 minutes.
+
+    Safety net behind the publish-time BackgroundTasks scan: anything whose
+    scan crashed or hit an AI outage stays pending_scan and is retried here.
+    """
+    import asyncio
+
+    await asyncio.sleep(30)  # initial delay — let app fully start
+    while True:
+        try:
+            from app.moderation.tasks import moderation_sweep
+
+            count = await moderation_sweep()
+            if count:
+                logger.info("moderation_sweep_cycle", listings_scanned=count)
+        except Exception as e:
+            logger.error("moderation_scheduler_error", error=str(e))
+        await asyncio.sleep(600)  # 10 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -77,11 +98,16 @@ async def lifespan(app: FastAPI):
     weather_alert_task = asyncio.create_task(_weather_alert_scheduler())
     logger.info("weather_alert_scheduler_started", interval_seconds=3600)
 
+    # Start the listing moderation sweep
+    moderation_task = asyncio.create_task(_moderation_scheduler())
+    logger.info("moderation_scheduler_started", interval_seconds=600)
+
     yield
 
     # Shutdown: cancel schedulers and dispose engine
     matching_task.cancel()
     weather_alert_task.cancel()
+    moderation_task.cancel()
     await engine.dispose()
     logger.info("govihub_shutdown")
 

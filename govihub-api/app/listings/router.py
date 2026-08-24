@@ -6,13 +6,19 @@ from typing import Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_complete_profile, require_role
 from app.exceptions import ForbiddenError, GoviHubException, ValidationError
 from app.listings.models import CropTaxonomy, HarvestStatus
+from app.moderation.models import STATUS_PENDING
+from app.moderation.service import (
+    count_user_listings,
+    notify_first_listing_standalone,
+    scan_listing_standalone,
+)
 from app.listings.schemas import (
     DemandPostingCreate,
     DemandPostingRead,
@@ -249,10 +255,15 @@ async def upload_listing_image(
 )
 async def create_harvest_listing(
     data: HarvestListingCreate,
+    background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
-    """Create a new harvest listing. Requires farmer role."""
+    """Create a new harvest listing. Requires farmer role.
+
+    The moderation scan is queued, not awaited: the farmer's request never waits
+    on an AI call, and the listing goes live immediately.
+    """
     data_dict = data.model_dump()
     assert_images_belong_to(data_dict.get("images"), current_user.id)
 
@@ -278,6 +289,19 @@ async def create_harvest_listing(
         await db.flush()  # ensure listing is visible to engine SQL queries
         count = await run_matching_inline(db, "harvest", listing.id)
         logger.info("matching_inline", listing_type="harvest", listing_id=str(listing.id), matches_created=count)
+
+    listing.moderation_status = STATUS_PENDING
+    is_first = await count_user_listings(db, current_user.id) == 1
+
+    # Commit BEFORE scheduling: background tasks run ahead of the get_db
+    # teardown commit, so an uncommitted row is invisible to them.
+    await db.commit()
+
+    if is_first:
+        background.add_task(
+            notify_first_listing_standalone, current_user.id, "harvest", listing.id
+        )
+    background.add_task(scan_listing_standalone, "harvest", listing.id)
 
     return _harvest_to_read(listing)
 
@@ -389,10 +413,15 @@ async def get_harvest_listing(
 async def update_harvest_listing(
     listing_id: UUID,
     data: HarvestListingUpdate,
+    background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role("farmer")),
 ):
-    """Update a harvest listing. Owner only; only planned/ready listings."""
+    """Update a harvest listing. Owner only; only planned/ready listings.
+
+    An edit re-enters the moderation queue — otherwise a clean listing could be
+    edited into a scam after it passed its first scan.
+    """
     assert_images_belong_to(data.images, current_user.id)
     svc = ListingService(db)
     listing = await svc.update_harvest(
@@ -411,6 +440,10 @@ async def update_harvest_listing(
         await db.flush()
         count = await run_matching_inline(db, "harvest", listing.id)
         logger.info("matching_inline_update", listing_type="harvest", listing_id=str(listing.id), matches_created=count)
+
+    listing.moderation_status = STATUS_PENDING
+    await db.commit()  # see create_harvest_listing — commit before scheduling
+    background.add_task(scan_listing_standalone, "harvest", listing.id)
 
     return _harvest_to_read(listing)
 
