@@ -192,6 +192,8 @@ def _serialize_harvest(
         "description": hl.description,
         "images": _normalise_images(hl.images),
         "status": hl.status.value if hasattr(hl.status, "value") else str(hl.status),
+        # Surfaced so the admin panel can render a moderation badge on every row.
+        "moderation_status": getattr(hl, "moderation_status", None),
         "is_organic": hl.is_organic,
         "delivery_available": hl.delivery_available,
         "delivery_radius_km": hl.delivery_radius_km,
@@ -411,6 +413,8 @@ def _serialize_supply(
         "delivery_available": sl.delivery_available,
         "delivery_radius_km": sl.delivery_radius_km,
         "status": sl.status.value if hasattr(sl.status, "value") else str(sl.status),
+        # Surfaced so the admin panel can render a moderation badge on every row.
+        "moderation_status": getattr(sl, "moderation_status", None),
         "created_at": sl.created_at.isoformat() if sl.created_at else None,
         "removal_reason": sl.removal_reason,
         "removed_by": str(sl.removed_by) if sl.removed_by else None,
