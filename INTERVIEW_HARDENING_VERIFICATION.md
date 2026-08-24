@@ -8,9 +8,9 @@
 |---|---|
 | **T4** privacy page | ✅ **PASSED — live** |
 | **T8** listing moderation v1 | ✅ **PASSED — live** |
-| **T6** capacity | 🟡 **deployed + partially verified** — G6.1 needs a real MCP client call; G6.3/G6.4/G6.5 not run |
-| **T7** support@ mailbox | ⛔ **BLOCKED** — no AWS credentials; resume prompt recorded |
-| **T5** credential rotation | ⏸ **NOT STARTED** — runs last by design; see handoff |
+| **T6** capacity | ✅ **PASSED** — all five gates green |
+| **T7** support@ mailbox | ✅ **PASSED** — Resend Inbound, proven end to end |
+| **T5** credential rotation | ✅ **PASSED** — rotated, old value 401s, tree purged |
 
 ---
 
@@ -121,109 +121,212 @@ G8.7  cleanup: 203 users / 7 supply / 21 harvest / 0 events   baseline restored 
 **Deliberately not exposed:** `moderation_status` is absent from the *public* marketplace schema.
 Buyers should not see moderation state; only admin surfaces carry it.
 
-## T6 — Capacity 🟡 built, deploy in flight, gates outstanding
+## T6 — Capacity ✅
 
-Audit: **4 vCPU / 16 GB** (11.3 GB free), API `-w 1`, DB pool **20+10 per process**, Postgres
-`max_connections=100`, one Traefik router serving `/api` + `/mcp` + `/uploads`.
+**G6.1 CLOSED.** The manager's live Claude connector made **two successful real tool calls** through
+the new `govihub-mcp-spices` service, baseline matched. That satisfies the project's MCP rule; the
+earlier curl-only evidence is superseded.
 
 ### The hazard the spec did not account for
 
-Background schedulers (matching 5min, weather alerts 60min, moderation sweep 10min) run **inside the
-worker process** via `asyncio.create_task`. Scaling to N workers runs them N times — duplicate match
-batches, **duplicate weather-alert emails to real farmers**, duplicate moderation scans and admin
-emails. That is a correctness bug, not just waste.
+Scaling workers without moving the schedulers out is a **correctness bug, not just waste**:
+`app/main.py` started matching, weather-alert and moderation schedulers inside each worker via
+`asyncio.create_task`. Five workers meant five concurrent runs — duplicate match batches and
+**duplicate weather-alert emails to real farmers**. Fixed by giving scheduler ownership to the
+single-process MCP service and gating them off in the API.
 
-And the connection math: pools are per-process, so the rule-of-thumb 2×vCPU+1 = 9 workers × 30 =
-**270 connections against a cap of 100**.
+| | Before | After |
+|---|---|---|
+| API workers | `-w 1` | **`-w 5`** (chosen for connection headroom, not 2×vCPU+1) |
+| DB pool | 20+10 | **10+5**. 5 API × 15 = 75, plus 15 MCP = **90 < 100** |
 
-### What shipped (commit above `a7aa561`)
-
-| Change | Value |
-|---|---|
-| MCP split | new `govihub-mcp-spices`, still `-w 1` (SSE requires it), Traefik priority **25** beats API's 20 so `/mcp` lands there. **Public URL `https://spices.govihublk.com/mcp/sse` unchanged**; `flushInterval=1ms` preserved on that router |
-| Schedulers | gated behind `RUN_SCHEDULERS` — **true only on the single-worker MCP service**, false on the scaled API. Defaults **true** so an unset env can never silently stop them |
-| API workers | `-w 1` → **`-w 5`** (chosen for connection headroom, not 2×vCPU+1) |
-| DB pool | 20+10 → **10+5** from settings. 5 API × 15 = 75, plus 15 MCP = **90 < 100**, leaving headroom for psql/admin |
-
-Verified locally before deploy: `RUN_SCHEDULERS=False, pool 10+5`, `import app.main` OK.
-
-### ⚠️ Outstanding — these gates did NOT run
+### All five gates
 
 ```
-G6.2  worker count + scheduler ownership                    PASS - see below
-G6.1  MCP route reachable at the unchanged URL              PARTIAL - curl only, see below
-G6.3  burst 200 concurrent 60s, p95 <1.5s, DB under cap     NOT RUN
-G6.4  CGNAT rate limits (register 30/min, login 60/min IP)  NOT IMPLEMENTED
-G6.5  full regression smoke after the worker change         NOT RUN (health/terms/landing 200 only)
+G6.1  MCP reachable at the unchanged URL         PASS - two real connector tool calls
+G6.2  worker count + scheduler ownership         PASS - re-verified after every redeploy
+G6.3  burst 200 concurrent 60s, p95 <1.5s        PASS
+G6.4  per-IP rate limits (register 30, login 60) PASS
+G6.5  full regression smoke                      PASS - 29/29
 ```
 
-**G6.2 PASSED — the hazard is provably fixed.** Each worker logs once at startup:
+**G6.2** — re-confirmed after both redeploys, from real container logs:
 
 ```
-API : 5 x schedulers_disabled     <- 5 workers, none owns the schedulers
-MCP : 1 x schedulers_started      <- exactly one process owns them
+API : 6 gunicorn procs (master + 5)  ->  5 x schedulers_disabled
+MCP : 2 gunicorn procs (master + 1)  ->  1 x schedulers_started
 ```
 
-That is the duplicate-farmer-email risk closed, verified from real container logs.
+Exactly one process owns the schedulers. The duplicate-farmer-email risk is closed.
 
-**G6.1 PARTIAL — routing confirmed, real client call NOT done.**
-`GET https://spices.govihublk.com/mcp/sse` returns
-`401 {"error":"Missing authentication. Provide Authorization header or ?token= parameter"}`.
-That is the MCP app's own auth contract answering, which proves Traefik routes `/mcp` to the new
-`govihub-mcp-spices` service and the app is alive there — a broken route would return 404 or the
-Next.js page. Other surfaces unaffected: `/api/v1/health`, `/en/terms`, `/` all 200.
+**G6.3 burst** — 200 concurrent clients, 60.2s, against `/api/v1/crops` (public, DB-backed):
 
-**Per the project's own MCP rule, this is NOT sufficient to call the MCP work done.** curl preserves
-query strings, ignores CORS, and uses connection patterns real clients do not. **Nuwan must confirm
-a real tool call through the registered connector** — invoke any GoviHub MCP tool twice in sequence
-(two calls catches session-binding bugs) and confirm it lands with `status_code=200` and a populated
-`tool_name`. If it fails, roll back: revert the compose change and
-`docker compose -f docker-compose.spices.yml up -d --force-recreate govihub-api-spices`, which
-restores the single service answering `/mcp`.
+```
+requests    : 58,773   (977 req/s)
+status dist : {200: 58773}     5xx: 0     transport errors: 0
+p50 / p95 / p99 : 0.136s / 0.609s / 1.150s      max 3.679s
+peak DB connections : 83 / 100
+GATE p95 < 1.5s : PASS      GATE zero 5xx : PASS
+```
 
-**G6.1 is the critical one — your live Claude connector depends on that URL.** Do not consider T6
-done until it passes. Rollback if it fails: revert the compose change and
-`up -d --force-recreate govihub-api-spices`, which restores the single service answering `/mcp`.
+⚠️ **83 of 100 connections at peak.** Under the cap, but only 17 spare. If worker count ever grows,
+raise `max_connections` to 200 first.
 
-## T7 — support@ mailbox ⛔ BLOCKED
+**G6.4 rate limits** — `register 30/min/IP`, `login 60/min/IP`, Redis counter, same pattern as the
+upload limiter. Limits are deliberately loose: Sri Lankan mobile users sit behind **CGNAT**, so one
+exit IP can front a whole town.
 
-- `MX govihublk.com` → `inbound-smtp.us-east-1.amazonaws.com` — SES inbound, and **us-east-1 does
-  support inbound receiving**. The approach is viable; this is **not** a vendor problem.
-- `aws` CLI is installed at `/usr/local/bin/aws`, but there are **no credentials**: no `~/.aws`, no
-  `AWS_*` in any env file, and `aws sts get-caller-identity` → *Unable to locate credentials*.
+- Login proven with **real traffic on prod**: first `429` at attempt **#61**.
+- Register proven by seeding the counter to 30 and firing once → `429`, counter incremented
+  `rl:beta_register:<ip>` to 31. **Seeded rather than fired 31 times so no user rows were created.**
+  The full-traffic boundary (#31) was proven locally against the same code.
+- `429` body is `{"code":"RATE_LIMITED"}`. The frontend **already** mapped that code to
+  `auth.auth_error_rate_limited`, which already existed in **en/si/ta** — so no frontend or locale
+  change was needed.
+- **Fails open** on a Redis outage, matching the upload limiter. A Redis blip must not lock every
+  user out of login.
 
-**No new vendor was added**, per the spec's decision rule. Full resume prompt (including the exact
-IAM permissions needed) is in the state file.
+One honest limit: the limiter runs *after* Pydantic body validation, so malformed bodies return 422
+without incrementing. Harmless — a 422 creates nothing — but the counter measures well-formed
+attempts only.
 
-**Read this before trusting any future "support@ works" claim:** an earlier SMTP probe accepted
-`support@` **and a garbage control address** at 250 — that is a domain-wide catch-all. Acceptance
-proves nothing; only S3/SNS evidence closes this gate.
+**G6.5 regression smoke — 29/29.** Script saved at `/root/smoke_spices.sh` on `govihub-mumbai`.
+Covers TLS validity on all three hosts, the umbrella + `www` + `http→https` final-200, every spices
+locale route, `/en/terms` + `/si/terms`, both auth pages, three API endpoints **with payload
+assertions**, the login 401 contract, the `/mcp` auth contract, image serving, and the admin panel.
 
-T4 now points users at support@ for PDPA erasure requests, which makes this materially more
-important than it was this morning.
+Three of my first assertions failed and **none were regressions** — they were my own bad guesses:
+`/privacy` lives on the umbrella host not spices, spices has no `/marketplace` route, and the crops
+payload keys on `name_en`. Worth recording because a smoke script that asserts the wrong thing reads
+exactly like a broken product.
 
-## T5 — Credential rotation ⏸ NOT STARTED
+## T7 — support@ mailbox ✅
 
-Correctly last: every gate above authenticates with the current credential. **The literal is still in
-`e2e-v3/test-all.js:20` and in GitHub history.** Nothing was rotated this session.
+**The premise in the last handoff was wrong, and the correction is the whole story.**
+
+There is no AWS account. The MX record was read as an orphan pointing at a dead SES setup. But
+**Resend Inbound runs on the same shared SES `us-east-1` ingress**, and the MX record Resend requires
+is:
+
+```
+Type MX   Name @ (root)   Value inbound-smtp.us-east-1.amazonaws.com   Priority 10
+```
+
+That is **byte-identical to what was already published**. The record was never an orphan — it was
+already correct. **No Hostinger DNS change was required, and none was made.**
+
+What was actually missing was the receiving capability on the Resend side:
+
+1. Domain `govihublk.com` (`3661a9fa-…`) was already **verified for sending**.
+   `PATCH capabilities.receiving=enabled` → `POST /verify` → Receiving record **verified**.
+   Sending was untouched (omitted fields keep their current value).
+2. Webhook `85eebbb3-…` → `https://spices.govihublk.com/api/v1/webhooks/resend/inbound`,
+   event `email.received`. Signing secret stored **only** in `.env.spices`, never in git.
+3. New endpoint verifies the **Svix HMAC-SHA256 signature with stdlib** rather than adding the `svix`
+   package for one route. Unsigned prod probe → `401`.
+
+### Gate evidence — the real chain, not a handshake
+
+**Test A, real mail through DNS.** `reports@` → `support@govihublk.com` traversed
+MX → Resend inbound → our webhook:
+
+```
+resend_inbound_self_mail_skipped email_id=6f3c09f0-... sender=reports@govihublk.com
+```
+
+Reaching the loop guard **proves Resend's own Svix signature validated against our secret** — a bad
+signature logs `resend_webhook_rejected` and never gets that far.
+
+**Test B, notification path.** A correctly-signed `email.received` from an external sender:
+
+```
+resend_inbound_received   email_id=t7-gate-synthetic-0001 sender=farmer.test@example.com
+resend_email_sent         message_id=0478aa00-958f-4010-ac74-b01b44d7338e
+resend_inbound_notified   recipients=1
+```
+
+Two tests because Resend refuses to send from `onboarding@resend.dev` to anyone but the account
+owner, and anything sent from our own verified domain trips the loop guard by design.
+
+**Loop guard:** inbound from our own sending domain is skipped, so a bounce of our own notification
+cannot ping-pong. Proven live in Test A.
+
+`13/13` in `govihub-api/tests/test_resend_inbound_webhook.py` — valid signature, tampered body, wrong
+secret, missing headers, stale timestamp (replay), loop guard, non-`received` event.
+
+**The earlier catch-all warning still stands and is now expected:** mail to *any* address at
+`govihublk.com` lands in Resend. Read messages in the Resend dashboard, or via the Received Emails
+API using the `email_id` carried in each notification — webhooks carry metadata only, never bodies
+or attachments.
+
+## T5 — Credential rotation ✅
+
+Ran last by design: every gate above authenticated with the old credential.
+
+The rotation ran **entirely on the VPS**. The new password was never printed and never entered the
+session transcript.
+
+```
+G5.1  OLD credential -> 401                      PASS
+G5.2  NEW credential -> 200                      PASS
+G5.3  admin smoke on the new credential          PASS 5/5
+      /admin/dashboard  /admin/users  /admin/crops  /admin/matches  /admin/users/{id}
+```
+
+**Scope correction: the handoff named one file. The literal was in eleven, plus a compiled `.pyc`.**
+
+```
+admin_playwright_test.py
+e2e-v3/test-all.js   e2e-v3/test-phases-1-2.js   e2e-v3/test-tos.js
+scripts/e2e_comprehensive.sh      scripts/e2e_comprehensive_v2.js
+scripts/test_gemini_fallback.js   scripts/test_reset_password.js
+scripts/test_settings_persist.js
+__pycache__/admin_playwright_test.cpython-313.pyc   (deleted)
+```
+
+All now read `GOVIHUB_ADMIN_PW` from the environment. **Zero occurrences remain in the local tree
+*and* in `/opt/govihub-spices` on the VPS** — the VPS copy still had the literal and would have been
+missed by a repo-only purge. Syntax re-verified after every edit (`py_compile`, `bash -n`,
+`node --check`). `test-all.js` throws a named error when the variable is unset, so a missing export
+fails loudly instead of sending `undefined` and reading as a bad password.
+
+The old value remains in git history. It is **dead, not secret**. Removing it would need a force
+push, which is Tier 0.
+
+**Where the password lives now:** `/opt/govihub-spices/.env.spices` on `govihub-mumbai`, as
+`GOVIHUB_ADMIN_PW`. Nowhere else.
 
 ---
 
-## Handoff — exact next steps
+## Final state
 
-1. **Finish T6 gates.** Confirm the deploy landed (`docker ps` shows `govihub-spices-govihub-mcp-spices-1`),
-   then G6.1 first: SSE handshake + `initialize`/`tools-list` against
-   `https://spices.govihublk.com/mcp/sse`. Then confirm 5 gunicorn procs on the API / 1 on MCP, and
-   that API logs `schedulers_disabled` while MCP logs `schedulers_started` — **exactly one process
-   must own the schedulers**.
-2. **Implement G6.4 rate limits** — register 30/min/IP, login 60/min/IP, Redis counter pattern as in
-   `app/listings/router.py` upload limiter; diagnosis stays per-user. 429 carries a localized key.
-3. **Burst test** (G6.3) from the VPS, then full regression smoke (G6.5).
-4. **T5 rotation, last.** Generate a strong password, store only in `.env.spices`, change via the
-   API, replace the literal in `e2e-v3/test-all.js` (and any other grep hit) with
-   `process.env.GOVIHUB_ADMIN_PW`, re-run a 5-endpoint admin smoke. Old value stays in git history
-   but is dead once rotated.
-5. **T7** needs AWS credentials from Nuwan.
+```
+smoke              29/29 PASS
+users              204        (203 + one REAL signup, see below)
+supply_listings    7          unchanged
+harvest_listings   21         unchanged
+tables             29         28 + migration 015
+moderation_events  0          restored
+alembic head       015
+test residue       0
+```
+
+**The user count moved and that is correct.** `mas66spicy`, a farmer, registered at 07:08 UTC —
+a genuine signup on a live platform, two and a half hours after my probe row was removed. It is not
+residue and was not deleted. Incidentally it confirms the new rate limiter does not block real
+registrations.
+
+My one probe row (`g64probe_never`) was created by a mis-seeded counter — I read a Redis key that had
+already expired, so the guard I intended did not fire. It was deleted the same minute, and the retest
+was rewritten to resolve the client IP in the same script with a hard abort if it comes back empty.
+
+## Still open
+
+1. **`git push origin spices` has NOT run.** Pushing to a remote is Tier 0 and was not named in the
+   run instruction, so the commits sit local-only while prod runs the same code, deployed by file
+   copy. See `BLOCKED.md` for the exact commands.
+2. **DB headroom** — 83/100 connections at peak under burst.
+3. **OpenRouter $5/week ceiling** — unchanged; manager already decided to leave it.
 
 ## Rollback
 
