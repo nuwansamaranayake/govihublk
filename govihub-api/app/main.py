@@ -90,24 +90,30 @@ async def lifespan(app: FastAPI):
     await loop.run_in_executor(None, embedding_service.load_model)
     logger.info("embedding_model_ready", placeholder_mode=embedding_service.is_placeholder)
 
-    # Start the periodic matching scheduler as a background task
-    matching_task = asyncio.create_task(_matching_scheduler())
-    logger.info("matching_scheduler_started", interval_seconds=300)
-
-    # Start the weather alert scheduler
-    weather_alert_task = asyncio.create_task(_weather_alert_scheduler())
-    logger.info("weather_alert_scheduler_started", interval_seconds=3600)
-
-    # Start the listing moderation sweep
-    moderation_task = asyncio.create_task(_moderation_scheduler())
-    logger.info("moderation_scheduler_started", interval_seconds=600)
+    # Background schedulers must run in EXACTLY ONE process. They live in the
+    # worker process, so with N gunicorn workers they would each run N times —
+    # duplicate match batches, duplicate weather-alert emails to real farmers,
+    # duplicate moderation scans and admin emails. The single-worker MCP service
+    # sets RUN_SCHEDULERS=1; the scaled API workers set it to 0.
+    scheduler_tasks = []
+    if settings.RUN_SCHEDULERS:
+        scheduler_tasks = [
+            asyncio.create_task(_matching_scheduler()),
+            asyncio.create_task(_weather_alert_scheduler()),
+            asyncio.create_task(_moderation_scheduler()),
+        ]
+        logger.info(
+            "schedulers_started",
+            matching_seconds=300, weather_seconds=3600, moderation_seconds=600,
+        )
+    else:
+        logger.info("schedulers_disabled", note="RUN_SCHEDULERS=0 — another process owns them")
 
     yield
 
     # Shutdown: cancel schedulers and dispose engine
-    matching_task.cancel()
-    weather_alert_task.cancel()
-    moderation_task.cancel()
+    for t in scheduler_tasks:
+        t.cancel()
     await engine.dispose()
     logger.info("govihub_shutdown")
 

@@ -79,6 +79,15 @@ class Settings(BaseSettings):
     # non-admin user through the re-acceptance modal (tos_version != TOS_VERSION).
     TOS_VERSION: str = "1.1"
 
+    # Background schedulers (matching, weather alerts, moderation sweep) must run
+    # in exactly one process. Enabled only on the single-worker MCP service.
+    RUN_SCHEDULERS: bool = True
+
+    # Per-process DB pool. workers x (POOL_SIZE + MAX_OVERFLOW) must stay under
+    # postgres max_connections (100) with headroom for psql and admin sessions.
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 5
+
     @property
     def sync_database_url(self) -> str:
         """Synchronous database URL for Alembic."""

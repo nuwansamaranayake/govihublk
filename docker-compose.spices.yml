@@ -3,8 +3,12 @@ services:
     build:
       context: ./govihub-api
       dockerfile: Dockerfile
-    command: gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
+    command: gunicorn app.main:app -w 5 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
     env_file: .env.spices
+    environment:
+      # Schedulers live on the single-worker MCP service; running them in each of
+      # the 5 API workers would duplicate match batches and farmer emails 5x.
+      RUN_SCHEDULERS: "false"
     ports:
       - "8003:8000"
     volumes:
@@ -17,7 +21,7 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.govihub-api-spices.rule=Host(`spices.govihublk.com`) && (PathPrefix(`/api`) || PathPrefix(`/mcp`) || PathPrefix(`/uploads`))"
+      - "traefik.http.routers.govihub-api-spices.rule=Host(`spices.govihublk.com`) && (PathPrefix(`/api`) || PathPrefix(`/uploads`))"
       - "traefik.http.routers.govihub-api-spices.entrypoints=websecure"
       - "traefik.http.routers.govihub-api-spices.tls.certresolver=letsencrypt"
       - "traefik.http.routers.govihub-api-spices.priority=20"
@@ -101,6 +105,38 @@ services:
       - "traefik.http.middlewares.spices-admin-strip.stripprefix.prefixes=/admin"
       - "traefik.http.routers.spices-admin.middlewares=spices-admin-strip"
       - "traefik.http.services.spices-admin.loadbalancer.server.port=80"
+
+  # MCP runs alone on a single worker: SSE streaming requires -w 1, and it is
+  # also the ONE process that owns the background schedulers. The public URL
+  # https://spices.govihublk.com/mcp/sse is unchanged — only which container
+  # answers it. Router priority 25 beats the API's 20 so /mcp lands here.
+  govihub-mcp-spices:
+    build:
+      context: ./govihub-api
+      dockerfile: Dockerfile
+    command: gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile -
+    env_file: .env.spices
+    environment:
+      RUN_SCHEDULERS: "true"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres-spices:
+        condition: service_healthy
+      redis-spices:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.govihub-mcp-spices.rule=Host(`spices.govihublk.com`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.govihub-mcp-spices.entrypoints=websecure"
+      - "traefik.http.routers.govihub-mcp-spices.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.govihub-mcp-spices.priority=25"
+      - "traefik.http.services.govihub-mcp-spices.loadbalancer.server.port=8000"
+      - "traefik.http.services.govihub-mcp-spices.loadbalancer.responseForwarding.flushInterval=1ms"
+    networks:
+      - govihub-spices-net
+
 
 volumes:
   spices_pgdata:

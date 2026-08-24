@@ -24,8 +24,11 @@ metadata = MetaData(naming_convention=convention)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.APP_DEBUG,
-    pool_size=20,
-    max_overflow=10,
+    # Pools are PER WORKER PROCESS. With 5 API workers this is 5x(10+5)=75, plus
+    # 15 for the single-worker MCP service = 90, under postgres max_connections=100.
+    # The old 20+10 would have been 9x30=270 against a 100 cap once workers scaled.
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
     pool_pre_ping=True,
 )
 
