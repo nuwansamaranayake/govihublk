@@ -8,7 +8,7 @@
 |---|---|
 | **T4** privacy page | ✅ **PASSED — live** |
 | **T8** listing moderation v1 | ✅ **PASSED — live** |
-| **T6** capacity | 🟡 **built + deploying** — verification gates outstanding (see §T6) |
+| **T6** capacity | 🟡 **deployed + partially verified** — G6.1 needs a real MCP client call; G6.3/G6.4/G6.5 not run |
 | **T7** support@ mailbox | ⛔ **BLOCKED** — no AWS credentials; resume prompt recorded |
 | **T5** credential rotation | ⏸ **NOT STARTED** — runs last by design; see handoff |
 
@@ -150,12 +150,36 @@ Verified locally before deploy: `RUN_SCHEDULERS=False, pool 10+5`, `import app.m
 ### ⚠️ Outstanding — these gates did NOT run
 
 ```
-G6.1  MCP SSE handshake + initialize/tools-list at the unchanged URL   NOT RUN
-G6.2  worker count + smoke endpoints                                   partially dispatched
-G6.3  burst: 200 concurrent 60s, p95 <1.5s, zero 5xx, DB under cap     NOT RUN
-G6.4  CGNAT-aware rate limits (register 30/min/IP, login 60/min/IP)    NOT IMPLEMENTED
-G6.5  full regression smoke after the worker change                    NOT RUN
+G6.2  worker count + scheduler ownership                    PASS - see below
+G6.1  MCP route reachable at the unchanged URL              PARTIAL - curl only, see below
+G6.3  burst 200 concurrent 60s, p95 <1.5s, DB under cap     NOT RUN
+G6.4  CGNAT rate limits (register 30/min, login 60/min IP)  NOT IMPLEMENTED
+G6.5  full regression smoke after the worker change         NOT RUN (health/terms/landing 200 only)
 ```
+
+**G6.2 PASSED — the hazard is provably fixed.** Each worker logs once at startup:
+
+```
+API : 5 x schedulers_disabled     <- 5 workers, none owns the schedulers
+MCP : 1 x schedulers_started      <- exactly one process owns them
+```
+
+That is the duplicate-farmer-email risk closed, verified from real container logs.
+
+**G6.1 PARTIAL — routing confirmed, real client call NOT done.**
+`GET https://spices.govihublk.com/mcp/sse` returns
+`401 {"error":"Missing authentication. Provide Authorization header or ?token= parameter"}`.
+That is the MCP app's own auth contract answering, which proves Traefik routes `/mcp` to the new
+`govihub-mcp-spices` service and the app is alive there — a broken route would return 404 or the
+Next.js page. Other surfaces unaffected: `/api/v1/health`, `/en/terms`, `/` all 200.
+
+**Per the project's own MCP rule, this is NOT sufficient to call the MCP work done.** curl preserves
+query strings, ignores CORS, and uses connection patterns real clients do not. **Nuwan must confirm
+a real tool call through the registered connector** — invoke any GoviHub MCP tool twice in sequence
+(two calls catches session-binding bugs) and confirm it lands with `status_code=200` and a populated
+`tool_name`. If it fails, roll back: revert the compose change and
+`docker compose -f docker-compose.spices.yml up -d --force-recreate govihub-api-spices`, which
+restores the single service answering `/mcp`.
 
 **G6.1 is the critical one — your live Claude connector depends on that URL.** Do not consider T6
 done until it passes. Rollback if it fails: revert the compose change and
