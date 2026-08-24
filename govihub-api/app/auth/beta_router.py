@@ -54,9 +54,15 @@ async def get_current_user(
 
 
 @router.post("/beta/register", response_model=TokenResponse)
-async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(get_db)):
+async def beta_register(
+    request: Request,
+    body: BetaRegisterRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
     """Register a new user with username and password (beta/dev only)."""
     _check_beta_env()
+    await _enforce_ip_limit(request, redis, "beta_register", _REGISTER_LIMIT)
 
     # Check username uniqueness (case-insensitive)
     existing = await db.execute(
@@ -163,9 +169,15 @@ async def beta_register(body: BetaRegisterRequest, db: AsyncSession = Depends(ge
 
 
 @router.post("/beta/login", response_model=TokenResponse)
-async def beta_login(body: BetaLoginRequest, db: AsyncSession = Depends(get_db)):
+async def beta_login(
+    request: Request,
+    body: BetaLoginRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
     """Login with username and password (beta/dev only)."""
     _check_beta_env()
+    await _enforce_ip_limit(request, redis, "beta_login", _LOGIN_LIMIT)
 
     # Look up user by username (case-insensitive)
     result = await db.execute(
@@ -257,6 +269,35 @@ async def _check_rate_limit(request: Request, redis) -> None:
         await redis.expire(key, _USERNAME_CHECK_WINDOW)
     if count > _USERNAME_CHECK_LIMIT:
         raise HTTPException(status_code=429, detail="Too many requests")
+
+
+# Sri Lankan mobile users sit behind carrier-grade NAT, so one IP can front a
+# whole town. Limits are deliberately loose: they stop scripted abuse without
+# locking out a village that shares an exit IP.
+_REGISTER_LIMIT = 30  # registrations per IP per minute
+_LOGIN_LIMIT = 60  # login attempts per IP per minute
+
+
+async def _enforce_ip_limit(request: Request, redis, bucket: str, limit: int) -> None:
+    """Per-IP per-minute cap. Fails OPEN on a Redis outage (same as uploads).
+
+    Raises 429 with ``detail={"code": "RATE_LIMITED"}`` — the frontend already
+    maps that code to ``auth.auth_error_rate_limited`` in en/si/ta.
+    """
+    try:
+        key = f"rl:{bucket}:{_client_ip(request)}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, _USERNAME_CHECK_WINDOW)
+    except Exception as exc:  # noqa: BLE001 — a Redis blip must not block auth
+        logger.warning("auth_rate_limit_unavailable", bucket=bucket, error=str(exc))
+        return
+    if count > limit:
+        logger.warning("auth_rate_limited", bucket=bucket, ip=_client_ip(request))
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "RATE_LIMITED", "message": "Too many attempts. Please wait a moment and try again."},
+        )
 
 
 async def _generate_username_suggestions(db: AsyncSession, base: str) -> list[str]:
