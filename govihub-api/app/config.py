@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = ""
     RESEND_FROM_NAME: str = "GoviHub Reports"
     ADMIN_REPORT_RECIPIENTS: str = "govihub.ai@gmail.com"  # comma-separated
+    RESEND_INBOUND_WEBHOOK_SECRET: str = ""  # Svix signing secret for email.received
 
     # App
     APP_NAME: str = "GoviHub"

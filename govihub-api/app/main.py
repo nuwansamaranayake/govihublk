@@ -264,6 +264,7 @@ def create_app() -> FastAPI:
     from app.sector.router import router as sector_router
     from app.weather.router import router as weather_router
     from app.ads.router import router as ads_router
+    from app.webhooks.router import router as webhooks_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
@@ -281,6 +282,7 @@ def create_app() -> FastAPI:
     app.include_router(sector_router, prefix="/api/v1", tags=["Sector"])
     app.include_router(weather_router, prefix="/api/v1/weather", tags=["Weather"])
     app.include_router(ads_router, prefix="/api/v1", tags=["Advertisements"])
+    app.include_router(webhooks_router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
     # Beta auth — username/password login for beta testing
     if settings.APP_ENV in ("beta", "development"):
