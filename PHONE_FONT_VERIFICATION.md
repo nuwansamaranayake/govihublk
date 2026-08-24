@@ -1,5 +1,18 @@
 # PHONE_FONT_VERIFICATION.md
 
+> ## ⚠️ CORRECTION — 2026-08-23, same day
+> **The two "admin panel defects" reported in this document were MISREPORTED. Do not re-trust them.**
+> A later audit against live production proved that server-side pagination and search already worked
+> and the panel already called them (`search=nuwan` → total 5, admin present; 203 users across 9
+> pages), and that **every user row already had an Edit button** opening a modal with
+> name / phone / role / district.
+> **What actually happened:** the Playwright agent opened the read-only *detail* modal and never
+> clicked the per-row **Edit** button; its own harness was flaky (it self-reported a duplicate-tab
+> bug that silently reset forms). The GA.1/GA.2 "BLOCKED — no phone field exists" conclusion below,
+> and the two defects in "found in passing", are therefore **wrong**.
+> Corrected findings and the genuinely remaining gaps: `ADMIN_USERS_VERIFICATION.md`.
+> Everything in this document about **Task B (the umbrella font)** is unaffected and stands.
+
 **Tasks:** A — normalize admin phone (and close G2.6) · B — load Noto Sans Sinhala on the umbrella
 **Date:** 2026-08-23 · **Branch:** `spices` · **Commit:** `31d5bb7` (Task B; Task A is data-only)
 **Spec:** `CC_PHONE_NORMALIZE_AND_UMBRELLA_FONT.md` · **State:** `/opt/govihub-spices/.cc_state/phone_font_micro.json`
@@ -21,7 +34,7 @@ impossible — G2.6 remains OPEN and is not closable today. Details below.**
 
 Before-state matched the spec's expectation exactly, so the task proceeded.
 
-### The specified method does not exist — G2.6 cannot be closed
+### ~~The specified method does not exist — G2.6 cannot be closed~~ — **RETRACTED, see correction at top**
 
 The spec required driving the live admin panel's user-edit form, which would also have closed gate
 G2.6 from the previous loop. Playwright against the real UI found **two independent blockers**:
@@ -67,7 +80,7 @@ admin re-login        200, /users/me -> role admin, phone +94771234567
 **Restore path: NOT used.** No mid-task failure occurred. During the UI investigation the phone was
 confirmed unchanged at `0771234567` before and after, so the only write was the intentional one.
 
-### Two admin-panel defects found in passing (not fixed — out of scope)
+### ~~Two admin-panel defects found in passing~~ — **RETRACTED: neither defect was real, see correction at top**
 
 1. `/admin/users` loads a hard `size=100` with no pagination and searches only the loaded page, so
    any user outside the 100 most recent is **invisible and unmanageable**. With 203 users, roughly
@@ -148,7 +161,7 @@ the trade this task accepted; `display=swap` keeps text visible during load.
 
 ## Carried forward
 
-- **G2.6 still open** — needs an admin-panel user-edit form with a phone field.
-- The two admin-panel defects above (pagination/search; no editable fields).
+- ~~G2.6 still open~~ — the edit form existed all along; G2.6 was closed on 2026-08-23 by driving it.
+- ~~The two admin-panel defects above~~ — retracted, neither was real (see correction at top).
 - Plaintext production admin credential in `e2e-v3/test-all.js:20` — used again for these gates
   (passed via env var, never written to a file or into this document). Still the top security item.
