@@ -261,7 +261,7 @@ async function testApiPreferences() {
 
     // --- FARMER ---
     console.log("--- FARMER TESTS ---");
-    await login("nuwan", "Nuwan-Super9635");
+    await login("nuwan", process.env.GOVIHUB_ADMIN_PW);
 
     // API test first
     const apiResults = await testApiPreferences();
@@ -288,7 +288,7 @@ async function testApiPreferences() {
     // --- BUYER ---
     console.log("\n--- BUYER TESTS ---");
     // Register a test buyer if needed, or use admin who can access buyer routes
-    await login("nuwan", "Nuwan-Super9635");
+    await login("nuwan", process.env.GOVIHUB_ADMIN_PW);
     // Admin can't access buyer settings directly, so test API-level only
     const buyerApiResults = await testApiPreferences();
     for (const r of buyerApiResults) {
@@ -299,7 +299,7 @@ async function testApiPreferences() {
 
     // --- SUPPLIER ---
     console.log("\n--- SUPPLIER TESTS ---");
-    await login("nuwan", "Nuwan-Super9635");
+    await login("nuwan", process.env.GOVIHUB_ADMIN_PW);
     const supplierApiResults = await testApiPreferences();
     for (const r of supplierApiResults) {
       console.log(`  ${r.pass ? "PASS" : "FAIL"}: ${r.test}${r.detail ? ` (${r.detail})` : ""}`);

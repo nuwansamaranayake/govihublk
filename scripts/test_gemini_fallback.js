@@ -22,7 +22,7 @@ async function setup() {
 
   // Fill login form — username field is input[type="text"] with autocomplete="username"
   await page.locator('input[autocomplete="username"]').fill("nuwan");
-  await page.locator('input[type="password"]').first().fill("Nuwan-Super9635");
+  await page.locator('input[type="password"]').first().fill(process.env.GOVIHUB_ADMIN_PW);
 
   // Submit
   await page.locator('form button[type="submit"], form button:not([type])').first().click();

@@ -703,7 +703,7 @@ async function registerViaUI(page, { name, username, password, role, district, p
     // ================================================================
     console.log('\n========== PHASE 9: ADMIN PANEL ==========');
 
-    page = await loginAs(context, 'nuwan', 'Nuwan-Super9635');
+    page = await loginAs(context, 'nuwan', process.env.GOVIHUB_ADMIN_PW);
     await page.goto(`${BASE}/en/admin/dashboard`, { waitUntil: 'networkidle', timeout: 20000 });
     await sleep(3000);
     await shot(page, 'admin_dashboard');

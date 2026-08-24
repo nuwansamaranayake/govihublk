@@ -57,7 +57,7 @@ async function loginViaBeta(page, username, password) {
     const adminLoginRes = await fetch(`${BASE}/api/v1/auth/beta/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "nuwan", password: "Nuwan-Super9635" }),
+      body: JSON.stringify({ username: "nuwan", password: process.env.GOVIHUB_ADMIN_PW }),
     });
     const adminData = await adminLoginRes.json();
     adminToken = adminData.access_token;
@@ -67,7 +67,7 @@ async function loginViaBeta(page, username, password) {
     // =========================================
     console.log("\n=== STEP 2: Login as admin ===");
     const page = await context.newPage();
-    await loginViaBeta(page, "nuwan", "Nuwan-Super9635");
+    await loginViaBeta(page, "nuwan", process.env.GOVIHUB_ADMIN_PW);
     console.log(`  Logged in as admin → ${page.url()}`);
 
     // =========================================

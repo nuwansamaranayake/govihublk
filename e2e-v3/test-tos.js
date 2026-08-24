@@ -30,7 +30,7 @@ const PG_DB = 'govihub_spices';
 const SMOKE = { username: 'tossmoke0719', password: 'SmokeTest2026' };
 // Admin credential taken from e2e-v3/test-all.js (this repo's own harness for
 // this same production host). Not supplied by the operator — see report.
-const ADMIN = { username: 'nuwan', password: 'Nuwan-Super9635' };
+const ADMIN = { username: 'nuwan', password: process.env.GOVIHUB_ADMIN_PW };
 
 const RUN = Math.floor(Math.random() * 9000 + 1000); // 4 digits
 const createdUsers = [];

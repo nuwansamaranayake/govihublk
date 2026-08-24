@@ -31,7 +31,7 @@ from playwright.sync_api import (
 
 ADMIN_URL = "https://spices.govihublk.com/admin/"
 USERNAME = "nuwan"
-PASSWORD = "Nuwan-Super9635"
+PASSWORD = os.environ["GOVIHUB_ADMIN_PW"]
 
 # /tmp on Linux/macOS; resolves under the current drive on Windows.
 SCREENSHOT_DIR = Path("/tmp/admin_screenshots")

@@ -77,7 +77,7 @@ print(','.join(bad) if bad else 'NONE')
 # 005: Knowledge base has 591+ chunks
 ADMIN_TOKEN=$(get_token "$($CURL -s --max-time 10 -X POST $API/auth/beta/login \
   -H 'Content-Type: application/json' \
-  -d '{"username":"nuwan","password":"Nuwan-Super9635"}')")
+  -d '{"username":"nuwan","password":"'"$GOVIHUB_ADMIN_PW"'"}')")
 
 KB_RESP=$($CURL -s --max-time 10 "$API/admin/knowledge?size=1" -H "Authorization: Bearer $ADMIN_TOKEN")
 KB_COUNT=$(echo "$KB_RESP" | $PY -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null)

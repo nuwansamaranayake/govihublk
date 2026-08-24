@@ -17,7 +17,8 @@ const USERS = {
   buyer2:  { name: 'Saman Processing', username: 'e2e_buyer_gampaha', password: 'E2eTest2026!', phone: '0771111004', district: 'Gampaha', role: 'buyer' },
   supplier: { name: 'Kandy Agri Supplies', username: 'e2e_supplier_kandy', password: 'E2eTest2026!', phone: '0771111005', district: 'Kandy', role: 'supplier' },
 };
-const ADMIN = { username: 'nuwan', password: 'Nuwan-Super9635' };
+const ADMIN = { username: 'nuwan', password: process.env.GOVIHUB_ADMIN_PW };
+if (!ADMIN.password) throw new Error('GOVIHUB_ADMIN_PW is not set - export it before running (value lives in .env.spices on the VPS)');
 
 let results = [];
 let ssCount = 0;

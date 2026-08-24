@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-19T09:19:38.996Z",
+  "timestamp": "2026-08-24T07:36:23.643Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -18,27 +18,47 @@
   "uncommitted_files": [
     {
       "status": "M",
+      "path": ".planning/HANDOFF.json"
+    },
+    {
+      "status": "M",
       "path": "CLAUDE.md"
     },
     {
       "status": "M",
-      "path": "govihub-umbrella/public/about-si.html"
+      "path": "admin_playwright_test.py"
     },
     {
       "status": "M",
-      "path": "govihub-umbrella/public/about.html"
+      "path": "e2e-v3/test-all.js"
     },
     {
-      "status": "??",
-      "path": ".planning/"
+      "status": "M",
+      "path": "e2e-v3/test-phases-1-2.js"
     },
     {
-      "status": "??",
-      "path": "TOS_AUDIT.md"
+      "status": "M",
+      "path": "e2e-v3/test-tos.js"
     },
     {
-      "status": "??",
-      "path": "TOS_DISCLAIMER_VERIFICATION.md"
+      "status": "M",
+      "path": "scripts/e2e_comprehensive.sh"
+    },
+    {
+      "status": "M",
+      "path": "scripts/e2e_comprehensive_v2.js"
+    },
+    {
+      "status": "M",
+      "path": "scripts/test_gemini_fallback.js"
+    },
+    {
+      "status": "M",
+      "path": "scripts/test_reset_password.js"
+    },
+    {
+      "status": "M",
+      "path": "scripts/test_settings_persist.js"
     },
     {
       "status": "??",
@@ -47,16 +67,8 @@
     {
       "status": "??",
       "path": "docker-compose.dev.local.yml"
-    },
-    {
-      "status": "??",
-      "path": "docs/agent-legibility/"
-    },
-    {
-      "status": "??",
-      "path": "e2e-v3/test-tos.js"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\n5843110 feat(legal): ToS checkbox on both registration paths + blocking re-acceptance modal\n643bd15 feat(legal): match liability disclaimer on match card and detail\n6a3a2be feat(legal): Terms of Use EN/SI/TA + trilingual locale keys + review docs\n0b566f7 feat(legal): POST /users/me/accept-tos, tos fields on /users/me, gate complete-registration\nf8e1906 feat(legal): TOS_NOT_ACCEPTED structured error + acceptance stamped on beta register"
+  "context_notes": "Recent commits:\ndb4d332 feat(email): Resend Inbound webhook for mail to govihublk.com (T7)\naad584c feat(auth): per-IP rate limits on beta register and login (G6.4)\nb094038 docs: T6 partial verification — scheduler split proven, MCP needs a real client call\n1d8d415 docs: interview hardening verification — T4/T8 passed, T6 in flight, T7 blocked, T5 not started\nad5fa6d perf(capacity): split MCP to its own service, scale API to 5 workers, gate schedulers"
 }

@@ -17,7 +17,7 @@ const USERS = {
   supplier: { name: 'Kandy Agri Supplies', username: 'e2e_supplier_kandy', password: 'E2eTest2026!', phone: '+94771111005', district: 'Kandy', role: 'supplier' },
 };
 
-const ADMIN = { username: 'nuwan', password: 'Nuwan-Super9635' };
+const ADMIN = { username: 'nuwan', password: process.env.GOVIHUB_ADMIN_PW };
 
 let results = [];
 let screenshotCount = 0;
