@@ -1,0 +1,338 @@
+{
+ "base": "https://spices.govihublk.com",
+ "label": "prod",
+ "when": "2026-08-25T16:14:54.299Z",
+ "created": {
+  "name": "தமிழ் சோதனை",
+  "username": "tgate_m74377714",
+  "password": "TaGate#2026x",
+  "phone": "774377714"
+ },
+ "byGate": {
+  "GT.6": true,
+  "GP.6": true,
+  "GP.1": true,
+  "GP.3": true,
+  "GP.7": true,
+  "GP.2": true,
+  "GP.4": true,
+  "GP.5": true,
+  "GP.8": true
+ },
+ "results": [
+  {
+   "gate": "GT.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "document.fonts.check('16px \"Noto Sans Tamil\"') = true"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "landing: no horizontal overflow"
+  },
+  {
+   "gate": "GP.1a",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "country picker present, first option = LK"
+  },
+  {
+   "gate": "GP.1b",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "ToU click-wrap checked"
+  },
+  {
+   "gate": "GP.1c",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "registration form renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "register form: no horizontal overflow"
+  },
+  {
+   "gate": "GP.1",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "phone=774377714 submit -> /ta/farmer/dashboard"
+  },
+  {
+   "gate": "GP.3a",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "dashboard renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "dashboard: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7a",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "dashboard English leak: none"
+  },
+  {
+   "gate": "GP.2",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "blocked=true, Tamil duplicate-phone message shown=true"
+  },
+  {
+   "gate": "GP.3b",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "weather: Tamil at /ta/farmer/weather"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "weather: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7b",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "weather English leak: none"
+  },
+  {
+   "gate": "GP.3c",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "diagnosis: Tamil at /ta/farmer/diagnosis"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "diagnosis: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7b",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "diagnosis English leak: none"
+  },
+  {
+   "gate": "GP.4",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "marketplace: Tamil at /ta/farmer/marketplace"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "marketplace: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7c",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "marketplace English leak: none"
+  },
+  {
+   "gate": "GP.4b",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "detail view Tamil at /ta/farmer/listings"
+  },
+  {
+   "gate": "GP.5a",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "settings page renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "settings: no horizontal overflow"
+  },
+  {
+   "gate": "GP.5",
+   "viewport": "mobile",
+   "pass": true,
+   "detail": "settings language ta->si->en->ta survives reload  [si:persisted=true en:persisted=true ta:persisted=true]"
+  },
+  {
+   "gate": "GT.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "document.fonts.check('16px \"Noto Sans Tamil\"') = true"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "landing: no horizontal overflow"
+  },
+  {
+   "gate": "GP.1a",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "country picker present, first option = LK"
+  },
+  {
+   "gate": "GP.1b",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "ToU click-wrap checked"
+  },
+  {
+   "gate": "GP.1c",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "registration form renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "register form: no horizontal overflow"
+  },
+  {
+   "gate": "GP.1",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "phone=774439148 submit -> /ta/farmer/dashboard"
+  },
+  {
+   "gate": "GP.3a",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "dashboard renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "dashboard: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7a",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "dashboard English leak: none"
+  },
+  {
+   "gate": "GP.2",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "blocked=true, Tamil duplicate-phone message shown=true"
+  },
+  {
+   "gate": "GP.3b",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "weather: Tamil at /ta/farmer/weather"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "weather: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7b",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "weather English leak: none"
+  },
+  {
+   "gate": "GP.3c",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "diagnosis: Tamil at /ta/farmer/diagnosis"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "diagnosis: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7b",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "diagnosis English leak: none"
+  },
+  {
+   "gate": "GP.4",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "marketplace: Tamil at /ta/farmer/marketplace"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "marketplace: no horizontal overflow"
+  },
+  {
+   "gate": "GP.7c",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "marketplace English leak: none"
+  },
+  {
+   "gate": "GP.4b",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "detail view Tamil at /ta/farmer/listings"
+  },
+  {
+   "gate": "GP.5a",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "settings page renders Tamil"
+  },
+  {
+   "gate": "GP.6",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "settings: no horizontal overflow"
+  },
+  {
+   "gate": "GP.5",
+   "viewport": "desktop",
+   "pass": true,
+   "detail": "settings language ta->si->en->ta survives reload  [si:persisted=true en:persisted=true ta:persisted=true]"
+  },
+  {
+   "gate": "GP.8",
+   "viewport": "both",
+   "pass": true,
+   "detail": "18 screenshots saved under screenshots/tamil/prod/"
+  }
+ ],
+ "screenshots": [
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-01-landing.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-02-register-form.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-03-after-register.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-04-duplicate-phone.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-05-weather.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-05-diagnosis.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-06-marketplace.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-07-marketplace-detail.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\mobile-08-settings-language.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-01-landing.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-02-register-form.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-03-after-register.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-04-duplicate-phone.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-05-weather.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-05-diagnosis.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-06-marketplace.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-07-marketplace-detail.png",
+  "E:\\AiGNITE\\projects\\GoviHub\\screenshots\\tamil\\prod\\desktop-08-settings-language.png"
+ ]
+}
