@@ -99,6 +99,26 @@ async function run(vp) {
     await shot(page, `${vp.name}-01-landing`);
     rec('GP.6', vp.name, await noOverflow(page), 'landing: no horizontal overflow');
 
+    // ---------- GP.9 landing-page language selector ----------
+    // The landing page hand-rolls its own selector instead of using
+    // LanguageSwitcher, so Tamil can go missing there while every other screen
+    // is fully translated. That is exactly what happened, and nothing caught it.
+    const langLinks = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('a[href]'))
+        .map(a => a.getAttribute('href'))
+        .filter(h => /^\/(si|en|ta)(\/|$)/.test(h)));
+    const offered = ['si', 'en', 'ta'].filter(c =>
+      langLinks.some(h => h === `/${c}` || h.startsWith(`/${c}/`)));
+    rec('GP.9', vp.name, offered.length === 3,
+        `landing selector offers [${offered.join(',')}] (need si,en,ta)`);
+
+    if (offered.includes('ta')) {
+      await page.goto(`${BASE}/ta`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1000);
+      const taLanded = page.url().includes('/ta') && TAMIL_RE.test(await visibleText(page));
+      rec('GP.9b', vp.name, taLanded, 'Tamil selector target renders Tamil');
+    }
+
     // ---------- GP.1 registration end to end ----------
     await page.goto(`${BASE}/ta/auth/beta-login`, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'பதிவுசெய்' }).first().click();

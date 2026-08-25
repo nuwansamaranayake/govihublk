@@ -99,6 +99,16 @@ export default function HomePage({ params }: { params: { locale: string } }) {
             >
               🇬🇧 English
             </Link>
+            <Link
+              href="/ta"
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                locale === "ta"
+                  ? "bg-white text-green-800 shadow-md"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              🇱🇰 தமிழ்
+            </Link>
           </div>
 
           {/* Logo */}
